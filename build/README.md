@@ -1,0 +1,2 @@
+# BUILD folder
+Packaging, CI

@@ -1,3 +1,3 @@
-module tidy
+module hrms
 
 go 1.25.5
