@@ -1,4 +1,4 @@
-package slogpretty
+package log
 
 import (
 	"context"
@@ -6,25 +6,26 @@ import (
 	"io"
 	stdLog "log"
 	"log/slog"
+	"os"
 
 	"github.com/fatih/color"
 )
 
-type PrettyHandlerOptions struct {
+type LocalHandlerOptions struct {
 	SlogOpts *slog.HandlerOptions
 }
 
-type PrettyHandler struct {
-	opts PrettyHandlerOptions
+type LocalHandler struct {
+	opts LocalHandlerOptions
 	slog.Handler
 	l     *stdLog.Logger
 	attrs []slog.Attr
 }
 
-func (opts PrettyHandlerOptions) NewPrettyHandler(
+func (opts LocalHandlerOptions) NewLocalHandler(
 	out io.Writer,
-) *PrettyHandler {
-	h := &PrettyHandler{
+) *LocalHandler {
+	h := &LocalHandler{
 		Handler: slog.NewJSONHandler(out, opts.SlogOpts),
 		l:       stdLog.New(out, "", 0),
 	}
@@ -32,7 +33,7 @@ func (opts PrettyHandlerOptions) NewPrettyHandler(
 	return h
 }
 
-func (h *PrettyHandler) Handle(_ context.Context, r slog.Record) error {
+func (h *LocalHandler) Handle(_ context.Context, r slog.Record) error {
 	level := r.Level.String() + ":"
 
 	switch r.Level {
@@ -81,18 +82,35 @@ func (h *PrettyHandler) Handle(_ context.Context, r slog.Record) error {
 	return nil
 }
 
-func (h *PrettyHandler) WithAttrs(attrs []slog.Attr) slog.Handler {
-	return &PrettyHandler{
+func (h *LocalHandler) WithAttrs(attrs []slog.Attr) slog.Handler {
+	return &LocalHandler{
 		Handler: h.Handler,
 		l:       h.l,
 		attrs:   attrs,
 	}
 }
 
-func (h *PrettyHandler) WithGroup(name string) slog.Handler {
-	// TODO: implement
-	return &PrettyHandler{
+func (h *LocalHandler) WithGroup(name string) slog.Handler {
+	return &LocalHandler{
 		Handler: h.Handler.WithGroup(name),
 		l:       h.l,
+	}
+}
+
+func setupLocalSlog() *slog.Logger {
+	opts := LocalHandlerOptions{
+		SlogOpts: &slog.HandlerOptions{
+			Level: slog.LevelDebug,
+		},
+	}
+
+	handler := opts.NewLocalHandler(os.Stdout)
+	return slog.New(handler)
+}
+
+func Err(err error) slog.Attr {
+	return slog.Attr{
+		Key:   "error",
+		Value: slog.StringValue(err.Error()),
 	}
 }

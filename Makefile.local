@@ -1,0 +1,42 @@
+MIGRATIONS_DIR=internal/infrastructure/storage/postgres/migrations
+
+DB_DSN=postgres://postgres:123@localhost:5432/hrms?sslmode=disable
+
+
+migrate-up:
+	@echo "Applying migrations..."
+	@goose -dir $(MIGRATIONS_DIR) postgres "$(DB_DSN)" up
+
+migrate-down:
+	@echo "Rolling back last migration..."
+	@goose -dir $(MIGRATIONS_DIR) postgres "$(DB_DSN)" down
+
+migrate-status:
+	@echo "Migration status:"
+	@goose -dir $(MIGRATIONS_DIR) postgres "$(DB_DSN)" status
+
+migrate-create:
+	@echo "Creating new migration file: $(name)"
+	@goose -dir $(MIGRATIONS_DIR) create $(name) sql
+
+seed-fixtures:
+	@echo "Seeding database..."
+	@psql -f ./test/fixtures/fixture.sql "$(DB_DSN)"
+
+
+migrate-down-to:
+	@if [ -z "$(version)" ]; then \
+		echo "Error: version required"; \
+		echo "Usage: make migrate-down-to version=3"; \
+		exit 1; \
+	fi
+	@echo "⬇Migrating down to version $(version)..."
+	@goose -dir $(MIGRATIONS_DIR) postgres "$(DB_DSN)" down-to $(version)
+
+migrate-version:
+	@echo "Current version:"
+	@goose -dir $(MIGRATIONS_DIR) postgres "$(DB_DSN)" version
+
+migrate-reset:
+	@echo "Rolling back ALL migrations..."
+	@goose -dir $(MIGRATIONS_DIR) postgres "$(DB_DSN)" down-to 0

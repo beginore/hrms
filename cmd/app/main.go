@@ -1,20 +1,29 @@
 package main
 
 import (
+	"context"
+	"errors"
 	"hrms/internal/infrastructure/config"
-	"hrms/pkg/logger"
-	"log/slog"
+	"hrms/pkg/log"
 	"os"
 )
 
 func main() {
 	configPath := os.Args[1]
 	cfg := config.ParseConfig(configPath)
-	log := logger.SetupLogger(cfg.Env)
+	logger := log.NewLog(cfg.LogLevel)
+	logger.Info("Some Info Message")
+	logger.With(
+		log.String("Structured log KEY", "Structured log VALUE"),
+	).Info("With some info message")
 
-	log.Info("Loading config...",
-		slog.String("env", cfg.Env),
-		slog.Any("path", cfg.Http.Port))
-	log.Warn("Zhansaya loshara")
-	log.Error("Adel tozhe")
+	ctx := context.Background()
+	logger.WithContext(ctx).Info("Logging with context",
+		log.String("key", "value"),
+	)
+
+	logger.Warn("Some warning message")
+
+	err := errors.New("some Error Message")
+	logger.Error("501", log.Error(err))
 }

@@ -5,6 +5,27 @@
 # Local Makefile won't be pushed to remote repository,
 # '-' char means not panic if file wasn't found
 -include Makefile.local
+# migrate-up
+# applies all migrations up
+
+# migrate-down-to version=[timestamp]
+# migrate down to version with this timestamp
+
+# migrate-down
+# migrate down by 1
+
+# migrate-status
+# shows status of all migrations
+
+# migrate-create
+# creates migration, to create .sql file you need to use following format:
+# make migrate-create name=some_migration, otherwise it will create .go migration
+
+# migrate-reset
+# reverts all migrations
+
+# seed-fixtures
+# applies fixtures
 
 .PHONY: hi
 
@@ -27,4 +48,3 @@ hi:
 
 # stop:
 # 	docker compose -f ./configs/local/docker-compose.yaml stop
-

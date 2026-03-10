@@ -17,7 +17,7 @@ type UserHandler interface {
 type userHandler struct {
 	// Handler takes only different services inside.
 	// You can't inject repositories in it.
-	// Additionally, you can put here needed utility managers (clock, logger, transaction manager).
+	// Additionally, you can put here needed utility managers (clock, log, transaction manager).
 	userService service.UserService
 }
 
