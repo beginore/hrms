@@ -4,28 +4,55 @@
 # For local scripts that can vary (containers up / down, migrate up / down, psql seed)
 # Local Makefile won't be pushed to remote repository,
 # '-' char means not panic if file wasn't found
--include Makefile.local
-# migrate-up
-# applies all migrations up
+#-include Makefile.local
+MIGRATIONS_DIR=internal/infrastructure/storage/postgres/migrations
 
-# migrate-down-to version=[timestamp]
-# migrate down to version with this timestamp
+DB_DSN=postgres://postgres:123@localhost:5432/hrms?sslmode=disable
 
-# migrate-down
-# migrate down by 1
+LINTER_VERSION=1.64.5
 
-# migrate-status
-# shows status of all migrations
+migrate-up:
+	@echo "Applying migrations..."
+	@goose -dir $(MIGRATIONS_DIR) postgres "$(DB_DSN)" up
 
-# migrate-create
-# creates migration, to create .sql file you need to use following format:
-# make migrate-create name=some_migration, otherwise it will create .go migration
+migrate-down:
+	@echo "Rolling back last migration..."
+	@goose -dir $(MIGRATIONS_DIR) postgres "$(DB_DSN)" down
 
-# migrate-reset
-# reverts all migrations
+migrate-status:
+	@echo "Migration status:"
+	@goose -dir $(MIGRATIONS_DIR) postgres "$(DB_DSN)" status
 
-# seed-fixtures
-# applies fixtures
+migrate-create:
+	@echo "Creating new migration file: $(name)"
+	@goose -dir $(MIGRATIONS_DIR) create $(name) sql
+
+seed-fixtures:
+	@echo "Seeding database..."
+	@for f in ./test/fixtures/postgres/*.sql; do \
+  		psql -f "$$f" "$(DB_DSN)"; \
+	done
+
+migrate-down-to:
+	@if [ -z "$(version)" ]; then \
+		echo "Error: version required"; \
+		echo "Usage: make migrate-down-to version=3"; \
+		exit 1; \
+	fi
+	@echo "⬇Migrating down to version $(version)..."
+	@goose -dir $(MIGRATIONS_DIR) postgres "$(DB_DSN)" down-to $(version)
+
+migrate-version:
+	@echo "Current version:"
+	@goose -dir $(MIGRATIONS_DIR) postgres "$(DB_DSN)" version
+
+migrate-reset:
+	@echo "Rolling back ALL migrations..."
+	@goose -dir $(MIGRATIONS_DIR) postgres "$(DB_DSN)" down-to 0
+
+lint:
+	@echo 'run golangci lint'
+	@go run github.com/golangci/golangci-lint/cmd/golangci-lint@v$(LINTER_VERSION) run --out-format=tab
 
 .PHONY: hi
 

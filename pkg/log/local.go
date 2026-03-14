@@ -6,7 +6,6 @@ import (
 	"io"
 	stdLog "log"
 	"log/slog"
-	"os"
 
 	"github.com/fatih/color"
 )
@@ -16,7 +15,6 @@ type LocalHandlerOptions struct {
 }
 
 type LocalHandler struct {
-	opts LocalHandlerOptions
 	slog.Handler
 	l     *stdLog.Logger
 	attrs []slog.Attr
@@ -95,17 +93,6 @@ func (h *LocalHandler) WithGroup(name string) slog.Handler {
 		Handler: h.Handler.WithGroup(name),
 		l:       h.l,
 	}
-}
-
-func setupLocalSlog() *slog.Logger {
-	opts := LocalHandlerOptions{
-		SlogOpts: &slog.HandlerOptions{
-			Level: slog.LevelDebug,
-		},
-	}
-
-	handler := opts.NewLocalHandler(os.Stdout)
-	return slog.New(handler)
 }
 
 func Err(err error) slog.Attr {

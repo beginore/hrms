@@ -1,0 +1,58 @@
+package main
+
+import (
+	consentRepository "hrms/internal/feature/consent/repository"
+	consentService "hrms/internal/feature/consent/service"
+	oganizationRepository "hrms/internal/feature/organization/repository"
+	organizationService "hrms/internal/feature/organization/service"
+	organizationHandler "hrms/internal/feature/organization/transport/http"
+	"hrms/internal/infrastructure/app/cognito"
+	"hrms/internal/infrastructure/config"
+	"hrms/internal/infrastructure/email"
+	"hrms/internal/infrastructure/storage/postgres"
+	"hrms/pkg/log"
+
+	"github.com/gin-gonic/gin"
+)
+
+func main() {
+	cfg := config.ParseConfig("")
+	logger := log.NewLog(cfg.LogLevel)
+	postgres.InitDB(cfg)
+	cognitoClient, err := cognito.New(cfg)
+	if err != nil {
+		logger.Fatal("Failed to initialize Cognito client")
+	}
+	cognitoSvc := cognito.NewService(cognitoClient)
+	emailSvc, err := email.NewService(cfg)
+	if err != nil {
+		logger.Fatal("Failed to initialize Email client")
+	}
+
+	// TODO: Initialize repositories for all modules.
+	orgRepo := oganizationRepository.NewOrganizationRepository(postgres.DB)
+	consentRepo := consentRepository.NewRepository(postgres.DB)
+
+	// TODO: Initialize services for all modules.
+	consentSvc := consentService.NewService(consentRepo)
+	orgSvc := organizationService.NewSignUpService(orgRepo, consentRepo, cognitoSvc, emailSvc)
+
+	handler := organizationHandler.NewOrganizationHandler(orgSvc, consentSvc)
+
+	router := gin.Default()
+
+	v1 := router.Group("/v1")
+
+	v1.POST("/organizations", handler.CreateOrganization)
+	v1.POST("/organizations/verify-otp", handler.VerifyOTP)
+
+	v1.POST("/organizations/consents", handler.SubmitConsents)
+	v1.GET("/organizations/consents/validate", handler.ValidateConsents)
+	v1.GET("/legal/documents", handler.GetDocuments)
+
+	port := ":8080"
+	logger.Info("Starting HTTP server on port " + port)
+	if err := router.Run(port); err != nil {
+		logger.Fatal("Server failed", log.Error(err))
+	}
+}

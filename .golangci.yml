@@ -1,0 +1,69 @@
+# version: "2"
+run:
+  timeout: 5m
+
+
+output:
+  sort-results: true
+
+linters:
+  enable-all: true
+  disable:
+    - wrapcheck
+    - exhaustruct
+    - revive
+    - depguard
+    - varnamelen
+    - ireturn
+    - depguard
+    - inamedparam
+    - nonamedreturns
+    - tagliatelle
+    - wsl
+    - lll
+    - nlreturn
+    - stylecheck
+    - exhaustive
+    - nolintlint
+    - tenv
+
+linters-settings:
+  funlen:
+    lines: 100
+  paralleltest:
+    # Ignore missing calls to `t.Parallel()` and only report incorrect uses of it.
+    ignore-missing: true
+
+  varnamelen:
+    ignore-type-assert-ok: true
+    ignore-map-index-ok: true
+    ignore-chan-recv-ok: true
+    max-distance: 10
+
+  gci:
+    sections:
+      - standard
+      - default
+      - prefix(github.com/inDriver/watchdocs-application-service)
+
+issues:
+  exclude-rules:
+    - path: /
+      linters:
+        - typecheck
+  exclude-dirs:
+    - docs
+    - migrations
+    - fixtures
+    - deployments
+    - config
+    - build
+    - mocks
+    - mock
+
+
+  exclude-files:
+    - ".*\\.pb\\.go"
+    - ".*\\.gen\\.go"
+    - "_test.go"
+    - "_mock.go"

@@ -8,4 +8,4 @@
    `goose -dir internal/infrastructure/storage/postgres/migrations postgres "postgres://postgres:postgres@localhost:5432/iam?sslmode=disable" up` or `make migrate-up`
 3. Run the application:
 4.
-`go run .\cmd\microservice\main.go ".\configs\local\config.toml"`
+`go run .\cmd\main.go ".\configs\local\config.toml"`

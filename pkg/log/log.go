@@ -12,7 +12,7 @@ import (
 // Field represents a structured logging field used by the log facade.
 type Field slog.Attr
 
-// String creates a string logging field
+// String creates a string logging field.
 func String(key, value string) Field {
 	return Field(slog.String(key, value))
 }
@@ -47,23 +47,23 @@ func Time(key string, value time.Time) Field {
 	return Field(slog.Time(key, value))
 }
 
-// Duration creates a duration time field in nanoseconds
+// Duration creates a duration time field in nanoseconds.
 func Duration(key string, value time.Duration) Field {
 	return Field(slog.Duration(key, value))
 }
 
-// Any creates a logging field with an arbitrary value
+// Any creates a logging field with an arbitrary value.
 func Any(key string, value interface{}) Field {
 	return Field(slog.Any(key, value))
 }
 
-// Error creates a logging field for an error value
+// Error creates a logging field for an error value.
 func Error(err error) Field {
 	return Field(slog.String("error", err.Error()))
 }
 
 // TraceFields extracts trace and span identifiers from the context
-// and returns them as logging fields
+// and returns them as logging fields.
 func TraceFields(ctx context.Context) []Field {
 	spanContext := trace.SpanContextFromContext(ctx)
 
@@ -99,6 +99,12 @@ func (l *Log) Warn(msg string, fields ...Field) {
 func (l *Log) Error(msg string, fields ...Field) {
 	attrs := fieldsToAttrs(fields)
 	l.logger.LogAttrs(context.Background(), slog.LevelError, msg, attrs...)
+}
+
+func (l *Log) Fatal(msg string, fields ...Field) {
+	attrs := fieldsToAttrs(fields)
+	l.logger.LogAttrs(context.Background(), slog.LevelError, msg, attrs...)
+	os.Exit(1)
 }
 
 func (l *Log) With(fields ...Field) Logger {
