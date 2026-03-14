@@ -17,16 +17,32 @@ coverage.*
 *.coverprofile
 profile.cov
 
-# Dependency directories (remove the comment below to include it)
-# vendor/
-
 # Go workspace file
 go.work
 go.work.sum
 
-# env file
+# Environment variable file
 .env
+*.env
 
-# Editor/IDE
-# .idea/
-# .vscode/
+# GoLand files
+.idea/
+*.iml
+.idea_modules/
+*.ipr
+*.iws
+
+# Visual Studio Code files
+.vscode/
+*.code-workspace
+
+# Logs
+logs/
+*.log
+
+# Local configuration
+configs/local/
+
+# Local Makefile
+Makefile.local
+makefile.local

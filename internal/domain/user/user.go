@@ -1,4 +1,8 @@
-package user
+package domain
+
+import (
+	"hrms/internal/infrastructure/errs"
+)
 
 // The struct already contains aggregated data from different User models that represent tabel entity
 // No JSON, nor Validation, nor DB tags should be there.
