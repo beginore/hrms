@@ -17,6 +17,7 @@ var (
 	ErrUserAlreadyExists      = errors.New("user already exists")
 	ErrInvalidCredentials     = errors.New("invalid credentials")
 	ErrCognitoOperationFailed = errors.New("cognito operation failed")
+	ErrUserNotConfirmed       = errors.New("user account is not confirmed")
 )
 
 type Service struct {
