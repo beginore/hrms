@@ -39,6 +39,8 @@ func (h *Handler) GenerateInvite(c *gin.Context) {
 			c.JSON(http.StatusNotFound, gin.H{"error": err.Error()})
 		case errors.Is(err, service.ErrGenerateInvite):
 			c.JSON(http.StatusConflict, gin.H{"error": err.Error()})
+		case errors.Is(err, service.ErrInviteEmailUnavailable):
+			c.JSON(http.StatusServiceUnavailable, gin.H{"error": err.Error()})
 		default:
 			log.Printf("[Invite Generate] Unexpected error: %v", err)
 			c.JSON(http.StatusInternalServerError, gin.H{"error": "internal server error"})

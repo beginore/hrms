@@ -3,51 +3,49 @@ package service
 import (
 	"context"
 	"fmt"
+	"net/smtp"
+	"strings"
 
 	"hrms/internal/infrastructure/config"
-
-	"github.com/aws/aws-sdk-go-v2/aws"
-	awsconfig "github.com/aws/aws-sdk-go-v2/config"
-	"github.com/aws/aws-sdk-go-v2/credentials"
-	"github.com/aws/aws-sdk-go-v2/service/sesv2"
-	"github.com/aws/aws-sdk-go-v2/service/sesv2/types"
 )
 
 type mailer struct {
-	client      *sesv2.Client
+	host        string
+	port        int
+	username    string
+	password    string
 	senderEmail string
+	enabled     bool
 }
 
 func newMailer(cfg *config.Config) (*mailer, error) {
-	var loadOpts []func(*awsconfig.LoadOptions) error
-
-	if cfg.AWS.AccessKeyID != "" && cfg.AWS.SecretAccessKey != "" {
-		loadOpts = append(loadOpts,
-			awsconfig.WithCredentialsProvider(
-				credentials.NewStaticCredentialsProvider(
-					cfg.AWS.AccessKeyID,
-					cfg.AWS.SecretAccessKey,
-					"",
-				),
-			),
-		)
+	senderEmail := strings.TrimSpace(cfg.SMTP.SenderEmail)
+	if senderEmail == "" {
+		senderEmail = strings.TrimSpace(cfg.SMTP.Username)
 	}
 
-	awsCfg, err := awsconfig.LoadDefaultConfig(
-		context.Background(),
-		append(loadOpts, awsconfig.WithRegion(cfg.AWS.Region))...,
-	)
-	if err != nil {
-		return nil, fmt.Errorf("load aws config for invite mailer: %w", err)
-	}
+	enabled := strings.TrimSpace(cfg.SMTP.Host) != "" &&
+		cfg.SMTP.Port > 0 &&
+		strings.TrimSpace(cfg.SMTP.Username) != "" &&
+		strings.TrimSpace(cfg.SMTP.Password) != "" &&
+		senderEmail != ""
 
 	return &mailer{
-		client:      sesv2.NewFromConfig(awsCfg),
-		senderEmail: cfg.SES.SenderEmail,
+		host:        strings.TrimSpace(cfg.SMTP.Host),
+		port:        cfg.SMTP.Port,
+		username:    strings.TrimSpace(cfg.SMTP.Username),
+		password:    cfg.SMTP.Password,
+		senderEmail: senderEmail,
+		enabled:     enabled,
 	}, nil
 }
 
 func (m *mailer) SendInvite(ctx context.Context, toEmail, firstName, organizationName, inviteCode, platformURL string) error {
+	_ = ctx
+	if !m.enabled {
+		return ErrInviteEmailUnavailable
+	}
+
 	subject := "You have been invited to join HRMS"
 
 	bodyText := fmt.Sprintf(`Hello %s,
@@ -65,24 +63,21 @@ This invitation expires in 24 hours and can only be used once.
 Best regards,
 HRMS System Team`, firstName, organizationName, inviteCode, platformURL)
 
-	input := &sesv2.SendEmailInput{
-		FromEmailAddress: aws.String(m.senderEmail),
-		Destination: &types.Destination{
-			ToAddresses: []string{toEmail},
-		},
-		Content: &types.EmailContent{
-			Simple: &types.Message{
-				Subject: &types.Content{Data: aws.String(subject)},
-				Body: &types.Body{
-					Text: &types.Content{Data: aws.String(bodyText)},
-				},
-			},
-		},
-	}
+	message := strings.Join([]string{
+		fmt.Sprintf("From: %s", m.senderEmail),
+		fmt.Sprintf("To: %s", toEmail),
+		fmt.Sprintf("Subject: %s", subject),
+		"MIME-Version: 1.0",
+		"Content-Type: text/plain; charset=\"UTF-8\"",
+		"",
+		bodyText,
+	}, "\r\n")
 
-	_, err := m.client.SendEmail(ctx, input)
+	addr := fmt.Sprintf("%s:%d", m.host, m.port)
+	auth := smtp.PlainAuth("", m.username, m.password, m.host)
+	err := smtp.SendMail(addr, auth, m.senderEmail, []string{toEmail}, []byte(message))
 	if err != nil {
-		return fmt.Errorf("failed to send invite email to %s: %w", toEmail, err)
+		return fmt.Errorf("failed to send invite email to %s via smtp: %w", toEmail, err)
 	}
 
 	return nil

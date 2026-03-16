@@ -9,3 +9,21 @@
 3. Run the application:
 4.
 `go run .\cmd\main.go ".\configs\local\config.toml"`
+
+## Invite SMTP
+
+Invites use SMTP configuration from the `[smtp]` section.
+
+For Gmail SMTP use:
+
+`host = "smtp.gmail.com"`
+
+`port = 587`
+
+`username = "your-email@gmail.com"`
+
+`password = "your-gmail-app-password"`
+
+`sender_email = "your-email@gmail.com"`
+
+Gmail requires an App Password when 2-Step Verification is enabled.

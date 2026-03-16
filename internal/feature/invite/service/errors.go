@@ -15,6 +15,7 @@ var (
 	ErrInviteExpired          = errors.New("invite has expired")
 	ErrInviteAlreadyUsed      = errors.New("invite has already been used")
 	ErrGenerateInvite         = errors.New("failed to generate unique invite code")
+	ErrInviteEmailUnavailable = errors.New("invite email delivery is not configured")
 	ErrPasswordRequired       = errors.New("password must be at least 8 characters and contain a special character")
 	ErrPhoneNumberRequired    = errors.New("phone number is required")
 	ErrUserAlreadyExists      = errors.New("user already exists")
