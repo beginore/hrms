@@ -33,6 +33,14 @@ type Config struct {
 	SES struct {
 		SenderEmail string `toml:"sender_email" env:"SES_SENDER_EMAIL" env-description:"Verified SES sender email"`
 	} `toml:"ses"`
+
+	SMTP struct {
+		Host        string `toml:"host" env:"SMTP_HOST"`
+		Port        int    `toml:"port" env:"SMTP_PORT" env-default:"587"`
+		Username    string `toml:"username" env:"SMTP_USERNAME"`
+		Password    string `toml:"password" env:"SMTP_PASSWORD"`
+		SenderEmail string `toml:"sender_email" env:"SMTP_SENDER_EMAIL"`
+	} `toml:"smtp"`
 }
 
 var (
