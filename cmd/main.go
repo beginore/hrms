@@ -6,6 +6,9 @@ import (
 	authHandler "hrms/internal/feature/auth/transport/http"
 	consentRepository "hrms/internal/feature/consent/repository"
 	consentService "hrms/internal/feature/consent/service"
+	inviteRepository "hrms/internal/feature/invite/repository"
+	inviteService "hrms/internal/feature/invite/service"
+	inviteHandler "hrms/internal/feature/invite/transport/http"
 	oganizationRepository "hrms/internal/feature/organization/repository"
 	organizationService "hrms/internal/feature/organization/service"
 	organizationHandler "hrms/internal/feature/organization/transport/http"
@@ -35,15 +38,21 @@ func main() {
 	// TODO: Initialize repositories for all modules.
 	orgRepo := oganizationRepository.NewOrganizationRepository(postgres.DB)
 	consentRepo := consentRepository.NewRepository(postgres.DB)
+	inviteRepo := inviteRepository.NewRepository(postgres.DB)
 	authRepo := authRepository.NewAuthRepository(postgres.DB)
 
 	// TODO: Initialize services for all modules.
 	authSvc := authService.NewAuthService(cognitoSvc, authRepo)
 	consentSvc := consentService.NewService(consentRepo)
 	orgSvc := organizationService.NewSignUpService(orgRepo, consentRepo, cognitoSvc, emailSvc)
+	inviteSvc, err := inviteService.NewService(inviteRepo, cfg, cognitoClient)
+	if err != nil {
+		logger.Fatal("Failed to initialize Invite service")
+	}
 
 	newAuthHandler := authHandler.NewAuthHandler(authSvc)
 	handler := organizationHandler.NewOrganizationHandler(orgSvc, consentSvc)
+	inviteHTTPHandler := inviteHandler.NewHandler(inviteSvc)
 
 	router := gin.Default()
 
@@ -55,6 +64,10 @@ func main() {
 	// Organizations
 	v1.POST("/organizations", handler.CreateOrganization)
 	v1.POST("/organizations/verify-otp", handler.VerifyOTP)
+	v1.POST("/invites/generate", inviteHTTPHandler.GenerateInvite)
+	v1.POST("/invites/verify", inviteHTTPHandler.VerifyInvite)
+	v1.POST("/invites/complete-registration", inviteHTTPHandler.CompleteRegistration)
+
 	// Consents
 	v1.POST("/organizations/consents", handler.SubmitConsents)
 	v1.GET("/organizations/consents/validate", handler.ValidateConsents)
