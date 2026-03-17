@@ -114,6 +114,13 @@ func (s *SignUpService) createCognitoUser(ctx context.Context, req CreateOrganiz
 func (s *SignUpService) VerifyOTP(ctx context.Context, req VerifyOTPRequest) error {
 	log.Printf("[VerifyOTP] Verifying OTP for email: %s", req.Email)
 
+	if req.Email == "" {
+		return ErrUserNotFound
+	}
+	if req.Code == "" {
+		return ErrInvalidOTP
+	}
+
 	if err := s.cognitoSvc.ConfirmSignUp(ctx, req.Email, req.Code); err != nil {
 		log.Printf("[VerifyOTP] Cognito ConfirmSignUp failed: %v", err)
 		return err

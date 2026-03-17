@@ -1,9 +1,15 @@
 package service
 
 import (
+	"hrms/internal/feature/auth/repository"
+	authPostgres "hrms/internal/feature/auth/repository/postgres"
+
 	"context"
 	"errors"
 	"hrms/internal/infrastructure/app/cognito"
+	"log"
+
+	"github.com/google/uuid"
 )
 
 type AuthService interface {
@@ -13,10 +19,11 @@ type AuthService interface {
 
 type authService struct {
 	cognitoSvc *cognito.Service
+	repo       repository.AuthRepository
 }
 
-func NewAuthService(cognitoSvc *cognito.Service) AuthService {
-	return &authService{cognitoSvc: cognitoSvc}
+func NewAuthService(cognitoSvc *cognito.Service, repo repository.AuthRepository) AuthService {
+	return &authService{cognitoSvc: cognitoSvc, repo: repo}
 }
 
 func (s *authService) Login(ctx context.Context, req LoginRequest) (*TokenResponse, error) {
@@ -26,7 +33,7 @@ func (s *authService) Login(ctx context.Context, req LoginRequest) (*TokenRespon
 	output, err := s.cognitoSvc.SignIn(ctx, req.Email, req.Password)
 	if err != nil {
 		if errors.Is(err, cognito.ErrInvalidCredentials) {
-			return nil, ErrUserNotConfirmed
+			return nil, ErrInvalidCredentials
 		}
 		if errors.Is(err, cognito.ErrUserNotConfirmed) {
 			return nil, ErrUserNotConfirmed
@@ -34,6 +41,20 @@ func (s *authService) Login(ctx context.Context, req LoginRequest) (*TokenRespon
 		return nil, err
 	}
 	result := output.AuthenticationResult
+	userId, cognitoUsername, err := s.cognitoSvc.ParseTokenClaims(*result.AccessToken)
+	if err != nil {
+		log.Printf("[Auth] Failed to parse token claims %v", err)
+		return nil, err
+	}
+	if err := s.repo.InsertUserSession(ctx, authPostgres.InsertUserSessionParams{
+		ID:              uuid.New(),
+		UserID:          userId,
+		CognitoUsername: cognitoUsername,
+		RefreshToken:    *result.RefreshToken,
+		ExpiresAt:       repository.SessionExpiresAt(),
+	}); err != nil {
+		log.Printf("[Auth] Failed to save session %v", err)
+	}
 	return &TokenResponse{
 		IdToken:      *result.IdToken,
 		AccessToken:  *result.AccessToken,
@@ -48,5 +69,31 @@ func (s *authService) RefreshToken(ctx context.Context, req RefreshTokenRequest)
 		return nil, ErrInvalidRefreshToken
 	}
 
-	output, err := s.cognitoSvc.RefreshTokens()
+	session, err := s.repo.GetSessionByRefreshToken(ctx, req.RefreshToken)
+	if err != nil {
+		log.Printf("[Auth] Failed to get session %v", err)
+		return nil, ErrInvalidRefreshToken
+	}
+
+	output, err := s.cognitoSvc.RefreshToken(ctx, req.RefreshToken, session.CognitoUsername)
+	if err != nil {
+		if errors.Is(err, cognito.ErrInvalidRefreshToken) {
+			_ = s.repo.DeleteSessionByRefreshToken(ctx, session.RefreshToken)
+			return nil, ErrInvalidRefreshToken
+		}
+		return nil, err
+	}
+	result := output.AuthenticationResult
+	// Since we have disabled refresh token rotation in our cognito, it will just return is nil, so we just use our current refresh token for now ;D
+	refreshToken := req.RefreshToken
+	if result.RefreshToken != nil {
+		refreshToken = *result.RefreshToken
+	}
+	return &TokenResponse{
+		IdToken:      *result.IdToken,
+		AccessToken:  *result.AccessToken,
+		RefreshToken: refreshToken,
+		ExpiresIn:    result.ExpiresIn,
+		TokenType:    *result.TokenType,
+	}, nil
 }
