@@ -1,6 +1,9 @@
 package main
 
 import (
+	authRepository "hrms/internal/feature/auth/repository"
+	authService "hrms/internal/feature/auth/service"
+	authHandler "hrms/internal/feature/auth/transport/http"
 	consentRepository "hrms/internal/feature/consent/repository"
 	consentService "hrms/internal/feature/consent/service"
 	oganizationRepository "hrms/internal/feature/organization/repository"
@@ -32,20 +35,27 @@ func main() {
 	// TODO: Initialize repositories for all modules.
 	orgRepo := oganizationRepository.NewOrganizationRepository(postgres.DB)
 	consentRepo := consentRepository.NewRepository(postgres.DB)
+	authRepo := authRepository.NewAuthRepository(postgres.DB)
 
 	// TODO: Initialize services for all modules.
+	authSvc := authService.NewAuthService(cognitoSvc, authRepo)
 	consentSvc := consentService.NewService(consentRepo)
 	orgSvc := organizationService.NewSignUpService(orgRepo, consentRepo, cognitoSvc, emailSvc)
 
+	newAuthHandler := authHandler.NewAuthHandler(authSvc)
 	handler := organizationHandler.NewOrganizationHandler(orgSvc, consentSvc)
 
 	router := gin.Default()
 
 	v1 := router.Group("/v1")
 
+	// Auth
+	v1.POST("/auth/login", newAuthHandler.Login)
+	v1.POST("/auth/refresh", newAuthHandler.RefreshTokens)
+	// Organizations
 	v1.POST("/organizations", handler.CreateOrganization)
 	v1.POST("/organizations/verify-otp", handler.VerifyOTP)
-
+	// Consents
 	v1.POST("/organizations/consents", handler.SubmitConsents)
 	v1.GET("/organizations/consents/validate", handler.ValidateConsents)
 	v1.GET("/legal/documents", handler.GetDocuments)
