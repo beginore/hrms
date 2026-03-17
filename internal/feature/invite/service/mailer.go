@@ -3,6 +3,7 @@ package service
 import (
 	"context"
 	"fmt"
+	"log"
 	"net/smtp"
 	"strings"
 
@@ -43,8 +44,11 @@ func newMailer(cfg *config.Config) (*mailer, error) {
 func (m *mailer) SendInvite(ctx context.Context, toEmail, firstName, organizationName, inviteCode, platformURL string) error {
 	_ = ctx
 	if !m.enabled {
+		log.Printf("[Invite Mailer] SMTP delivery is not configured for email=%q", toEmail)
 		return ErrInviteEmailUnavailable
 	}
+
+	log.Printf("[Invite Mailer] Sending SMTP invite email to=%q via host=%q port=%d", toEmail, m.host, m.port)
 
 	subject := "You have been invited to join HRMS"
 
@@ -77,8 +81,11 @@ HRMS System Team`, firstName, organizationName, inviteCode, platformURL)
 	auth := smtp.PlainAuth("", m.username, m.password, m.host)
 	err := smtp.SendMail(addr, auth, m.senderEmail, []string{toEmail}, []byte(message))
 	if err != nil {
+		log.Printf("[Invite Mailer] SMTP send failed to=%q: %v", toEmail, err)
 		return fmt.Errorf("failed to send invite email to %s via smtp: %w", toEmail, err)
 	}
+
+	log.Printf("[Invite Mailer] SMTP invite email sent to=%q", toEmail)
 
 	return nil
 }

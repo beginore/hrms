@@ -29,6 +29,7 @@ type VerifyInviteResponse struct {
 	OrganizationName string    `json:"organizationName"`
 	FirstName        string    `json:"firstName"`
 	LastName         string    `json:"lastName"`
+	FullName         string    `json:"fullName"`
 	Email            string    `json:"email"`
 	Role             string    `json:"role"`
 	Position         *string   `json:"position,omitempty"`
@@ -39,8 +40,6 @@ type VerifyInviteResponse struct {
 type CompleteRegistrationRequest struct {
 	Code        string `json:"code"`
 	Password    string `json:"password"`
-	FirstName   string `json:"firstName,omitempty"`
-	LastName    string `json:"lastName,omitempty"`
 	PhoneNumber string `json:"phoneNumber"`
 }
 

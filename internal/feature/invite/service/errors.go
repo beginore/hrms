@@ -18,5 +18,16 @@ var (
 	ErrInviteEmailUnavailable = errors.New("invite email delivery is not configured")
 	ErrPasswordRequired       = errors.New("password must be at least 8 characters and contain a special character")
 	ErrPhoneNumberRequired    = errors.New("phone number is required")
+	ErrInvalidPhoneNumber     = errors.New("phone number must be in international format, for example +77001234567")
+	ErrPhoneNumberExists      = errors.New("phone number already exists")
+	ErrEmailAlreadyExists     = errors.New("email already exists")
 	ErrUserAlreadyExists      = errors.New("user already exists")
 )
+
+type PasswordPolicyError struct {
+	Message string
+}
+
+func (e *PasswordPolicyError) Error() string {
+	return e.Message
+}

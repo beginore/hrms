@@ -21,6 +21,7 @@ func NewHandler(service *service.Service) *Handler {
 func (h *Handler) GenerateInvite(c *gin.Context) {
 	var req service.GenerateInviteRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
+		log.Printf("[Invite Generate] Invalid request body: %v", err)
 		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid request body"})
 		return
 	}
@@ -54,6 +55,7 @@ func (h *Handler) GenerateInvite(c *gin.Context) {
 func (h *Handler) VerifyInvite(c *gin.Context) {
 	var req service.VerifyInviteRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
+		log.Printf("[Invite Verify] Invalid request body: %v", err)
 		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid request body"})
 		return
 	}
@@ -81,21 +83,29 @@ func (h *Handler) VerifyInvite(c *gin.Context) {
 func (h *Handler) CompleteRegistration(c *gin.Context) {
 	var req service.CompleteRegistrationRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
+		log.Printf("[Invite CompleteRegistration] Invalid request body: %v", err)
 		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid request body"})
 		return
 	}
 
 	resp, err := h.service.CompleteRegistration(c.Request.Context(), req)
 	if err != nil {
+		var passwordPolicyErr *service.PasswordPolicyError
+
 		switch {
 		case errors.Is(err, service.ErrInviteCodeRequired),
 			errors.Is(err, service.ErrPasswordRequired),
-			errors.Is(err, service.ErrPhoneNumberRequired):
+			errors.Is(err, service.ErrPhoneNumberRequired),
+			errors.Is(err, service.ErrInvalidPhoneNumber):
 			c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		case errors.As(err, &passwordPolicyErr):
+			c.JSON(http.StatusBadRequest, gin.H{"error": passwordPolicyErr.Error()})
 		case errors.Is(err, service.ErrInviteNotFound):
 			c.JSON(http.StatusNotFound, gin.H{"error": err.Error()})
 		case errors.Is(err, service.ErrInviteExpired),
 			errors.Is(err, service.ErrInviteAlreadyUsed),
+			errors.Is(err, service.ErrPhoneNumberExists),
+			errors.Is(err, service.ErrEmailAlreadyExists),
 			errors.Is(err, service.ErrUserAlreadyExists):
 			c.JSON(http.StatusConflict, gin.H{"error": err.Error()})
 		default:

@@ -160,6 +160,15 @@ func IsUniqueViolation(err error) bool {
 	return err != nil && errors.As(err, &pgErr) && pgErr.Code == "23505"
 }
 
+func UniqueConstraintName(err error) string {
+	var pgErr *pgconn.PgError
+	if err != nil && errors.As(err, &pgErr) && pgErr.Code == "23505" {
+		return pgErr.ConstraintName
+	}
+
+	return ""
+}
+
 func scanInvite(scanner interface {
 	Scan(dest ...any) error
 }) (Invite, error) {
