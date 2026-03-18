@@ -6,6 +6,9 @@ import (
 	authHandler "hrms/internal/feature/auth/transport/http"
 	consentRepository "hrms/internal/feature/consent/repository"
 	consentService "hrms/internal/feature/consent/service"
+	eventsRepository "hrms/internal/feature/events/repository"
+	eventsService "hrms/internal/feature/events/service"
+	eventsHandler "hrms/internal/feature/events/transport/http"
 	inviteRepository "hrms/internal/feature/invite/repository"
 	inviteService "hrms/internal/feature/invite/service"
 	inviteHandler "hrms/internal/feature/invite/transport/http"
@@ -15,6 +18,9 @@ import (
 	oganizationRepository "hrms/internal/feature/organization/repository"
 	organizationService "hrms/internal/feature/organization/service"
 	organizationHandler "hrms/internal/feature/organization/transport/http"
+	userRepository "hrms/internal/feature/user/repository"
+	userService "hrms/internal/feature/user/service"
+	userHandler "hrms/internal/feature/user/transport/http"
 	"hrms/internal/infrastructure/app/cognito"
 	"hrms/internal/infrastructure/config"
 	"hrms/internal/infrastructure/email"
@@ -44,14 +50,18 @@ func main() {
 	consentRepo := consentRepository.NewRepository(postgres.DB)
 	inviteRepo := inviteRepository.NewRepository(postgres.DB)
 	authRepo := authRepository.NewAuthRepository(postgres.DB)
+	userRepo := userRepository.NewRepository(postgres.DB)
+	eventsRepo := eventsRepository.NewRepository(postgres.DB)
 	notificationRepo := notificationRepository.NewNotificationRepository(postgres.DB)
 
 	// TODO: Initialize services for all modules.
 	authSvc := authService.NewAuthService(cognitoSvc, authRepo)
 	consentSvc := consentService.NewService(consentRepo)
-	orgSvc := organizationService.NewSignUpService(orgRepo, consentRepo, cognitoSvc, emailSvc)
+	userSvc := userService.NewService(cognitoSvc, userRepo)
+	eventsSvc := eventsService.NewService(eventsRepo)
 	notificationSvc := notificationService.NewService(notificationRepo)
-	inviteSvc, err := inviteService.NewService(inviteRepo, cfg, cognitoClient)
+	orgSvc := organizationService.NewSignUpService(orgRepo, consentRepo, notificationSvc, cognitoSvc, emailSvc)
+	inviteSvc, err := inviteService.NewService(inviteRepo, notificationSvc, cfg, cognitoClient)
 	if err != nil {
 		logger.Fatal("Failed to initialize Invite service")
 	}
@@ -59,6 +69,8 @@ func main() {
 	newAuthHandler := authHandler.NewAuthHandler(authSvc)
 	handler := organizationHandler.NewOrganizationHandler(orgSvc, consentSvc)
 	inviteHTTPHandler := inviteHandler.NewHandler(inviteSvc)
+	userHTTPHandler := userHandler.NewHandler(userSvc)
+	eventsHTTPHandler := eventsHandler.NewHandler(eventsSvc)
 	notificationHTTPHandler := notificationHandler.NewHandler(notificationSvc)
 
 	router := gin.Default()
@@ -76,6 +88,7 @@ func main() {
 	// Auth
 	v1.POST("/auth/login", newAuthHandler.Login)
 	v1.POST("/auth/refresh", newAuthHandler.RefreshTokens)
+	v1.GET("/profile/me", userHTTPHandler.Me)
 	// Organizations
 	v1.POST("/organizations", handler.CreateOrganization)
 	v1.POST("/organizations/verify-otp", handler.VerifyOTP)
@@ -83,12 +96,17 @@ func main() {
 	v1.POST("/invites/verify", inviteHTTPHandler.VerifyInvite)
 	v1.POST("/invites/complete-registration", inviteHTTPHandler.CompleteRegistration)
 
+	events := v1.Group("/events")
+	events.Use(cognito.AuthMiddleware(cognitoSvc, userRepo))
+	events.GET("/upcoming", eventsHTTPHandler.Upcoming)
+	events.GET("/my", eventsHTTPHandler.My)
+	events.POST("", eventsHTTPHandler.Create)
+	events.PATCH("/:id", eventsHTTPHandler.Update)
+	events.DELETE("/:id", eventsHTTPHandler.Delete)
+
 	// Notifications
 	notifications := v1.Group("/notifications")
-	notifications.Use(cognito.AuthMiddleware(cognitoSvc))
-	notifications.POST("/payroll", notificationHTTPHandler.CreatePayrollNotification)
-	notifications.POST("/salary", notificationHTTPHandler.CreateSalaryNotification)
-	notifications.POST("/system", notificationHTTPHandler.CreateSystemNotification)
+	notifications.Use(cognito.AuthMiddleware(cognitoSvc, userRepo))
 	notifications.GET("", notificationHTTPHandler.ListNotifications)
 	notifications.PATCH("/:id/read", notificationHTTPHandler.MarkAsRead)
 	notifications.PATCH("/read-all", notificationHTTPHandler.MarkAllAsRead)

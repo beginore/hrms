@@ -38,3 +38,23 @@ type MarkAllAsReadRequest struct{}
 type MarkAllAsReadResponse struct {
 	Updated int64 `json:"updated"`
 }
+
+type NotifyUserRequest struct {
+	UserID   string
+	OrgID    *string
+	Title    string
+	Message  string
+	Metadata json.RawMessage
+}
+
+type NotifyRoleRequest struct {
+	OrgID    *string
+	Role     string
+	Title    string
+	Message  string
+	Metadata json.RawMessage
+}
+
+type NotifyResult struct {
+	Created int `json:"created"`
+}

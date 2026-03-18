@@ -12,8 +12,11 @@ import (
 )
 
 const (
-	defaultLimit = 20
-	maxLimit     = 100
+	defaultLimit   = 20
+	maxLimit       = 100
+	RoleSuperAdmin = "SysAdmin"
+	RoleAdmin      = "Admin"
+	RoleEmployee   = "Employee"
 )
 
 type Service struct {
@@ -24,16 +27,20 @@ func NewService(repo repository.NotificationRepository) *Service {
 	return &Service{repo: repo}
 }
 
-func (s *Service) CreatePayrollNotification(ctx context.Context, userIDRaw string, req CreateNotificationRequest) (*NotificationResponse, error) {
-	return s.createNotification(ctx, userIDRaw, repository.TypePayroll, req)
+func (s *Service) NotifyPayrollToAdmins(ctx context.Context, req NotifyRoleRequest) (*NotifyResult, error) {
+	return s.notifyToRole(ctx, repository.TypePayroll, req)
 }
 
-func (s *Service) CreateSalaryNotification(ctx context.Context, userIDRaw string, req CreateNotificationRequest) (*NotificationResponse, error) {
-	return s.createNotification(ctx, userIDRaw, repository.TypeSalary, req)
+func (s *Service) NotifySalaryToEmployee(ctx context.Context, req NotifyUserRequest) (*NotificationResponse, error) {
+	return s.notifyToUser(ctx, repository.TypeSalary, req)
 }
 
-func (s *Service) CreateSystemNotification(ctx context.Context, userIDRaw string, req CreateNotificationRequest) (*NotificationResponse, error) {
-	return s.createNotification(ctx, userIDRaw, repository.TypeSystem, req)
+func (s *Service) NotifySystemToUser(ctx context.Context, req NotifyUserRequest) (*NotificationResponse, error) {
+	return s.notifyToUser(ctx, repository.TypeSystem, req)
+}
+
+func (s *Service) NotifySystemToRole(ctx context.Context, req NotifyRoleRequest) (*NotifyResult, error) {
+	return s.notifyToRole(ctx, repository.TypeSystem, req)
 }
 
 func (s *Service) ListNotifications(ctx context.Context, userIDRaw string, req ListNotificationsRequest) ([]NotificationResponse, error) {
@@ -107,8 +114,8 @@ func (s *Service) MarkAllAsRead(ctx context.Context, userIDRaw string) (*MarkAll
 	return &MarkAllAsReadResponse{Updated: updated}, nil
 }
 
-func (s *Service) createNotification(ctx context.Context, userIDRaw, notificationType string, req CreateNotificationRequest) (*NotificationResponse, error) {
-	userID, err := parseUserID(userIDRaw)
+func (s *Service) notifyToUser(ctx context.Context, notificationType string, req NotifyUserRequest) (*NotificationResponse, error) {
+	userID, err := parseUserID(req.UserID)
 	if err != nil {
 		return nil, err
 	}
@@ -143,6 +150,57 @@ func (s *Service) createNotification(ctx context.Context, userIDRaw, notificatio
 
 	response := toNotificationResponse(notification)
 	return &response, nil
+}
+
+func (s *Service) notifyToRole(ctx context.Context, notificationType string, req NotifyRoleRequest) (*NotifyResult, error) {
+	role := strings.TrimSpace(req.Role)
+	if role == "" {
+		return nil, ErrRoleRequired
+	}
+
+	orgID, err := parseOptionalOrgID(req.OrgID)
+	if err != nil {
+		return nil, err
+	}
+
+	title := strings.TrimSpace(req.Title)
+	if title == "" {
+		return nil, ErrTitleRequired
+	}
+
+	message := strings.TrimSpace(req.Message)
+	if message == "" {
+		return nil, ErrMessageRequired
+	}
+
+	var userIDs []uuid.UUID
+	if orgID != nil {
+		userIDs, err = s.repo.ListUserIDsByOrgAndRole(ctx, *orgID, role)
+	} else {
+		userIDs, err = s.repo.ListUserIDsByRole(ctx, role)
+	}
+	if err != nil {
+		return nil, err
+	}
+
+	params := make([]repository.CreateNotificationParams, 0, len(userIDs))
+	for _, userID := range userIDs {
+		params = append(params, repository.CreateNotificationParams{
+			ID:       uuid.New(),
+			UserID:   userID,
+			OrgID:    orgID,
+			Type:     notificationType,
+			Title:    title,
+			Message:  message,
+			Metadata: normalizeMetadata(req.Metadata),
+		})
+	}
+
+	if err := s.repo.CreateBulk(ctx, params); err != nil {
+		return nil, err
+	}
+
+	return &NotifyResult{Created: len(params)}, nil
 }
 
 func parseUserID(raw string) (uuid.UUID, error) {

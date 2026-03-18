@@ -6,6 +6,7 @@ var (
 	ErrUserIDRequired         = errors.New("user_id is required")
 	ErrInvalidUserID          = errors.New("invalid user_id")
 	ErrInvalidOrgID           = errors.New("invalid org_id")
+	ErrRoleRequired           = errors.New("role is required")
 	ErrTitleRequired          = errors.New("title is required")
 	ErrMessageRequired        = errors.New("message is required")
 	ErrInvalidNotificationID  = errors.New("invalid notification_id")

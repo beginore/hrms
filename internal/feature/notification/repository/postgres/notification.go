@@ -51,6 +51,81 @@ RETURNING id, user_id, org_id, type, title, message, metadata, is_read, read_at,
 	return scanNotification(row)
 }
 
+func (r *notificationRepository) CreateBulk(ctx context.Context, params []repository.CreateNotificationParams) error {
+	if len(params) == 0 {
+		return nil
+	}
+
+	tx, err := r.db.BeginTx(ctx, nil)
+	if err != nil {
+		return fmt.Errorf("begin notification bulk insert tx: %w", err)
+	}
+	defer tx.Rollback()
+
+	const query = `
+INSERT INTO notifications (
+    id,
+    user_id,
+    org_id,
+    type,
+    title,
+    message,
+    metadata
+)
+VALUES ($1, $2, $3, $4, $5, $6, $7)
+`
+
+	stmt, err := tx.PrepareContext(ctx, query)
+	if err != nil {
+		return fmt.Errorf("prepare notification bulk insert: %w", err)
+	}
+	defer stmt.Close()
+
+	for _, item := range params {
+		if _, err := stmt.ExecContext(
+			ctx,
+			item.ID,
+			item.UserID,
+			item.OrgID,
+			item.Type,
+			item.Title,
+			item.Message,
+			normalizeMetadata(item.Metadata),
+		); err != nil {
+			return fmt.Errorf("exec notification bulk insert: %w", err)
+		}
+	}
+
+	if err := tx.Commit(); err != nil {
+		return fmt.Errorf("commit notification bulk insert: %w", err)
+	}
+
+	return nil
+}
+
+func (r *notificationRepository) ListUserIDsByRole(ctx context.Context, role string) ([]uuid.UUID, error) {
+	const query = `
+SELECT u.id
+FROM users u
+LEFT JOIN employees e ON e.user_id = u.id
+WHERE LOWER(COALESCE(NULLIF(TRIM(e.role), ''), NULLIF(TRIM(u.role), ''))) = LOWER($1)
+`
+
+	return r.listUserIDs(ctx, query, role)
+}
+
+func (r *notificationRepository) ListUserIDsByOrgAndRole(ctx context.Context, orgID uuid.UUID, role string) ([]uuid.UUID, error) {
+	const query = `
+SELECT u.id
+FROM users u
+LEFT JOIN employees e ON e.user_id = u.id
+WHERE u.org_id = $1
+  AND LOWER(COALESCE(NULLIF(TRIM(e.role), ''), NULLIF(TRIM(u.role), ''))) = LOWER($2)
+`
+
+	return r.listUserIDs(ctx, query, orgID, role)
+}
+
 func (r *notificationRepository) ListByUserID(ctx context.Context, params repository.ListNotificationsParams) ([]repository.Notification, error) {
 	baseQuery := `
 SELECT id, user_id, org_id, type, title, message, metadata, is_read, read_at, created_at
@@ -138,6 +213,29 @@ func normalizeMetadata(metadata json.RawMessage) []byte {
 	}
 
 	return []byte(trimmed)
+}
+
+func (r *notificationRepository) listUserIDs(ctx context.Context, query string, args ...any) ([]uuid.UUID, error) {
+	rows, err := r.db.QueryContext(ctx, query, args...)
+	if err != nil {
+		return nil, fmt.Errorf("query notification recipients: %w", err)
+	}
+	defer rows.Close()
+
+	var userIDs []uuid.UUID
+	for rows.Next() {
+		var userID uuid.UUID
+		if err := rows.Scan(&userID); err != nil {
+			return nil, fmt.Errorf("scan notification recipient: %w", err)
+		}
+		userIDs = append(userIDs, userID)
+	}
+
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("iterate notification recipients: %w", err)
+	}
+
+	return userIDs, nil
 }
 
 func scanNotification(scanner interface {

@@ -1,7 +1,6 @@
 package http
 
 import (
-	"context"
 	"errors"
 	"fmt"
 	"log"
@@ -20,18 +19,6 @@ type Handler struct {
 
 func NewHandler(service *service.Service) *Handler {
 	return &Handler{service: service}
-}
-
-func (h *Handler) CreatePayrollNotification(c *gin.Context) {
-	h.createByType(c, h.service.CreatePayrollNotification)
-}
-
-func (h *Handler) CreateSalaryNotification(c *gin.Context) {
-	h.createByType(c, h.service.CreateSalaryNotification)
-}
-
-func (h *Handler) CreateSystemNotification(c *gin.Context) {
-	h.createByType(c, h.service.CreateSystemNotification)
 }
 
 func (h *Handler) ListNotifications(c *gin.Context) {
@@ -112,38 +99,6 @@ func (h *Handler) MarkAllAsRead(c *gin.Context) {
 	}
 
 	c.JSON(http.StatusOK, resp)
-}
-
-func (h *Handler) createByType(c *gin.Context, create func(ctx context.Context, userID string, req service.CreateNotificationRequest) (*service.NotificationResponse, error)) {
-	var req service.CreateNotificationRequest
-	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid request body"})
-		return
-	}
-
-	userID, err := currentUserID(c)
-	if err != nil {
-		c.JSON(http.StatusUnauthorized, gin.H{"error": err.Error()})
-		return
-	}
-
-	resp, err := create(c.Request.Context(), userID, req)
-	if err != nil {
-		switch {
-		case errors.Is(err, service.ErrUserIDRequired),
-			errors.Is(err, service.ErrInvalidUserID),
-			errors.Is(err, service.ErrInvalidOrgID),
-			errors.Is(err, service.ErrTitleRequired),
-			errors.Is(err, service.ErrMessageRequired):
-			c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
-		default:
-			log.Printf("[Notification Create] Unexpected error: %v", err)
-			c.JSON(http.StatusInternalServerError, gin.H{"error": "internal server error"})
-		}
-		return
-	}
-
-	c.JSON(http.StatusCreated, resp)
 }
 
 func currentUserID(c *gin.Context) (string, error) {
