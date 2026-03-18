@@ -12,6 +12,9 @@ import (
 	oganizationRepository "hrms/internal/feature/organization/repository"
 	organizationService "hrms/internal/feature/organization/service"
 	organizationHandler "hrms/internal/feature/organization/transport/http"
+	userRepository "hrms/internal/feature/user/repository"
+	userService "hrms/internal/feature/user/service"
+	userHandler "hrms/internal/feature/user/transport/http"
 	"hrms/internal/infrastructure/app/cognito"
 	"hrms/internal/infrastructure/config"
 	"hrms/internal/infrastructure/email"
@@ -40,11 +43,13 @@ func main() {
 	consentRepo := consentRepository.NewRepository(postgres.DB)
 	inviteRepo := inviteRepository.NewRepository(postgres.DB)
 	authRepo := authRepository.NewAuthRepository(postgres.DB)
+	userRepo := userRepository.NewRepository(postgres.DB)
 
 	// TODO: Initialize services for all modules.
 	authSvc := authService.NewAuthService(cognitoSvc, authRepo)
 	consentSvc := consentService.NewService(consentRepo)
 	orgSvc := organizationService.NewSignUpService(orgRepo, consentRepo, cognitoSvc, emailSvc)
+	userSvc := userService.NewService(cognitoSvc, userRepo)
 	inviteSvc, err := inviteService.NewService(inviteRepo, cfg, cognitoClient)
 	if err != nil {
 		logger.Fatal("Failed to initialize Invite service")
@@ -53,6 +58,7 @@ func main() {
 	newAuthHandler := authHandler.NewAuthHandler(authSvc)
 	handler := organizationHandler.NewOrganizationHandler(orgSvc, consentSvc)
 	inviteHTTPHandler := inviteHandler.NewHandler(inviteSvc)
+	userHTTPHandler := userHandler.NewHandler(userSvc)
 
 	router := gin.Default()
 
@@ -61,6 +67,7 @@ func main() {
 	// Auth
 	v1.POST("/auth/login", newAuthHandler.Login)
 	v1.POST("/auth/refresh", newAuthHandler.RefreshTokens)
+	v1.GET("/profile/me", userHTTPHandler.Me)
 	// Organizations
 	v1.POST("/organizations", handler.CreateOrganization)
 	v1.POST("/organizations/verify-otp", handler.VerifyOTP)
