@@ -1,11 +1,10 @@
 package service
 
 import (
-	"hrms/internal/feature/auth/repository"
-	authPostgres "hrms/internal/feature/auth/repository/postgres"
-
 	"context"
 	"errors"
+	"hrms/internal/feature/auth/repository"
+	authPostgres "hrms/internal/feature/auth/repository/postgres"
 	"hrms/internal/infrastructure/app/cognito"
 	"log"
 
