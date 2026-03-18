@@ -9,6 +9,9 @@ import (
 	inviteRepository "hrms/internal/feature/invite/repository"
 	inviteService "hrms/internal/feature/invite/service"
 	inviteHandler "hrms/internal/feature/invite/transport/http"
+	notificationRepository "hrms/internal/feature/notification/repository/postgres"
+	notificationService "hrms/internal/feature/notification/service"
+	notificationHandler "hrms/internal/feature/notification/transport/http"
 	oganizationRepository "hrms/internal/feature/organization/repository"
 	organizationService "hrms/internal/feature/organization/service"
 	organizationHandler "hrms/internal/feature/organization/transport/http"
@@ -18,6 +21,7 @@ import (
 	"hrms/internal/infrastructure/storage/postgres"
 	"hrms/pkg/log"
 
+	"github.com/gin-contrib/cors"
 	"github.com/gin-gonic/gin"
 )
 
@@ -40,11 +44,13 @@ func main() {
 	consentRepo := consentRepository.NewRepository(postgres.DB)
 	inviteRepo := inviteRepository.NewRepository(postgres.DB)
 	authRepo := authRepository.NewAuthRepository(postgres.DB)
+	notificationRepo := notificationRepository.NewNotificationRepository(postgres.DB)
 
 	// TODO: Initialize services for all modules.
 	authSvc := authService.NewAuthService(cognitoSvc, authRepo)
 	consentSvc := consentService.NewService(consentRepo)
 	orgSvc := organizationService.NewSignUpService(orgRepo, consentRepo, cognitoSvc, emailSvc)
+	notificationSvc := notificationService.NewService(notificationRepo)
 	inviteSvc, err := inviteService.NewService(inviteRepo, cfg, cognitoClient)
 	if err != nil {
 		logger.Fatal("Failed to initialize Invite service")
@@ -53,8 +59,17 @@ func main() {
 	newAuthHandler := authHandler.NewAuthHandler(authSvc)
 	handler := organizationHandler.NewOrganizationHandler(orgSvc, consentSvc)
 	inviteHTTPHandler := inviteHandler.NewHandler(inviteSvc)
+	notificationHTTPHandler := notificationHandler.NewHandler(notificationSvc)
 
 	router := gin.Default()
+
+	router.Use(cors.New(cors.Config{
+		AllowOrigins:     []string{"http://localhost:5173"},
+		AllowMethods:     []string{"GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"},
+		AllowHeaders:     []string{"Origin", "Content-Type", "Accept", "Authorization"},
+		ExposeHeaders:    []string{"Content-Length"},
+		AllowCredentials: true,
+	}))
 
 	v1 := router.Group("/v1")
 
@@ -67,6 +82,16 @@ func main() {
 	v1.POST("/invites/generate", inviteHTTPHandler.GenerateInvite)
 	v1.POST("/invites/verify", inviteHTTPHandler.VerifyInvite)
 	v1.POST("/invites/complete-registration", inviteHTTPHandler.CompleteRegistration)
+
+	// Notifications
+	notifications := v1.Group("/notifications")
+	notifications.Use(cognito.AuthMiddleware(cognitoSvc))
+	notifications.POST("/payroll", notificationHTTPHandler.CreatePayrollNotification)
+	notifications.POST("/salary", notificationHTTPHandler.CreateSalaryNotification)
+	notifications.POST("/system", notificationHTTPHandler.CreateSystemNotification)
+	notifications.GET("", notificationHTTPHandler.ListNotifications)
+	notifications.PATCH("/:id/read", notificationHTTPHandler.MarkAsRead)
+	notifications.PATCH("/read-all", notificationHTTPHandler.MarkAllAsRead)
 
 	// Consents
 	v1.POST("/organizations/consents", handler.SubmitConsents)
