@@ -5,6 +5,7 @@
 package postgres
 
 import (
+	"database/sql"
 	"time"
 
 	"github.com/google/uuid"
@@ -43,6 +44,21 @@ type Employee struct {
 	Role         string    `json:"role"`
 	SalaryRate   string    `json:"salary_rate"`
 	Status       string    `json:"status"`
+}
+
+type Invite struct {
+	ID        uuid.UUID      `json:"id"`
+	OrgID     uuid.UUID      `json:"org_id"`
+	FirstName string         `json:"first_name"`
+	LastName  string         `json:"last_name"`
+	Email     string         `json:"email"`
+	Code      string         `json:"code"`
+	Role      string         `json:"role"`
+	Position  sql.NullString `json:"position"`
+	ExpiresAt time.Time      `json:"expires_at"`
+	IsUsed    bool           `json:"is_used"`
+	UsedAt    sql.NullTime   `json:"used_at"`
+	CreatedAt time.Time      `json:"created_at"`
 }
 
 type Organization struct {

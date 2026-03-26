@@ -1,0 +1,212 @@
+@baseUrl = http://localhost:8080/v1
+@accessToken = YOUR_ACCESS_TOKEN_HERE
+@employeeId = YOUR_EMPLOYEE_ID_HERE
+
+
+### ──────────────────────────────────────────
+### AUTH
+### ──────────────────────────────────────────
+
+### POST /auth/login — логин, получить accessToken и refreshToken
+POST {{baseUrl}}/auth/login
+Content-Type: application/json
+
+{
+  "email": "admin@example.com",
+  "password": "Password123!"
+}
+
+###
+
+### POST /auth/refresh — обновить токены по refreshToken
+POST {{baseUrl}}/auth/refresh
+Content-Type: application/json
+
+{
+  "refreshToken": "YOUR_REFRESH_TOKEN_HERE"
+}
+
+
+### ──────────────────────────────────────────
+### ORGANIZATIONS
+### ──────────────────────────────────────────
+
+### POST /organizations — зарегистрировать организацию
+POST {{baseUrl}}/organizations
+Content-Type: application/json
+
+{
+  "firstname": "John",
+  "lastname": "Doe",
+  "phoneNumber": "+77001234567",
+  "email": "john.doe@example.com",
+  "password": "Password123!",
+  "organizationName": "Acme Corp",
+  "organizationDescription": "A company that makes everything",
+  "vat": "KZ123456789",
+  "streetAddress": "123 Main St",
+  "cityId": 1,
+  "privacyPolicyAccepted": true,
+  "termsAndConditionsAccepted": true
+}
+
+###
+
+### POST /organizations/verify-otp — подтвердить email по OTP
+POST {{baseUrl}}/organizations/verify-otp
+Content-Type: application/json
+
+{
+  "email": "john.doe@example.com",
+  "code": "123456"
+}
+
+###
+
+### POST /organizations/consents — отправить согласие с документами
+POST {{baseUrl}}/organizations/consents
+Content-Type: application/json
+Authorization: Bearer {{accessToken}}
+
+{
+  "privacyPolicyAccepted": true,
+  "termsAndConditionsAccepted": true
+}
+
+###
+
+### GET /organizations/consents/validate — проверить актуальность согласий
+GET {{baseUrl}}/organizations/consents/validate?organizationId={{employeeId}}
+Authorization: Bearer {{accessToken}}
+
+
+### ──────────────────────────────────────────
+### LEGAL
+### ──────────────────────────────────────────
+
+### GET /legal/documents — получить список активных документов
+GET {{baseUrl}}/legal/documents
+
+
+### ──────────────────────────────────────────
+### INVITES
+### ──────────────────────────────────────────
+
+### POST /invites/generate — сгенерировать инвайт для сотрудника
+POST {{baseUrl}}/invites/generate
+Content-Type: application/json
+Authorization: Bearer {{accessToken}}
+
+{
+  "firstName": "Jane",
+  "lastName": "Smith",
+  "email": "jane.smith@example.com",
+  "role": "Employee"
+}
+
+###
+
+### POST /invites/verify — проверить код инвайта
+POST {{baseUrl}}/invites/verify
+Content-Type: application/json
+
+{
+  "code": "INVITE_CODE_HERE"
+}
+
+###
+
+### POST /invites/complete-registration — завершить регистрацию по инвайту
+POST {{baseUrl}}/invites/complete-registration
+Content-Type: application/json
+
+{
+  "code": "INVITE_CODE_HERE",
+  "password": "Password123!",
+  "phoneNumber": "+77009876543"
+}
+
+
+### ──────────────────────────────────────────
+### EMPLOYEES
+### ──────────────────────────────────────────
+
+### POST /employees — создать сотрудника
+POST {{baseUrl}}/employees
+Content-Type: application/json
+Authorization: Bearer {{accessToken}}
+
+{
+  "userId": "USER_UUID_HERE",
+  "departmentId": "DEPARTMENT_UUID_HERE",
+  "positionId": "POSITION_UUID_HERE",
+  "role": "Engineer",
+  "salaryRate": "150000.00",
+  "status": "Active"
+}
+
+###
+
+### GET /employees — список всех сотрудников организации
+GET {{baseUrl}}/employees
+Authorization: Bearer {{accessToken}}
+
+###
+
+### GET /employees/:id — получить сотрудника по ID
+GET {{baseUrl}}/employees/{{employeeId}}
+
+###
+
+### PATCH /employees/:id/role — обновить роль
+PATCH {{baseUrl}}/employees/{{employeeId}}/role
+Content-Type: application/json
+
+{
+  "role": "Senior Engineer"
+}
+
+###
+
+### PATCH /employees/:id/salary — обновить зарплату
+PATCH {{baseUrl}}/employees/{{employeeId}}/salary
+Content-Type: application/json
+
+{
+  "salaryRate": "200000.00"
+}
+
+###
+
+### PATCH /employees/:id/status — обновить статус
+PATCH {{baseUrl}}/employees/{{employeeId}}/status
+Content-Type: application/json
+
+{
+  "status": "Inactive"
+}
+
+###
+
+### PATCH /employees/:id/department — перевести в другой отдел
+PATCH {{baseUrl}}/employees/{{employeeId}}/department
+Content-Type: application/json
+
+{
+  "departmentId": "NEW_DEPARTMENT_UUID_HERE"
+}
+
+###
+
+### PATCH /employees/:id/position — сменить должность
+PATCH {{baseUrl}}/employees/{{employeeId}}/position
+Content-Type: application/json
+
+{
+  "positionId": "NEW_POSITION_UUID_HERE"
+}
+
+###
+
+### DELETE /employees/:id — удалить сотрудника
+DELETE {{baseUrl}}/employees/{{employeeId}}

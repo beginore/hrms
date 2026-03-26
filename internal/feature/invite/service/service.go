@@ -36,7 +36,7 @@ type Service struct {
 	mailer        *mailer
 }
 
-func NewService(repo *repository.Repository, cfg *config.Config, cognitoClient *cognito.Client) (*Service, error) {
+func NewInviteService(repo *repository.Repository, cfg *config.Config, cognitoClient *cognito.Client) (*Service, error) {
 	inviteMailer, err := newMailer(cfg)
 	if err != nil {
 		return nil, err
