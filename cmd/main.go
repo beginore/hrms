@@ -6,6 +6,9 @@ import (
 	authHandler "hrms/internal/feature/auth/transport/http"
 	consentRepository "hrms/internal/feature/consent/repository"
 	consentService "hrms/internal/feature/consent/service"
+	employeeRepository "hrms/internal/feature/employee/repository"
+	employeeService "hrms/internal/feature/employee/service"
+	employeeHandler "hrms/internal/feature/employee/transport/http"
 	eventsRepository "hrms/internal/feature/events/repository"
 	eventsService "hrms/internal/feature/events/service"
 	eventsHandler "hrms/internal/feature/events/transport/http"
@@ -53,20 +56,24 @@ func main() {
 	userRepo := userRepository.NewRepository(postgres.DB)
 	eventsRepo := eventsRepository.NewRepository(postgres.DB)
 	notificationRepo := notificationRepository.NewNotificationRepository(postgres.DB)
+	employeeRepo := employeeRepository.NewRepository(postgres.DB)
 
 	// TODO: Initialize services for all modules.
 	authSvc := authService.NewAuthService(cognitoSvc, authRepo)
-	consentSvc := consentService.NewService(consentRepo)
+	consentSvc := consentService.NewConsentService(consentRepo)
 	userSvc := userService.NewService(cognitoSvc, userRepo)
 	eventsSvc := eventsService.NewService(eventsRepo)
 	notificationSvc := notificationService.NewService(notificationRepo)
 	orgSvc := organizationService.NewSignUpService(orgRepo, consentRepo, notificationSvc, cognitoSvc, emailSvc)
+	employeeSvc := employeeService.NewEmployeeService(employeeRepo)
 	inviteSvc, err := inviteService.NewService(inviteRepo, notificationSvc, cfg, cognitoClient)
 	if err != nil {
 		logger.Fatal("Failed to initialize Invite service")
 	}
 
-	newAuthHandler := authHandler.NewAuthHandler(authSvc)
+	// TODO: Initialize handlers for all modules
+	newAuthHTTPHandler := authHandler.NewAuthHandler(authSvc)
+	employeeHTTPHandler := employeeHandler.NewEmployeeHandler(employeeSvc, cognitoSvc)
 	handler := organizationHandler.NewOrganizationHandler(orgSvc, consentSvc)
 	inviteHTTPHandler := inviteHandler.NewHandler(inviteSvc)
 	userHTTPHandler := userHandler.NewHandler(userSvc)
@@ -86,8 +93,8 @@ func main() {
 	v1 := router.Group("/v1")
 
 	// Auth
-	v1.POST("/auth/login", newAuthHandler.Login)
-	v1.POST("/auth/refresh", newAuthHandler.RefreshTokens)
+	v1.POST("/auth/login", newAuthHTTPHandler.Login)
+	v1.POST("/auth/refresh", newAuthHTTPHandler.RefreshTokens)
 	v1.GET("/profile/me", userHTTPHandler.Me)
 	// Organizations
 	v1.POST("/organizations", handler.CreateOrganization)
@@ -115,6 +122,17 @@ func main() {
 	v1.POST("/organizations/consents", handler.SubmitConsents)
 	v1.GET("/organizations/consents/validate", handler.ValidateConsents)
 	v1.GET("/legal/documents", handler.GetDocuments)
+
+	// Employees
+	v1.POST("/employees", employeeHTTPHandler.CreateEmployee)
+	v1.GET("/employees", employeeHTTPHandler.ListEmployees)
+	v1.GET("/employees/:id", employeeHTTPHandler.GetEmployee)
+	v1.PATCH("/employees/:id/role", employeeHTTPHandler.UpdateRole)
+	v1.PATCH("/employees/:id/salary", employeeHTTPHandler.UpdateSalary)
+	v1.PATCH("/employees/:id/status", employeeHTTPHandler.UpdateStatus)
+	v1.PATCH("/employees/:id/department", employeeHTTPHandler.UpdateDepartment)
+	v1.PATCH("/employees/:id/position", employeeHTTPHandler.UpdatePosition)
+	v1.DELETE("/employees/:id", employeeHTTPHandler.DeleteEmployee)
 
 	port := ":8080"
 	logger.Info("Starting HTTP server on port " + port)

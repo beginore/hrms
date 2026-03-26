@@ -19,7 +19,7 @@ type consentService struct {
 	repo consentRepository.ConsentRepository
 }
 
-func NewService(repo consentRepository.ConsentRepository) ConsentService {
+func NewConsentService(repo consentRepository.ConsentRepository) ConsentService {
 	return &consentService{repo: repo}
 }
 

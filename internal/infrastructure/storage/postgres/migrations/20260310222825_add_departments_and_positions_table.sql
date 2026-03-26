@@ -1,13 +1,13 @@
 -- +goose Up
 -- +goose StatementBegin
-CREATE TABLE IF NOT EXISTS "departments"
+CREATE TABLE IF NOT EXISTS departments
 (
     "id" uuid PRIMARY KEY,
     "org_id" uuid NOT NULL,
     "name" VARCHAR(255) NOT NULL UNIQUE
 );
 
-CREATE TABLE IF NOT EXISTS "positions"
+CREATE TABLE IF NOT EXISTS positions
 (
     "id" uuid PRIMARY KEY,
     "org_id" uuid NOT NULL,
