@@ -19,6 +19,11 @@ type Employee struct {
 	PositionName   string
 }
 
+type RoleAndOrgID struct {
+	OrgID uuid.UUID
+	Role  string
+}
+
 type CreateEmployeeParams struct {
 	ID           uuid.UUID
 	OrgID        uuid.UUID

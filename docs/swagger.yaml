@@ -1,0 +1,1466 @@
+basePath: /v1
+definitions:
+  hrms_internal_feature_auth_service.ForgotPasswordRequest:
+    properties:
+      email:
+        type: string
+    type: object
+  hrms_internal_feature_auth_service.LoginRequest:
+    properties:
+      email:
+        type: string
+      password:
+        type: string
+    type: object
+  hrms_internal_feature_auth_service.LogoutRequest:
+    properties:
+      refreshToken:
+        type: string
+    type: object
+  hrms_internal_feature_auth_service.RefreshTokenRequest:
+    properties:
+      refreshToken:
+        type: string
+    type: object
+  hrms_internal_feature_auth_service.ResetPasswordRequest:
+    properties:
+      code:
+        type: string
+      email:
+        type: string
+      newPassword:
+        type: string
+    type: object
+  hrms_internal_feature_auth_service.TokenResponse:
+    properties:
+      accessToken:
+        type: string
+      expiresIn:
+        type: integer
+      idToken:
+        type: string
+      refreshToken:
+        type: string
+      tokenType:
+        type: string
+    type: object
+  hrms_internal_feature_consent_service.ConsentItemResponse:
+    properties:
+      currentVersion:
+        type: string
+      documentType:
+        type: string
+      latestVersion:
+        type: string
+      url:
+        type: string
+    type: object
+  hrms_internal_feature_consent_service.ConsentValidationError:
+    properties:
+      currentVersion:
+        type: string
+      documentType:
+        type: string
+      latestVersion:
+        type: string
+    required:
+    - documentType
+    type: object
+  hrms_internal_feature_consent_service.ConsentValidationResponse:
+    properties:
+      errors:
+        items:
+          $ref: '#/definitions/hrms_internal_feature_consent_service.ConsentValidationError'
+        type: array
+      valid:
+        type: boolean
+    type: object
+  hrms_internal_feature_consent_service.RenewConsentRequest:
+    properties:
+      privacyPolicyAccepted:
+        type: boolean
+      termsAndConditionsAccepted:
+        type: boolean
+    required:
+    - privacyPolicyAccepted
+    - termsAndConditionsAccepted
+    type: object
+  hrms_internal_feature_employee_service.CreateEmployeeRequest:
+    properties:
+      departmentId:
+        type: string
+      positionId:
+        type: string
+      role:
+        type: string
+      salaryRate:
+        type: string
+      status:
+        type: string
+      userId:
+        type: string
+    type: object
+  hrms_internal_feature_employee_service.CreateEmployeeResponse:
+    properties:
+      employeeId:
+        type: string
+    type: object
+  hrms_internal_feature_employee_service.EmployeeResponse:
+    properties:
+      departmentId:
+        type: string
+      departmentName:
+        type: string
+      email:
+        type: string
+      firstName:
+        type: string
+      id:
+        type: string
+      lastName:
+        type: string
+      orgId:
+        type: string
+      phoneNumber:
+        type: string
+      positionId:
+        type: string
+      positionName:
+        type: string
+      role:
+        type: string
+      salaryRate:
+        type: string
+      status:
+        type: string
+      userId:
+        type: string
+    type: object
+  hrms_internal_feature_employee_service.UpdateEmployeeDepartmentRequest:
+    properties:
+      departmentId:
+        type: string
+    type: object
+  hrms_internal_feature_employee_service.UpdateEmployeePositionRequest:
+    properties:
+      positionId:
+        type: string
+    type: object
+  hrms_internal_feature_employee_service.UpdateEmployeeRoleRequest:
+    properties:
+      role:
+        type: string
+    type: object
+  hrms_internal_feature_employee_service.UpdateEmployeeSalaryRequest:
+    properties:
+      salaryRate:
+        type: string
+    type: object
+  hrms_internal_feature_employee_service.UpdateEmployeeStatusRequest:
+    properties:
+      status:
+        type: string
+    type: object
+  hrms_internal_feature_invite_service.CompleteRegistrationRequest:
+    properties:
+      code:
+        type: string
+      password:
+        type: string
+      phoneNumber:
+        type: string
+    type: object
+  hrms_internal_feature_invite_service.CompleteRegistrationResponse:
+    properties:
+      organizationId:
+        type: string
+      role:
+        type: string
+      userId:
+        type: string
+    type: object
+  hrms_internal_feature_invite_service.GenerateInviteRequest:
+    properties:
+      email:
+        type: string
+      firstName:
+        type: string
+      lastName:
+        type: string
+      organizationId:
+        type: string
+      position:
+        type: string
+      role:
+        type: string
+    type: object
+  hrms_internal_feature_invite_service.GenerateInviteResponse:
+    properties:
+      code:
+        type: string
+      email:
+        type: string
+      expiresAt:
+        type: string
+      inviteId:
+        type: string
+      organizationId:
+        type: string
+      organizationName:
+        type: string
+    type: object
+  hrms_internal_feature_invite_service.VerifyInviteRequest:
+    properties:
+      code:
+        type: string
+    type: object
+  hrms_internal_feature_invite_service.VerifyInviteResponse:
+    properties:
+      email:
+        type: string
+      expiresAt:
+        type: string
+      firstName:
+        type: string
+      fullName:
+        type: string
+      lastName:
+        type: string
+      message:
+        type: string
+      organizationId:
+        type: string
+      organizationName:
+        type: string
+      position:
+        type: string
+      role:
+        type: string
+    type: object
+  hrms_internal_feature_organization_service.CreateDepartmentRequest:
+    properties:
+      departmentName:
+        type: string
+    type: object
+  hrms_internal_feature_organization_service.CreateDepartmentResponse:
+    properties:
+      id:
+        type: string
+      name:
+        type: string
+    type: object
+  hrms_internal_feature_organization_service.CreateOrganizationRequest:
+    properties:
+      cityId:
+        type: integer
+      email:
+        type: string
+      firstname:
+        type: string
+      lastname:
+        type: string
+      organizationDescription:
+        type: string
+      organizationName:
+        type: string
+      password:
+        type: string
+      phoneNumber:
+        type: string
+      privacyPolicyAccepted:
+        type: boolean
+      streetAddress:
+        type: string
+      termsAndConditionsAccepted:
+        type: boolean
+      vat:
+        type: string
+    type: object
+  hrms_internal_feature_organization_service.CreateOrganizationResponse:
+    properties:
+      organizationId:
+        type: string
+    type: object
+  hrms_internal_feature_organization_service.CreatePositionRequest:
+    properties:
+      positionName:
+        type: string
+    type: object
+  hrms_internal_feature_organization_service.CreatePositionResponse:
+    properties:
+      id:
+        type: string
+      name:
+        type: string
+    type: object
+  hrms_internal_feature_organization_service.DepartmentItem:
+    properties:
+      id:
+        type: string
+      name:
+        type: string
+    type: object
+  hrms_internal_feature_organization_service.PositionItem:
+    properties:
+      id:
+        type: string
+      name:
+        type: string
+    type: object
+  hrms_internal_feature_organization_service.VerifyOTPRequest:
+    properties:
+      code:
+        type: string
+      email:
+        type: string
+    type: object
+host: localhost:8080
+info:
+  contact: {}
+  description: Human Resource Management System API
+  title: HRMS API
+  version: "1.0"
+paths:
+  /auth/forgot-password:
+    post:
+      consumes:
+      - application/json
+      description: Sends a password reset code to the user's email
+      parameters:
+      - description: Email address
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/hrms_internal_feature_auth_service.ForgotPasswordRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "422":
+          description: Unprocessable Entity
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: Forgot password
+      tags:
+      - Auth
+  /auth/login:
+    post:
+      consumes:
+      - application/json
+      description: Authenticate with email and password, returns JWT tokens
+      parameters:
+      - description: Credentials
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/hrms_internal_feature_auth_service.LoginRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/hrms_internal_feature_auth_service.TokenResponse'
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "401":
+          description: Unauthorized
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: Login
+      tags:
+      - Auth
+  /auth/logout:
+    post:
+      consumes:
+      - application/json
+      description: Revokes the refresh token and deletes the session
+      parameters:
+      - description: Refresh token
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/hrms_internal_feature_auth_service.LogoutRequest'
+      produces:
+      - application/json
+      responses:
+        "204":
+          description: No Content
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "401":
+          description: Unauthorized
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Logout
+      tags:
+      - Auth
+  /auth/refresh:
+    post:
+      consumes:
+      - application/json
+      description: Exchange a valid refresh token for a new token pair
+      parameters:
+      - description: Refresh token
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/hrms_internal_feature_auth_service.RefreshTokenRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/hrms_internal_feature_auth_service.TokenResponse'
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "401":
+          description: Unauthorized
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: Refresh tokens
+      tags:
+      - Auth
+  /auth/reset-password:
+    post:
+      consumes:
+      - application/json
+      description: Confirms the password reset using the code sent to the user's email
+      parameters:
+      - description: Reset details
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/hrms_internal_feature_auth_service.ResetPasswordRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "422":
+          description: Unprocessable Entity
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: Reset password
+      tags:
+      - Auth
+  /employees:
+    get:
+      description: Retrieve all employees belonging to the caller's organisation
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/hrms_internal_feature_employee_service.EmployeeResponse'
+            type: array
+        "401":
+          description: Unauthorized
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: List employees
+      tags:
+      - Employees
+    post:
+      consumes:
+      - application/json
+      description: Add a new employee record for the caller's organisation
+      parameters:
+      - description: Employee data
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/hrms_internal_feature_employee_service.CreateEmployeeRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/hrms_internal_feature_employee_service.CreateEmployeeResponse'
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "401":
+          description: Unauthorized
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "422":
+          description: Unprocessable Entity
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Create employee
+      tags:
+      - Employees
+  /employees/{id}:
+    delete:
+      description: Permanently remove an employee record
+      parameters:
+      - description: Employee ID (UUID)
+        in: path
+        name: id
+        required: true
+        type: string
+      responses:
+        "204":
+          description: No Content
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "404":
+          description: Not Found
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Delete employee
+      tags:
+      - Employees
+    get:
+      description: Retrieve a single employee by their ID
+      parameters:
+      - description: Employee ID (UUID)
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/hrms_internal_feature_employee_service.EmployeeResponse'
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "404":
+          description: Not Found
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Get employee
+      tags:
+      - Employees
+  /employees/{id}/department:
+    patch:
+      consumes:
+      - application/json
+      description: Move an employee to a different department
+      parameters:
+      - description: Employee ID (UUID)
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: New department
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/hrms_internal_feature_employee_service.UpdateEmployeeDepartmentRequest'
+      responses:
+        "204":
+          description: No Content
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "404":
+          description: Not Found
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "422":
+          description: Unprocessable Entity
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Update employee department
+      tags:
+      - Employees
+  /employees/{id}/position:
+    patch:
+      consumes:
+      - application/json
+      description: Change the position of an employee
+      parameters:
+      - description: Employee ID (UUID)
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: New position
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/hrms_internal_feature_employee_service.UpdateEmployeePositionRequest'
+      responses:
+        "204":
+          description: No Content
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "404":
+          description: Not Found
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "422":
+          description: Unprocessable Entity
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Update employee position
+      tags:
+      - Employees
+  /employees/{id}/role:
+    patch:
+      consumes:
+      - application/json
+      description: Change the role of an employee
+      parameters:
+      - description: Employee ID (UUID)
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: New role
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/hrms_internal_feature_employee_service.UpdateEmployeeRoleRequest'
+      responses:
+        "204":
+          description: No Content
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "404":
+          description: Not Found
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Update employee role
+      tags:
+      - Employees
+  /employees/{id}/salary:
+    patch:
+      consumes:
+      - application/json
+      description: Change the salary rate of an employee
+      parameters:
+      - description: Employee ID (UUID)
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: New salary rate
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/hrms_internal_feature_employee_service.UpdateEmployeeSalaryRequest'
+      responses:
+        "204":
+          description: No Content
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "404":
+          description: Not Found
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Update employee salary
+      tags:
+      - Employees
+  /employees/{id}/status:
+    patch:
+      consumes:
+      - application/json
+      description: Change the employment status of an employee
+      parameters:
+      - description: Employee ID (UUID)
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: New status
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/hrms_internal_feature_employee_service.UpdateEmployeeStatusRequest'
+      responses:
+        "204":
+          description: No Content
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "404":
+          description: Not Found
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Update employee status
+      tags:
+      - Employees
+  /invites/complete-registration:
+    post:
+      consumes:
+      - application/json
+      description: Finalize a new employee's account using their invite code
+      parameters:
+      - description: Registration data
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/hrms_internal_feature_invite_service.CompleteRegistrationRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/hrms_internal_feature_invite_service.CompleteRegistrationResponse'
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "404":
+          description: Not Found
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "409":
+          description: Conflict
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: Complete registration
+      tags:
+      - Invites
+  /invites/generate:
+    post:
+      consumes:
+      - application/json
+      description: Create a time-limited invite link for a new employee and send it
+        by email
+      parameters:
+      - description: Invite details
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/hrms_internal_feature_invite_service.GenerateInviteRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/hrms_internal_feature_invite_service.GenerateInviteResponse'
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "404":
+          description: Not Found
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "409":
+          description: Conflict
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: Generate invite
+      tags:
+      - Invites
+  /invites/verify:
+    post:
+      consumes:
+      - application/json
+      description: Validate an invite code and return the invitation details
+      parameters:
+      - description: Invite code
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/hrms_internal_feature_invite_service.VerifyInviteRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/hrms_internal_feature_invite_service.VerifyInviteResponse'
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "404":
+          description: Not Found
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "409":
+          description: Conflict
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: Verify invite code
+      tags:
+      - Invites
+  /legal/documents:
+    get:
+      description: Return the list of active legal documents (privacy policy, terms,
+        etc.)
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/hrms_internal_feature_consent_service.ConsentItemResponse'
+            type: array
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: Get legal documents
+      tags:
+      - Legal
+  /organizations:
+    post:
+      consumes:
+      - application/json
+      description: Register a new organisation along with its admin user
+      parameters:
+      - description: Organisation details
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/hrms_internal_feature_organization_service.CreateOrganizationRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/hrms_internal_feature_organization_service.CreateOrganizationResponse'
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "409":
+          description: Conflict
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "422":
+          description: Unprocessable Entity
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: Create organisation
+      tags:
+      - Organizations
+  /organizations/consents:
+    post:
+      consumes:
+      - application/json
+      description: Record the organisation's acceptance of policy documents
+      parameters:
+      - description: Consent flags
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/hrms_internal_feature_consent_service.RenewConsentRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "422":
+          description: Unprocessable Entity
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Submit consents
+      tags:
+      - Organizations
+  /organizations/consents/validate:
+    get:
+      description: Check whether the organisation's consents are up to date
+      parameters:
+      - description: Organisation ID
+        in: query
+        name: organizationId
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/hrms_internal_feature_consent_service.ConsentValidationResponse'
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "422":
+          description: Unprocessable Entity
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Validate consents
+      tags:
+      - Organizations
+  /organizations/departments:
+    get:
+      description: Return all departments belonging to the caller's organisation
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/hrms_internal_feature_organization_service.DepartmentItem'
+            type: array
+        "401":
+          description: Unauthorized
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: List departments
+      tags:
+      - Departments
+    post:
+      consumes:
+      - application/json
+      description: Add a new department to the caller's organisation
+      parameters:
+      - description: Department name
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/hrms_internal_feature_organization_service.CreateDepartmentRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/hrms_internal_feature_organization_service.CreateDepartmentResponse'
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "401":
+          description: Unauthorized
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Create department
+      tags:
+      - Departments
+  /organizations/departments/{id}:
+    delete:
+      description: Remove a department. Fails with 409 if employees are still assigned
+        to it.
+      parameters:
+      - description: Department ID (UUID)
+        in: path
+        name: id
+        required: true
+        type: string
+      responses:
+        "204":
+          description: No Content
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "401":
+          description: Unauthorized
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "409":
+          description: Conflict
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Delete department
+      tags:
+      - Departments
+  /organizations/positions:
+    get:
+      description: Return all positions belonging to the caller's organisation
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/hrms_internal_feature_organization_service.PositionItem'
+            type: array
+        "401":
+          description: Unauthorized
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: List positions
+      tags:
+      - Positions
+    post:
+      consumes:
+      - application/json
+      description: Add a new position to the caller's organisation
+      parameters:
+      - description: Position name
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/hrms_internal_feature_organization_service.CreatePositionRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/hrms_internal_feature_organization_service.CreatePositionResponse'
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "401":
+          description: Unauthorized
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Create position
+      tags:
+      - Positions
+  /organizations/positions/{id}:
+    delete:
+      description: Remove a position. Fails with 409 if employees are still assigned
+        to it.
+      parameters:
+      - description: Position ID (UUID)
+        in: path
+        name: id
+        required: true
+        type: string
+      responses:
+        "204":
+          description: No Content
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "401":
+          description: Unauthorized
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "409":
+          description: Conflict
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Delete position
+      tags:
+      - Positions
+  /organizations/verify-otp:
+    post:
+      consumes:
+      - application/json
+      description: Confirm organisation admin's email with the OTP sent during registration
+      parameters:
+      - description: OTP details
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/hrms_internal_feature_organization_service.VerifyOTPRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "404":
+          description: Not Found
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "409":
+          description: Conflict
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "429":
+          description: Too Many Requests
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: Verify OTP
+      tags:
+      - Organizations
+securityDefinitions:
+  BearerAuth:
+    description: Type "Bearer" followed by a space and your JWT token.
+    in: header
+    name: Authorization
+    type: apiKey
+swagger: "2.0"

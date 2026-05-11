@@ -92,3 +92,6 @@ WHERE id = $1;
 
 -- name: GetOrgIDByUserID :one
 SELECT org_id FROM users WHERE id = $1;
+
+-- name: GetRoleAndOrgIDByUserID :one
+SELECT org_id, role FROM employees WHERE user_id = $1;

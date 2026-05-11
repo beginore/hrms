@@ -24,6 +24,102 @@ func (q *Queries) CheckVATUnique(ctx context.Context, vatID string) (int64, erro
 	return count, err
 }
 
+const countEmployeesByDepartment = `-- name: CountEmployeesByDepartment :one
+SELECT COUNT(*)
+FROM employees
+WHERE department_id = $1
+`
+
+func (q *Queries) CountEmployeesByDepartment(ctx context.Context, departmentID uuid.UUID) (int64, error) {
+	row := q.db.QueryRowContext(ctx, countEmployeesByDepartment, departmentID)
+	var count int64
+	err := row.Scan(&count)
+	return count, err
+}
+
+const countEmployeesByPosition = `-- name: CountEmployeesByPosition :one
+SELECT COUNT(*)
+FROM employees
+WHERE position_id = $1
+`
+
+func (q *Queries) CountEmployeesByPosition(ctx context.Context, positionID uuid.UUID) (int64, error) {
+	row := q.db.QueryRowContext(ctx, countEmployeesByPosition, positionID)
+	var count int64
+	err := row.Scan(&count)
+	return count, err
+}
+
+const deleteDepartment = `-- name: DeleteDepartment :exec
+DELETE FROM departments WHERE id = $1 AND org_id = $2
+`
+
+type DeleteDepartmentParams struct {
+	ID    uuid.UUID `json:"id"`
+	OrgID uuid.UUID `json:"org_id"`
+}
+
+func (q *Queries) DeleteDepartment(ctx context.Context, arg DeleteDepartmentParams) error {
+	_, err := q.db.ExecContext(ctx, deleteDepartment, arg.ID, arg.OrgID)
+	return err
+}
+
+const deletePosition = `-- name: DeletePosition :exec
+DELETE FROM positions WHERE id = $1 AND org_id = $2
+`
+
+type DeletePositionParams struct {
+	ID    uuid.UUID `json:"id"`
+	OrgID uuid.UUID `json:"org_id"`
+}
+
+func (q *Queries) DeletePosition(ctx context.Context, arg DeletePositionParams) error {
+	_, err := q.db.ExecContext(ctx, deletePosition, arg.ID, arg.OrgID)
+	return err
+}
+
+const getDepartmentsByOrgID = `-- name: GetDepartmentsByOrgID :many
+SELECT id, org_id, name FROM departments WHERE org_id = $1 ORDER BY name
+`
+
+func (q *Queries) GetDepartmentsByOrgID(ctx context.Context, orgID uuid.UUID) ([]Department, error) {
+	rows, err := q.db.QueryContext(ctx, getDepartmentsByOrgID, orgID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []Department
+	for rows.Next() {
+		var i Department
+		if err := rows.Scan(&i.ID, &i.OrgID, &i.Name); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	return items, rows.Err()
+}
+
+const getPositionsByOrgID = `-- name: GetPositionsByOrgID :many
+SELECT id, org_id, name FROM positions WHERE org_id = $1 ORDER BY name
+`
+
+func (q *Queries) GetPositionsByOrgID(ctx context.Context, orgID uuid.UUID) ([]Position, error) {
+	rows, err := q.db.QueryContext(ctx, getPositionsByOrgID, orgID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []Position
+	for rows.Next() {
+		var i Position
+		if err := rows.Scan(&i.ID, &i.OrgID, &i.Name); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	return items, rows.Err()
+}
+
 const getUserByEmail = `-- name: GetUserByEmail :one
 SELECT id, org_id, verification_status
 FROM users
@@ -72,6 +168,26 @@ func (q *Queries) InsertConsent(ctx context.Context, arg InsertConsentParams) er
 	return err
 }
 
+const insertDepartment = `-- name: InsertDepartment :exec
+INSERT INTO departments (
+    id, org_id, name
+)
+VALUES (
+        $1, $2, $3
+)
+`
+
+type InsertDepartmentParams struct {
+	ID    uuid.UUID `json:"id"`
+	OrgID uuid.UUID `json:"org_id"`
+	Name  string    `json:"name"`
+}
+
+func (q *Queries) InsertDepartment(ctx context.Context, arg InsertDepartmentParams) error {
+	_, err := q.db.ExecContext(ctx, insertDepartment, arg.ID, arg.OrgID, arg.Name)
+	return err
+}
+
 const insertOrganization = `-- name: InsertOrganization :exec
 INSERT INTO organizations (
     id,
@@ -105,6 +221,26 @@ func (q *Queries) InsertOrganization(ctx context.Context, arg InsertOrganization
 		arg.Address,
 		arg.CityID,
 	)
+	return err
+}
+
+const insertPosition = `-- name: InsertPosition :exec
+INSERT INTO positions (
+    id, org_id, name
+)
+VALUES (
+        $1, $2, $3
+)
+`
+
+type InsertPositionParams struct {
+	ID    uuid.UUID `json:"id"`
+	OrgID uuid.UUID `json:"org_id"`
+	Name  string    `json:"name"`
+}
+
+func (q *Queries) InsertPosition(ctx context.Context, arg InsertPositionParams) error {
+	_, err := q.db.ExecContext(ctx, insertPosition, arg.ID, arg.OrgID, arg.Name)
 	return err
 }
 
