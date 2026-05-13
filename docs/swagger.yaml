@@ -1,5 +1,137 @@
 basePath: /v1
 definitions:
+  hrms_internal_feature_attendance_service.AttendanceResponse:
+    properties:
+      check_in:
+        type: string
+      check_out:
+        type: string
+      date:
+        type: string
+      employee_id:
+        type: string
+      id:
+        type: string
+      note:
+        type: string
+      source:
+        type: string
+      status:
+        type: string
+      type:
+        type: string
+    type: object
+  hrms_internal_feature_attendance_service.CreateLeaveRequest:
+    properties:
+      document_url:
+        type: string
+      employee_id:
+        type: string
+      end_date:
+        description: YYYY-MM-DD
+        type: string
+      reason:
+        type: string
+      start_date:
+        description: YYYY-MM-DD
+        type: string
+      type:
+        description: SICK_LEAVE | VACATION | REMOTE | BUSINESS_TRIP | UNPAID_LEAVE
+        type: string
+    required:
+    - employee_id
+    - end_date
+    - start_date
+    - type
+    type: object
+  hrms_internal_feature_attendance_service.CreateLeaveResponse:
+    properties:
+      leave_request_id:
+        type: string
+    type: object
+  hrms_internal_feature_attendance_service.CreateSkudEventRequest:
+    properties:
+      device_id:
+        type: string
+      employee_id:
+        type: string
+      event_type:
+        description: ENTER | EXIT
+        type: string
+      occurred_at:
+        description: RFC3339; empty = now
+        type: string
+    required:
+    - employee_id
+    - event_type
+    type: object
+  hrms_internal_feature_attendance_service.CreateSkudEventResponse:
+    properties:
+      message:
+        type: string
+    type: object
+  hrms_internal_feature_attendance_service.LeaveRequestResponse:
+    properties:
+      created_at:
+        type: string
+      document_url:
+        type: string
+      employee_id:
+        type: string
+      end_date:
+        type: string
+      id:
+        type: string
+      reason:
+        type: string
+      reviewed_at:
+        type: string
+      reviewed_by:
+        type: string
+      start_date:
+        type: string
+      status:
+        type: string
+      type:
+        type: string
+    type: object
+  hrms_internal_feature_attendance_service.ReviewLeaveRequest:
+    properties:
+      action:
+        description: approve | reject
+        type: string
+    required:
+    - action
+    type: object
+  hrms_internal_feature_attendance_service.SetWorkScheduleRequest:
+    properties:
+      employee_id:
+        type: string
+      late_threshold_minutes:
+        description: default 15
+        type: integer
+      work_end:
+        description: '"18:00"'
+        type: string
+      work_start:
+        description: '"09:00"'
+        type: string
+    required:
+    - employee_id
+    - work_end
+    - work_start
+    type: object
+  hrms_internal_feature_attendance_service.WorkScheduleResponse:
+    properties:
+      employee_id:
+        type: string
+      late_threshold_minutes:
+        type: integer
+      work_end:
+        type: string
+      work_start:
+        type: string
+    type: object
   hrms_internal_feature_auth_service.ForgotPasswordRequest:
     properties:
       email:
@@ -42,6 +174,68 @@ definitions:
       refreshToken:
         type: string
       tokenType:
+        type: string
+    type: object
+  hrms_internal_feature_calendar_service.AddCalendarDayRequest:
+    properties:
+      date:
+        description: YYYY-MM-DD
+        type: string
+      name:
+        description: '"Наурыз", "День Независимости", etc.'
+        type: string
+      type:
+        description: HOLIDAY | WORKDAY
+        type: string
+    required:
+    - date
+    - type
+    type: object
+  hrms_internal_feature_calendar_service.AddCalendarDayResponse:
+    properties:
+      id:
+        type: string
+    type: object
+  hrms_internal_feature_calendar_service.DaySummary:
+    properties:
+      date:
+        type: string
+      is_working:
+        type: boolean
+      name:
+        type: string
+      type:
+        description: HOLIDAY | WORKDAY | WEEKEND | REGULAR
+        type: string
+      weekday:
+        type: string
+    type: object
+  hrms_internal_feature_calendar_service.MonthSummaryResponse:
+    properties:
+      days:
+        items:
+          $ref: '#/definitions/hrms_internal_feature_calendar_service.DaySummary'
+        type: array
+      holidays:
+        type: integer
+      month:
+        type: integer
+      total_days:
+        type: integer
+      weekends:
+        type: integer
+      workday_overrides:
+        type: integer
+      working_days:
+        type: integer
+      year:
+        type: integer
+    type: object
+  hrms_internal_feature_city_service.CityResponse:
+    properties:
+      id:
+        type: string
+      name:
         type: string
     type: object
   hrms_internal_feature_consent_service.ConsentItemResponse:
@@ -321,6 +515,386 @@ info:
   title: HRMS API
   version: "1.0"
 paths:
+  /attendance:
+    get:
+      description: List attendance records for the caller's organisation filtered
+        by period. Dates default to current month if not provided.
+      parameters:
+      - description: Start date (YYYY-MM-DD)
+        in: query
+        name: start_date
+        type: string
+      - description: End date (YYYY-MM-DD)
+        in: query
+        name: end_date
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/hrms_internal_feature_attendance_service.AttendanceResponse'
+            type: array
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "401":
+          description: Unauthorized
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: List attendance records
+      tags:
+      - Attendance
+  /attendance/employees/{employee_id}:
+    get:
+      description: List attendance records for a specific employee filtered by period
+      parameters:
+      - description: Employee ID (UUID)
+        in: path
+        name: employee_id
+        required: true
+        type: string
+      - description: Start date (YYYY-MM-DD)
+        in: query
+        name: start_date
+        type: string
+      - description: End date (YYYY-MM-DD)
+        in: query
+        name: end_date
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/hrms_internal_feature_attendance_service.AttendanceResponse'
+            type: array
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: List employee attendance
+      tags:
+      - Attendance
+  /attendance/leave-requests:
+    get:
+      description: List all leave requests in the caller's organisation
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/hrms_internal_feature_attendance_service.LeaveRequestResponse'
+            type: array
+        "401":
+          description: Unauthorized
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: List leave requests
+      tags:
+      - Attendance
+    post:
+      consumes:
+      - application/json
+      description: Submit a leave request (sick leave, vacation, remote work, etc.)
+      parameters:
+      - description: Leave request data
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/hrms_internal_feature_attendance_service.CreateLeaveRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/hrms_internal_feature_attendance_service.CreateLeaveResponse'
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "401":
+          description: Unauthorized
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "422":
+          description: Unprocessable Entity
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Submit leave request
+      tags:
+      - Attendance
+  /attendance/leave-requests/{id}:
+    get:
+      description: Retrieve details of a specific leave request
+      parameters:
+      - description: Leave Request ID (UUID)
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/hrms_internal_feature_attendance_service.LeaveRequestResponse'
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "404":
+          description: Not Found
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Get leave request
+      tags:
+      - Attendance
+  /attendance/leave-requests/{id}/review:
+    patch:
+      consumes:
+      - application/json
+      description: HR or manager approves or rejects a leave request
+      parameters:
+      - description: Leave Request ID (UUID)
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Action (approve|reject)
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/hrms_internal_feature_attendance_service.ReviewLeaveRequest'
+      responses:
+        "204":
+          description: No Content
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "401":
+          description: Unauthorized
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "404":
+          description: Not Found
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Approve or reject leave request
+      tags:
+      - Attendance
+  /attendance/skud-events:
+    post:
+      consumes:
+      - application/json
+      description: Accept an entry/exit event from the access control system (СКУД).
+        Automatically creates or updates the attendance record for the day.
+      parameters:
+      - description: SKUD event
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/hrms_internal_feature_attendance_service.CreateSkudEventRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/hrms_internal_feature_attendance_service.CreateSkudEventResponse'
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "422":
+          description: Unprocessable Entity
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Register SKUD event
+      tags:
+      - Attendance
+  /attendance/work-schedules:
+    post:
+      consumes:
+      - application/json
+      description: Create or update the flexible work schedule for an employee
+      parameters:
+      - description: Schedule data
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/hrms_internal_feature_attendance_service.SetWorkScheduleRequest'
+      produces:
+      - application/json
+      responses:
+        "204":
+          description: No Content
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "401":
+          description: Unauthorized
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "404":
+          description: Not Found
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "422":
+          description: Unprocessable Entity
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Set work schedule
+      tags:
+      - Attendance
+  /attendance/work-schedules/{employee_id}:
+    get:
+      description: Retrieve the work schedule for a specific employee
+      parameters:
+      - description: Employee ID (UUID)
+        in: path
+        name: employee_id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/hrms_internal_feature_attendance_service.WorkScheduleResponse'
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Get work schedule
+      tags:
+      - Attendance
   /auth/forgot-password:
     post:
       consumes:
@@ -517,6 +1091,144 @@ paths:
       summary: Reset password
       tags:
       - Auth
+  /calendar:
+    post:
+      consumes:
+      - application/json
+      description: Mark a date as a holiday (HOLIDAY) or override a weekend as a working
+        day (WORKDAY)
+      parameters:
+      - description: Day data
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/hrms_internal_feature_calendar_service.AddCalendarDayRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/hrms_internal_feature_calendar_service.AddCalendarDayResponse'
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "401":
+          description: Unauthorized
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Add calendar day
+      tags:
+      - Calendar
+  /calendar/{id}:
+    delete:
+      description: Remove a holiday or workday override from the calendar
+      parameters:
+      - description: Calendar Day ID (UUID)
+        in: path
+        name: id
+        required: true
+        type: string
+      responses:
+        "204":
+          description: No Content
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "404":
+          description: Not Found
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Delete calendar day
+      tags:
+      - Calendar
+  /calendar/summary:
+    get:
+      description: Returns a full breakdown of working days, weekends, and holidays
+        for a given month
+      parameters:
+      - description: 'Month in YYYY-MM format (default: current month)'
+        in: query
+        name: month
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/hrms_internal_feature_calendar_service.MonthSummaryResponse'
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "401":
+          description: Unauthorized
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Get month summary
+      tags:
+      - Calendar
+  /cities:
+    get:
+      description: Returns all available cities in Kazakhstan
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/hrms_internal_feature_city_service.CityResponse'
+            type: array
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: List cities
+      tags:
+      - Cities
   /employees:
     get:
       description: Retrieve all employees belonging to the caller's organisation

@@ -175,6 +175,16 @@ func (q *Queries) GetEmployeesByOrgID(ctx context.Context, orgID uuid.UUID) ([]G
 	return items, nil
 }
 
+const getUserRoleByUserID = `-- name: GetUserRoleByUserID :one
+SELECT role FROM users WHERE id = $1
+`
+
+func (q *Queries) GetUserRoleByUserID(ctx context.Context, userID uuid.UUID) (string, error) {
+	row := q.db.QueryRowContext(ctx, getUserRoleByUserID, userID)
+	var role string
+	return role, row.Scan(&role)
+}
+
 const getOrgIDByUserID = `-- name: GetOrgIDByUserID :one
 SELECT org_id FROM users WHERE id = $1
 `
@@ -187,7 +197,7 @@ func (q *Queries) GetOrgIDByUserID(ctx context.Context, id uuid.UUID) (uuid.UUID
 }
 
 const getRoleAndOrgIDByUserID = `-- name: GetRoleAndOrgIDByUserID :one
-SELECT org_id, role FROM employees WHERE user_id = $1
+SELECT org_id, role FROM users WHERE id = $1
 `
 
 type GetRoleAndOrgIDByUserIDRow struct {

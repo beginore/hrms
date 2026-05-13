@@ -19,4 +19,5 @@ type EmployeeRepository interface {
 	Exists(ctx context.Context, id uuid.UUID) (bool, error)
 	GetOrgIDByUserID(ctx context.Context, userID uuid.UUID) (uuid.UUID, error)
 	GetRoleAndOrgIDByUserID(ctx context.Context, userID uuid.UUID) (RoleAndOrgID, error)
+	GetUserRoleByUserID(ctx context.Context, userID uuid.UUID) (string, error)
 }

@@ -6,7 +6,8 @@
       "Bash(go vet *)",
       "Bash(go install *)",
       "Bash(swag init *)",
-      "Bash(go mod *)"
+      "Bash(go mod *)",
+      "Bash(xargs grep *)"
     ]
   }
 }

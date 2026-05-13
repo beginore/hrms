@@ -52,9 +52,18 @@ func (s *employeeService) CreateEmployee(ctx context.Context, callerUserID uuid.
 		return nil, ErrInvalidPositionID
 	}
 
+	role := req.Role
+	if role == "" {
+		role, err = s.repo.GetUserRoleByUserID(ctx, userID)
+		if err != nil {
+			log.Printf("[Employee] GetUserRoleByUserID failed: %v", err)
+			return nil, fmt.Errorf("%w: %v", ErrDatabaseQueryFailed, err)
+		}
+	}
+
 	employeeID := uuid.New()
 
-	log.Printf("[Employee] Creating employee userID=%s orgID=%s", userID, orgID)
+	log.Printf("[Employee] Creating employee userID=%s orgID=%s role=%s", userID, orgID, role)
 
 	if err := s.repo.CreateEmployee(ctx, employeeRepository.CreateEmployeeParams{
 		ID:           employeeID,
@@ -62,7 +71,7 @@ func (s *employeeService) CreateEmployee(ctx context.Context, callerUserID uuid.
 		UserID:       userID,
 		DepartmentID: departmentID,
 		PositionID:   positionID,
-		Role:         req.Role,
+		Role:         role,
 		SalaryRate:   req.SalaryRate,
 		Status:       req.Status,
 	}); err != nil {
