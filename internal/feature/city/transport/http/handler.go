@@ -21,7 +21,7 @@ func NewCityHandler(svc service.CityService) *CityHandler {
 // @Description  Returns all available cities in Kazakhstan
 // @Tags         Cities
 // @Produce      json
-// @Success      200  {array}   repository.City
+// @Success      200  {array}   service.CityResponse
 // @Failure      500  {object}  map[string]string
 // @Router       /cities [get]
 func (h *CityHandler) ListCities(c *gin.Context) {

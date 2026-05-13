@@ -5,6 +5,11 @@ import (
 	"hrms/internal/feature/city/repository"
 )
 
+type CityResponse struct {
+	ID   string `json:"id"`
+	Name string `json:"name"`
+}
+
 type CityService interface {
 	ListCities(ctx context.Context) ([]repository.City, error)
 }
