@@ -97,6 +97,14 @@ func (r *employeeRepository) GetOrgIDByUserID(ctx context.Context, userID uuid.U
 	return r.queries.GetOrgIDByUserID(ctx, userID)
 }
 
+func (r *employeeRepository) GetRoleAndOrgIDByUserID(ctx context.Context, userID uuid.UUID) (RoleAndOrgID, error) {
+	row, err := r.queries.GetRoleAndOrgIDByUserID(ctx, userID)
+	if err != nil {
+		return RoleAndOrgID{}, err
+	}
+	return RoleAndOrgID{OrgID: row.OrgID, Role: row.Role}, nil
+}
+
 func mapGetByIDRow(row postgres.GetEmployeeByIDRow) Employee {
 	return Employee{
 		ID:             row.ID,

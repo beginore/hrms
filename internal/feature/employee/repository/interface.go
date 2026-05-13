@@ -18,4 +18,5 @@ type EmployeeRepository interface {
 	Delete(ctx context.Context, id uuid.UUID) error
 	Exists(ctx context.Context, id uuid.UUID) (bool, error)
 	GetOrgIDByUserID(ctx context.Context, userID uuid.UUID) (uuid.UUID, error)
+	GetRoleAndOrgIDByUserID(ctx context.Context, userID uuid.UUID) (RoleAndOrgID, error)
 }

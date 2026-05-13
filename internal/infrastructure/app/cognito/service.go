@@ -25,6 +25,7 @@ var (
 	ErrInvalidOTPCode         = errors.New("invalid or incorrect OTP code")
 	ErrOTPCodeExpired         = errors.New("OTP code has expired")
 	ErrInvalidRefreshToken    = errors.New("invalid or expired refresh token")
+	ErrInvalidPassword        = errors.New("password does not meet requirements")
 	ErrCognitoOperationFailed = errors.New("cognito operation failed")
 )
 
@@ -144,6 +145,63 @@ func (s *Service) RefreshToken(ctx context.Context, refreshToken, username strin
 	return output, nil
 }
 
+func (s *Service) RevokeToken(ctx context.Context, refreshToken string) error {
+	input := &cognitoidentityprovider.RevokeTokenInput{
+		ClientId: aws.String(s.client.AppClientID()),
+		Token:    aws.String(refreshToken),
+	}
+	if s.client.appClientSecret != "" {
+		input.ClientSecret = aws.String(s.client.appClientSecret)
+	}
+	_, err := s.client.Svc().RevokeToken(ctx, input)
+	if err != nil {
+		return fmt.Errorf("%w: revoke token: %v", ErrCognitoOperationFailed, err)
+	}
+	return nil
+}
+
+func (s *Service) ForgotPassword(ctx context.Context, email string) error {
+	_, err := s.client.Svc().ForgotPassword(ctx, &cognitoidentityprovider.ForgotPasswordInput{
+		ClientId:   aws.String(s.client.AppClientID()),
+		Username:   aws.String(email),
+		SecretHash: aws.String(s.computeSecretHash(email)),
+	})
+	if err != nil {
+		var userNotFound *types.UserNotFoundException
+		if errors.As(err, &userNotFound) {
+			return nil // don't reveal whether the email exists
+		}
+		return fmt.Errorf("%w: %v", ErrCognitoOperationFailed, err)
+	}
+	return nil
+}
+
+func (s *Service) ConfirmForgotPassword(ctx context.Context, email, code, newPassword string) error {
+	_, err := s.client.Svc().ConfirmForgotPassword(ctx, &cognitoidentityprovider.ConfirmForgotPasswordInput{
+		ClientId:         aws.String(s.client.AppClientID()),
+		Username:         aws.String(email),
+		ConfirmationCode: aws.String(code),
+		Password:         aws.String(newPassword),
+		SecretHash:       aws.String(s.computeSecretHash(email)),
+	})
+	if err != nil {
+		var codeMismatch *types.CodeMismatchException
+		if errors.As(err, &codeMismatch) {
+			return ErrInvalidOTPCode
+		}
+		var expiredCode *types.ExpiredCodeException
+		if errors.As(err, &expiredCode) {
+			return ErrOTPCodeExpired
+		}
+		var invalidPassword *types.InvalidPasswordException
+		if errors.As(err, &invalidPassword) {
+			return ErrInvalidPassword
+		}
+		return fmt.Errorf("%w: %v", ErrCognitoOperationFailed, err)
+	}
+	return nil
+}
+
 func (s *Service) computeSecretHash(username string) string {
 	if s.client.appClientSecret == "" {
 		return ""
@@ -158,6 +216,7 @@ func (s *Service) ParseTokenClaims(accessToken string) (userID uuid.UUID, cognit
 	if len(parts) != 3 {
 		return uuid.Nil, "", fmt.Errorf("invalid token format")
 	}
+	fmt.Printf("[ParseTokenClaims] token claims: %s: %s\n", parts[0], parts[1])
 
 	payload, err := base64.RawURLEncoding.DecodeString(parts[1])
 	if err != nil {
@@ -176,6 +235,5 @@ func (s *Service) ParseTokenClaims(accessToken string) (userID uuid.UUID, cognit
 	if err != nil {
 		return uuid.Nil, "", fmt.Errorf("invalid sub claim: %w", err)
 	}
-
 	return userID, claims.Username, nil
 }

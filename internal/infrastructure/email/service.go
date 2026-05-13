@@ -5,6 +5,7 @@ import (
 	"crypto/rand"
 	"fmt"
 	"hrms/internal/infrastructure/config"
+	"hrms/internal/infrastructure/retry"
 	"math/big"
 
 	"github.com/aws/aws-sdk-go-v2/aws"
@@ -91,10 +92,12 @@ HRMS System Team`, otp)
 		},
 	}
 
-	_, err := s.client.SendEmail(ctx, input)
+	err := retry.Do(ctx, "SES.SendOTP", func() error {
+		_, err := s.client.SendEmail(ctx, input)
+		return err
+	})
 	if err != nil {
 		return fmt.Errorf("failed to send OTP email to %s: %w", toEmail, err)
 	}
-
 	return nil
 }

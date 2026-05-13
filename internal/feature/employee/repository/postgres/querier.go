@@ -16,6 +16,7 @@ type Querier interface {
 	GetEmployeeByID(ctx context.Context, id uuid.UUID) (GetEmployeeByIDRow, error)
 	GetEmployeesByOrgID(ctx context.Context, orgID uuid.UUID) ([]GetEmployeesByOrgIDRow, error)
 	GetOrgIDByUserID(ctx context.Context, id uuid.UUID) (uuid.UUID, error)
+	GetRoleAndOrgIDByUserID(ctx context.Context, userID uuid.UUID) (GetRoleAndOrgIDByUserIDRow, error)
 	InsertEmployee(ctx context.Context, arg InsertEmployeeParams) error
 	UpdateEmployeeDepartment(ctx context.Context, arg UpdateEmployeeDepartmentParams) error
 	UpdateEmployeePosition(ctx context.Context, arg UpdateEmployeePositionParams) error

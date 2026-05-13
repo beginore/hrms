@@ -186,6 +186,22 @@ func (q *Queries) GetOrgIDByUserID(ctx context.Context, id uuid.UUID) (uuid.UUID
 	return org_id, err
 }
 
+const getRoleAndOrgIDByUserID = `-- name: GetRoleAndOrgIDByUserID :one
+SELECT org_id, role FROM employees WHERE user_id = $1
+`
+
+type GetRoleAndOrgIDByUserIDRow struct {
+	OrgID uuid.UUID `json:"org_id"`
+	Role  string    `json:"role"`
+}
+
+func (q *Queries) GetRoleAndOrgIDByUserID(ctx context.Context, userID uuid.UUID) (GetRoleAndOrgIDByUserIDRow, error) {
+	row := q.db.QueryRowContext(ctx, getRoleAndOrgIDByUserID, userID)
+	var i GetRoleAndOrgIDByUserIDRow
+	err := row.Scan(&i.OrgID, &i.Role)
+	return i, err
+}
+
 const insertEmployee = `-- name: InsertEmployee :exec
 INSERT INTO employees (
     id,

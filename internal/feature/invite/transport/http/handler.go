@@ -18,6 +18,19 @@ func NewHandler(service *service.Service) *Handler {
 	return &Handler{service: service}
 }
 
+// GenerateInvite godoc
+// @Summary      Generate invite
+// @Description  Create a time-limited invite link for a new employee and send it by email
+// @Tags         Invites
+// @Accept       json
+// @Produce      json
+// @Param        body  body      service.GenerateInviteRequest   true  "Invite details"
+// @Success      201   {object}  service.GenerateInviteResponse
+// @Failure      400   {object}  map[string]string
+// @Failure      404   {object}  map[string]string
+// @Failure      409   {object}  map[string]string
+// @Failure      500   {object}  map[string]string
+// @Router       /invites/generate [post]
 func (h *Handler) GenerateInvite(c *gin.Context) {
 	var req service.GenerateInviteRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
@@ -52,6 +65,19 @@ func (h *Handler) GenerateInvite(c *gin.Context) {
 	c.JSON(http.StatusCreated, resp)
 }
 
+// VerifyInvite godoc
+// @Summary      Verify invite code
+// @Description  Validate an invite code and return the invitation details
+// @Tags         Invites
+// @Accept       json
+// @Produce      json
+// @Param        body  body      service.VerifyInviteRequest   true  "Invite code"
+// @Success      200   {object}  service.VerifyInviteResponse
+// @Failure      400   {object}  map[string]string
+// @Failure      404   {object}  map[string]string
+// @Failure      409   {object}  map[string]string
+// @Failure      500   {object}  map[string]string
+// @Router       /invites/verify [post]
 func (h *Handler) VerifyInvite(c *gin.Context) {
 	var req service.VerifyInviteRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
@@ -80,6 +106,19 @@ func (h *Handler) VerifyInvite(c *gin.Context) {
 	c.JSON(http.StatusOK, resp)
 }
 
+// CompleteRegistration godoc
+// @Summary      Complete registration
+// @Description  Finalize a new employee's account using their invite code
+// @Tags         Invites
+// @Accept       json
+// @Produce      json
+// @Param        body  body      service.CompleteRegistrationRequest   true  "Registration data"
+// @Success      201   {object}  service.CompleteRegistrationResponse
+// @Failure      400   {object}  map[string]string
+// @Failure      404   {object}  map[string]string
+// @Failure      409   {object}  map[string]string
+// @Failure      500   {object}  map[string]string
+// @Router       /invites/complete-registration [post]
 func (h *Handler) CompleteRegistration(c *gin.Context) {
 	var req service.CompleteRegistrationRequest
 	if err := c.ShouldBindJSON(&req); err != nil {

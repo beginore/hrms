@@ -24,7 +24,20 @@ func NewEmployeeHandler(service employeeService.EmployeeService, cognitoSvc *cog
 	}
 }
 
-// CreateEmployee POST /employees
+// CreateEmployee godoc
+// @Summary      Create employee
+// @Description  Add a new employee record for the caller's organisation
+// @Tags         Employees
+// @Accept       json
+// @Produce      json
+// @Param        body  body      employeeService.CreateEmployeeRequest   true  "Employee data"
+// @Success      201   {object}  employeeService.CreateEmployeeResponse
+// @Failure      400   {object}  map[string]string
+// @Failure      401   {object}  map[string]string
+// @Failure      422   {object}  map[string]string
+// @Failure      500   {object}  map[string]string
+// @Security     BearerAuth
+// @Router       /employees [post]
 func (h *EmployeeHandler) CreateEmployee(c *gin.Context) {
 	callerUserID, ok := h.extractCallerUserID(c)
 	if !ok {
@@ -56,7 +69,18 @@ func (h *EmployeeHandler) CreateEmployee(c *gin.Context) {
 	c.JSON(http.StatusCreated, resp)
 }
 
-// GetEmployee GET /employees/:id
+// GetEmployee godoc
+// @Summary      Get employee
+// @Description  Retrieve a single employee by their ID
+// @Tags         Employees
+// @Produce      json
+// @Param        id   path      string  true  "Employee ID (UUID)"
+// @Success      200  {object}  employeeService.EmployeeResponse
+// @Failure      400  {object}  map[string]string
+// @Failure      404  {object}  map[string]string
+// @Failure      500  {object}  map[string]string
+// @Security     BearerAuth
+// @Router       /employees/{id} [get]
 func (h *EmployeeHandler) GetEmployee(c *gin.Context) {
 	id, ok := h.parseEmployeeID(c)
 	if !ok {
@@ -78,7 +102,16 @@ func (h *EmployeeHandler) GetEmployee(c *gin.Context) {
 	c.JSON(http.StatusOK, resp)
 }
 
-// ListEmployees GET /employees
+// ListEmployees godoc
+// @Summary      List employees
+// @Description  Retrieve all employees belonging to the caller's organisation
+// @Tags         Employees
+// @Produce      json
+// @Success      200  {array}   employeeService.EmployeeResponse
+// @Failure      401  {object}  map[string]string
+// @Failure      500  {object}  map[string]string
+// @Security     BearerAuth
+// @Router       /employees [get]
 func (h *EmployeeHandler) ListEmployees(c *gin.Context) {
 	callerUserID, ok := h.extractCallerUserID(c)
 	if !ok {
@@ -100,7 +133,19 @@ func (h *EmployeeHandler) ListEmployees(c *gin.Context) {
 	c.JSON(http.StatusOK, resp)
 }
 
-// UpdateRole PATCH /employees/:id/role
+// UpdateRole godoc
+// @Summary      Update employee role
+// @Description  Change the role of an employee
+// @Tags         Employees
+// @Accept       json
+// @Param        id    path  string                              true  "Employee ID (UUID)"
+// @Param        body  body  employeeService.UpdateEmployeeRoleRequest  true  "New role"
+// @Success      204
+// @Failure      400   {object}  map[string]string
+// @Failure      404   {object}  map[string]string
+// @Failure      500   {object}  map[string]string
+// @Security     BearerAuth
+// @Router       /employees/{id}/role [patch]
 func (h *EmployeeHandler) UpdateRole(c *gin.Context) {
 	id, ok := h.parseEmployeeID(c)
 	if !ok {
@@ -121,7 +166,19 @@ func (h *EmployeeHandler) UpdateRole(c *gin.Context) {
 	c.Status(http.StatusNoContent)
 }
 
-// UpdateSalary PATCH /employees/:id/salary
+// UpdateSalary godoc
+// @Summary      Update employee salary
+// @Description  Change the salary rate of an employee
+// @Tags         Employees
+// @Accept       json
+// @Param        id    path  string                                true  "Employee ID (UUID)"
+// @Param        body  body  employeeService.UpdateEmployeeSalaryRequest  true  "New salary rate"
+// @Success      204
+// @Failure      400   {object}  map[string]string
+// @Failure      404   {object}  map[string]string
+// @Failure      500   {object}  map[string]string
+// @Security     BearerAuth
+// @Router       /employees/{id}/salary [patch]
 func (h *EmployeeHandler) UpdateSalary(c *gin.Context) {
 	id, ok := h.parseEmployeeID(c)
 	if !ok {
@@ -142,7 +199,19 @@ func (h *EmployeeHandler) UpdateSalary(c *gin.Context) {
 	c.Status(http.StatusNoContent)
 }
 
-// UpdateStatus PATCH /employees/:id/status
+// UpdateStatus godoc
+// @Summary      Update employee status
+// @Description  Change the employment status of an employee
+// @Tags         Employees
+// @Accept       json
+// @Param        id    path  string                                true  "Employee ID (UUID)"
+// @Param        body  body  employeeService.UpdateEmployeeStatusRequest  true  "New status"
+// @Success      204
+// @Failure      400   {object}  map[string]string
+// @Failure      404   {object}  map[string]string
+// @Failure      500   {object}  map[string]string
+// @Security     BearerAuth
+// @Router       /employees/{id}/status [patch]
 func (h *EmployeeHandler) UpdateStatus(c *gin.Context) {
 	id, ok := h.parseEmployeeID(c)
 	if !ok {
@@ -163,7 +232,20 @@ func (h *EmployeeHandler) UpdateStatus(c *gin.Context) {
 	c.Status(http.StatusNoContent)
 }
 
-// UpdateDepartment PATCH /employees/:id/department
+// UpdateDepartment godoc
+// @Summary      Update employee department
+// @Description  Move an employee to a different department
+// @Tags         Employees
+// @Accept       json
+// @Param        id    path  string                                    true  "Employee ID (UUID)"
+// @Param        body  body  employeeService.UpdateEmployeeDepartmentRequest  true  "New department"
+// @Success      204
+// @Failure      400   {object}  map[string]string
+// @Failure      404   {object}  map[string]string
+// @Failure      422   {object}  map[string]string
+// @Failure      500   {object}  map[string]string
+// @Security     BearerAuth
+// @Router       /employees/{id}/department [patch]
 func (h *EmployeeHandler) UpdateDepartment(c *gin.Context) {
 	id, ok := h.parseEmployeeID(c)
 	if !ok {
@@ -189,7 +271,20 @@ func (h *EmployeeHandler) UpdateDepartment(c *gin.Context) {
 	c.Status(http.StatusNoContent)
 }
 
-// UpdatePosition PATCH /employees/:id/position
+// UpdatePosition godoc
+// @Summary      Update employee position
+// @Description  Change the position of an employee
+// @Tags         Employees
+// @Accept       json
+// @Param        id    path  string                                   true  "Employee ID (UUID)"
+// @Param        body  body  employeeService.UpdateEmployeePositionRequest  true  "New position"
+// @Success      204
+// @Failure      400   {object}  map[string]string
+// @Failure      404   {object}  map[string]string
+// @Failure      422   {object}  map[string]string
+// @Failure      500   {object}  map[string]string
+// @Security     BearerAuth
+// @Router       /employees/{id}/position [patch]
 func (h *EmployeeHandler) UpdatePosition(c *gin.Context) {
 	id, ok := h.parseEmployeeID(c)
 	if !ok {
@@ -215,7 +310,17 @@ func (h *EmployeeHandler) UpdatePosition(c *gin.Context) {
 	c.Status(http.StatusNoContent)
 }
 
-// DeleteEmployee DELETE /employees/:id
+// DeleteEmployee godoc
+// @Summary      Delete employee
+// @Description  Permanently remove an employee record
+// @Tags         Employees
+// @Param        id  path  string  true  "Employee ID (UUID)"
+// @Success      204
+// @Failure      400  {object}  map[string]string
+// @Failure      404  {object}  map[string]string
+// @Failure      500  {object}  map[string]string
+// @Security     BearerAuth
+// @Router       /employees/{id} [delete]
 func (h *EmployeeHandler) DeleteEmployee(c *gin.Context) {
 	id, ok := h.parseEmployeeID(c)
 	if !ok {
@@ -230,7 +335,6 @@ func (h *EmployeeHandler) DeleteEmployee(c *gin.Context) {
 	c.Status(http.StatusNoContent)
 }
 
-// extractCallerUserID parses the Bearer token and returns the userID from the sub claim.
 func (h *EmployeeHandler) extractCallerUserID(c *gin.Context) (uuid.UUID, bool) {
 	authHeader := c.GetHeader("Authorization")
 	if authHeader == "" {
@@ -254,7 +358,6 @@ func (h *EmployeeHandler) extractCallerUserID(c *gin.Context) (uuid.UUID, bool) 
 	return userID, true
 }
 
-// parseEmployeeID extracts and validates the :id path param.
 func (h *EmployeeHandler) parseEmployeeID(c *gin.Context) (uuid.UUID, bool) {
 	id, err := uuid.Parse(c.Param("id"))
 	if err != nil {
@@ -264,7 +367,6 @@ func (h *EmployeeHandler) parseEmployeeID(c *gin.Context) (uuid.UUID, bool) {
 	return id, true
 }
 
-// handleMutationError handles errors common to all mutating operations.
 func (h *EmployeeHandler) handleMutationError(c *gin.Context, err error) {
 	switch {
 	case errors.Is(err, employeeService.ErrEmployeeNotFound):

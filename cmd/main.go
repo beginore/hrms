@@ -1,11 +1,28 @@
+// @title           HRMS API
+// @version         1.0
+// @description     Human Resource Management System API
+// @host            localhost:8080
+// @BasePath        /v1
+// @securityDefinitions.apikey BearerAuth
+// @in header
+// @name Authorization
+// @description Type "Bearer" followed by a space and your JWT token.
+
 package main
 
 import (
+	_ "hrms/docs"
 	authRepository "hrms/internal/feature/auth/repository"
 	authService "hrms/internal/feature/auth/service"
 	authHandler "hrms/internal/feature/auth/transport/http"
+	cityRepository "hrms/internal/feature/city/repository"
+	cityService "hrms/internal/feature/city/service"
+	cityHandler "hrms/internal/feature/city/transport/http"
 	consentRepository "hrms/internal/feature/consent/repository"
 	consentService "hrms/internal/feature/consent/service"
+	employeeRepository "hrms/internal/feature/employee/repository"
+	employeeService "hrms/internal/feature/employee/service"
+	employeeHandler "hrms/internal/feature/employee/transport/http"
 	inviteRepository "hrms/internal/feature/invite/repository"
 	inviteService "hrms/internal/feature/invite/service"
 	inviteHandler "hrms/internal/feature/invite/transport/http"
@@ -15,10 +32,13 @@ import (
 	"hrms/internal/infrastructure/app/cognito"
 	"hrms/internal/infrastructure/config"
 	"hrms/internal/infrastructure/email"
+	"hrms/internal/infrastructure/middleware"
 	"hrms/internal/infrastructure/storage/postgres"
 	"hrms/pkg/log"
 
 	"github.com/gin-gonic/gin"
+	swaggerFiles "github.com/swaggo/files"
+	ginSwagger "github.com/swaggo/gin-swagger"
 )
 
 func main() {
@@ -35,43 +55,85 @@ func main() {
 		logger.Fatal("Failed to initialize Email client")
 	}
 
-	// TODO: Initialize repositories for all modules.
+	cityRepo := cityRepository.NewRepository(postgres.DB)
+	citySvc := cityService.NewCityService(cityRepo)
+	cityHTTPHandler := cityHandler.NewCityHandler(citySvc)
+
 	orgRepo := oganizationRepository.NewOrganizationRepository(postgres.DB)
 	consentRepo := consentRepository.NewRepository(postgres.DB)
 	inviteRepo := inviteRepository.NewRepository(postgres.DB)
 	authRepo := authRepository.NewAuthRepository(postgres.DB)
+	employeeRepo := employeeRepository.NewRepository(postgres.DB)
 
-	// TODO: Initialize services for all modules.
 	authSvc := authService.NewAuthService(cognitoSvc, authRepo)
-	consentSvc := consentService.NewService(consentRepo)
+	consentSvc := consentService.NewConsentService(consentRepo)
 	orgSvc := organizationService.NewSignUpService(orgRepo, consentRepo, cognitoSvc, emailSvc)
-	inviteSvc, err := inviteService.NewService(inviteRepo, cfg, cognitoClient)
+	employeeSvc := employeeService.NewEmployeeService(employeeRepo)
+	inviteSvc, err := inviteService.NewInviteService(inviteRepo, cfg, cognitoClient)
 	if err != nil {
 		logger.Fatal("Failed to initialize Invite service")
 	}
 
-	newAuthHandler := authHandler.NewAuthHandler(authSvc)
+	newAuthHTTPHandler := authHandler.NewAuthHandler(authSvc)
+	employeeHTTPHandler := employeeHandler.NewEmployeeHandler(employeeSvc, cognitoSvc)
 	handler := organizationHandler.NewOrganizationHandler(orgSvc, consentSvc)
 	inviteHTTPHandler := inviteHandler.NewHandler(inviteSvc)
+
+	authMw, err := middleware.AuthMiddleware(cfg.AWS.Region, cfg.Cognito.UserPoolID, employeeRepo)
+	if err != nil {
+		logger.Fatal("Failed to initialize auth middleware")
+	}
 
 	router := gin.Default()
 
 	v1 := router.Group("/v1")
 
-	// Auth
-	v1.POST("/auth/login", newAuthHandler.Login)
-	v1.POST("/auth/refresh", newAuthHandler.RefreshTokens)
-	// Organizations
+	// Swagger UI
+	router.GET("/swagger/*any", ginSwagger.WrapHandler(swaggerFiles.Handler))
+
+	// Public routes
+	v1.POST("/auth/login", newAuthHTTPHandler.Login)
+	v1.POST("/auth/refresh", newAuthHTTPHandler.RefreshTokens)
+	v1.POST("/auth/forgot-password", newAuthHTTPHandler.ForgotPassword)
+	v1.POST("/auth/reset-password", newAuthHTTPHandler.ResetPassword)
 	v1.POST("/organizations", handler.CreateOrganization)
 	v1.POST("/organizations/verify-otp", handler.VerifyOTP)
 	v1.POST("/invites/generate", inviteHTTPHandler.GenerateInvite)
 	v1.POST("/invites/verify", inviteHTTPHandler.VerifyInvite)
 	v1.POST("/invites/complete-registration", inviteHTTPHandler.CompleteRegistration)
+	v1.GET("/legal/documents", handler.GetDocuments)
+	v1.GET("/cities", cityHTTPHandler.ListCities)
+
+	// Protected routes
+	protected := v1.Group("/", authMw)
+
+	// Auth (protected)
+	protected.POST("/auth/logout", newAuthHTTPHandler.Logout)
 
 	// Consents
-	v1.POST("/organizations/consents", handler.SubmitConsents)
-	v1.GET("/organizations/consents/validate", handler.ValidateConsents)
-	v1.GET("/legal/documents", handler.GetDocuments)
+	protected.POST("/organizations/consents", handler.SubmitConsents)
+	protected.GET("/organizations/consents/validate", handler.ValidateConsents)
+
+	// Departments
+	protected.POST("/organizations/departments", handler.CreateDepartment)
+	protected.GET("/organizations/departments", handler.ListDepartments)
+	protected.DELETE("/organizations/departments/:id", handler.DeleteDepartment)
+
+	// Positions
+	protected.POST("/organizations/positions", handler.CreatePosition)
+	protected.GET("/organizations/positions", handler.ListPositions)
+	protected.DELETE("/organizations/positions/:id", handler.DeletePosition)
+
+	// Employees
+	protected.POST("/employees", employeeHTTPHandler.CreateEmployee)
+	protected.GET("/employees", employeeHTTPHandler.ListEmployees)
+	protected.GET("/employees/:id", employeeHTTPHandler.GetEmployee)
+	protected.PATCH("/employees/:id/role", employeeHTTPHandler.UpdateRole)
+	protected.PATCH("/employees/:id/salary", employeeHTTPHandler.UpdateSalary)
+	protected.PATCH("/employees/:id/status", employeeHTTPHandler.UpdateStatus)
+	protected.PATCH("/employees/:id/department", employeeHTTPHandler.UpdateDepartment)
+	protected.PATCH("/employees/:id/position", employeeHTTPHandler.UpdatePosition)
+	protected.DELETE("/employees/:id", employeeHTTPHandler.DeleteEmployee)
 
 	port := ":8080"
 	logger.Info("Starting HTTP server on port " + port)
