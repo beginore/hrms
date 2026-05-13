@@ -12,6 +12,12 @@ package main
 
 import (
 	_ "hrms/docs"
+	attendanceRepository "hrms/internal/feature/attendance/repository"
+	attendanceService "hrms/internal/feature/attendance/service"
+	attendanceHandler "hrms/internal/feature/attendance/transport/http"
+	calendarRepository "hrms/internal/feature/calendar/repository"
+	calendarService "hrms/internal/feature/calendar/service"
+	calendarHandler "hrms/internal/feature/calendar/transport/http"
 	authRepository "hrms/internal/feature/auth/repository"
 	authService "hrms/internal/feature/auth/service"
 	authHandler "hrms/internal/feature/auth/transport/http"
@@ -64,6 +70,14 @@ func main() {
 	if err != nil {
 		logger.Fatal("Failed to initialize Email client")
 	}
+
+	calendarRepo := calendarRepository.NewRepository(postgres.DB)
+	calendarSvc := calendarService.NewCalendarService(calendarRepo)
+	calendarHTTPHandler := calendarHandler.NewCalendarHandler(calendarSvc, cognitoSvc)
+
+	attendanceRepo := attendanceRepository.NewRepository(postgres.DB, calendarRepo)
+	attendanceSvc := attendanceService.NewAttendanceService(attendanceRepo)
+	attendanceHTTPHandler := attendanceHandler.NewAttendanceHandler(attendanceSvc, cognitoSvc)
 
 	cityRepo := cityRepository.NewRepository(postgres.DB)
 	citySvc := cityService.NewCityService(cityRepo)
@@ -179,6 +193,28 @@ func main() {
 	protected.PATCH("/employees/:id/department", employeeHTTPHandler.UpdateDepartment)
 	protected.PATCH("/employees/:id/position", employeeHTTPHandler.UpdatePosition)
 	protected.DELETE("/employees/:id", employeeHTTPHandler.DeleteEmployee)
+
+	// Attendance — work schedules
+	protected.POST("/attendance/work-schedules", attendanceHTTPHandler.SetWorkSchedule)
+	protected.GET("/attendance/work-schedules/:employee_id", attendanceHTTPHandler.GetWorkSchedule)
+
+	// Attendance — СКУД events
+	protected.POST("/attendance/skud-events", attendanceHTTPHandler.CreateSkudEvent)
+
+	// Attendance — leave requests
+	protected.POST("/attendance/leave-requests", attendanceHTTPHandler.CreateLeaveRequest)
+	protected.GET("/attendance/leave-requests", attendanceHTTPHandler.ListLeaveRequests)
+	protected.GET("/attendance/leave-requests/:id", attendanceHTTPHandler.GetLeaveRequest)
+	protected.PATCH("/attendance/leave-requests/:id/review", attendanceHTTPHandler.ReviewLeaveRequest)
+
+	// Attendance — records
+	protected.GET("/attendance", attendanceHTTPHandler.ListAttendance)
+	protected.GET("/attendance/employees/:employee_id", attendanceHTTPHandler.ListEmployeeAttendance)
+
+	// Calendar
+	protected.POST("/calendar", calendarHTTPHandler.AddDay)
+	protected.DELETE("/calendar/:id", calendarHTTPHandler.DeleteDay)
+	protected.GET("/calendar/summary", calendarHTTPHandler.GetMonthSummary)
 
 	port := ":8080"
 	logger.Info("Starting HTTP server on port " + port)
