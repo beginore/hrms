@@ -14,6 +14,9 @@ import (
 type AuthService interface {
 	Login(ctx context.Context, req LoginRequest) (*TokenResponse, error)
 	RefreshToken(ctx context.Context, req RefreshTokenRequest) (*TokenResponse, error)
+	Logout(ctx context.Context, req LogoutRequest) error
+	ForgotPassword(ctx context.Context, req ForgotPasswordRequest) error
+	ResetPassword(ctx context.Context, req ResetPasswordRequest) error
 }
 
 type authService struct {
@@ -61,6 +64,45 @@ func (s *authService) Login(ctx context.Context, req LoginRequest) (*TokenRespon
 		ExpiresIn:    result.ExpiresIn,
 		TokenType:    *result.TokenType,
 	}, nil
+}
+
+func (s *authService) Logout(ctx context.Context, req LogoutRequest) error {
+	if req.RefreshToken == "" {
+		return ErrRefreshTokenRequired
+	}
+	if err := s.cognitoSvc.RevokeToken(ctx, req.RefreshToken); err != nil {
+		log.Printf("[Auth] Cognito RevokeToken failed (non-fatal): %v", err)
+	}
+	if err := s.repo.DeleteSessionByRefreshToken(ctx, req.RefreshToken); err != nil {
+		log.Printf("[Auth] Failed to delete session: %v", err)
+	}
+	return nil
+}
+
+func (s *authService) ForgotPassword(ctx context.Context, req ForgotPasswordRequest) error {
+	if req.Email == "" {
+		return ErrEmailRequired
+	}
+	return s.cognitoSvc.ForgotPassword(ctx, req.Email)
+}
+
+func (s *authService) ResetPassword(ctx context.Context, req ResetPasswordRequest) error {
+	if req.Email == "" || req.Code == "" || req.NewPassword == "" {
+		return ErrEmailRequired
+	}
+	err := s.cognitoSvc.ConfirmForgotPassword(ctx, req.Email, req.Code, req.NewPassword)
+	if err != nil {
+		switch {
+		case errors.Is(err, cognito.ErrInvalidOTPCode):
+			return ErrInvalidResetCode
+		case errors.Is(err, cognito.ErrOTPCodeExpired):
+			return ErrResetCodeExpired
+		case errors.Is(err, cognito.ErrInvalidPassword):
+			return ErrPasswordTooWeak
+		}
+		return err
+	}
+	return nil
 }
 
 func (s *authService) RefreshToken(ctx context.Context, req RefreshTokenRequest) (*TokenResponse, error) {

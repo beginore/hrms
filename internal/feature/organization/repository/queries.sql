@@ -46,3 +46,41 @@ WHERE email = $1;
 SELECT COUNT(*)
 FROM organizations
 WHERE vat_id = $1;
+
+-- name: InsertDepartment :exec
+INSERT INTO departments (
+    id, org_id, name
+)
+VALUES (
+        $1, $2, $3
+);
+
+-- name: InsertPosition :exec
+INSERT INTO positions (
+    id, org_id, name
+)
+VALUES (
+        $1, $2, $3
+);
+
+-- name: CountEmployeesByDepartment :one
+SELECT COUNT(*)
+FROM employees
+WHERE department_id = $1;
+
+-- name: CountEmployeesByPosition :one
+SELECT COUNT(*)
+FROM employees
+WHERE position_id = $1;
+
+-- name: GetDepartmentsByOrgID :many
+SELECT id, org_id, name FROM departments WHERE org_id = $1 ORDER BY name;
+
+-- name: GetPositionsByOrgID :many
+SELECT id, org_id, name FROM positions WHERE org_id = $1 ORDER BY name;
+
+-- name: DeleteDepartment :exec
+DELETE FROM departments WHERE id = $1 AND org_id = $2;
+
+-- name: DeletePosition :exec
+DELETE FROM positions WHERE id = $1 AND org_id = $2;

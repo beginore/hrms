@@ -52,4 +52,7 @@ var (
 	ErrTooManyOTPAttempts  = errors.New("too many failed OTP attempts – try again later")
 	ErrUserAlreadyVerified = errors.New("user is already verified")
 	ErrUserNotFound        = errors.New("user not found for this email")
+
+	ErrDepartmentHasEmployees = errors.New("department still has employees assigned")
+	ErrPositionHasEmployees   = errors.New("position still has employees assigned")
 )

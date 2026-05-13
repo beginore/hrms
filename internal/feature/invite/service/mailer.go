@@ -8,6 +8,7 @@ import (
 	"strings"
 
 	"hrms/internal/infrastructure/config"
+	"hrms/internal/infrastructure/retry"
 )
 
 type mailer struct {
@@ -79,13 +80,14 @@ HRMS System Team`, firstName, organizationName, inviteCode, platformURL)
 
 	addr := fmt.Sprintf("%s:%d", m.host, m.port)
 	auth := smtp.PlainAuth("", m.username, m.password, m.host)
-	err := smtp.SendMail(addr, auth, m.senderEmail, []string{toEmail}, []byte(message))
+	err := retry.Do(ctx, "SMTP.SendInvite", func() error {
+		return smtp.SendMail(addr, auth, m.senderEmail, []string{toEmail}, []byte(message))
+	})
 	if err != nil {
 		log.Printf("[Invite Mailer] SMTP send failed to=%q: %v", toEmail, err)
 		return fmt.Errorf("failed to send invite email to %s via smtp: %w", toEmail, err)
 	}
 
 	log.Printf("[Invite Mailer] SMTP invite email sent to=%q", toEmail)
-
 	return nil
 }

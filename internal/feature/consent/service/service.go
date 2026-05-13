@@ -11,8 +11,8 @@ import (
 
 type ConsentService interface {
 	GetActiveDocuments(ctx context.Context) ([]ConsentItemResponse, error)
-	SubmitConsents(ctx context.Context, req RenewConsentRequest) error
-	ValidateConsents(ctx context.Context) (*ConsentValidationResponse, error)
+	SubmitConsents(ctx context.Context, orgID uuid.UUID, req RenewConsentRequest) error
+	ValidateConsents(ctx context.Context, orgID uuid.UUID) (*ConsentValidationResponse, error)
 }
 
 type consentService struct {
@@ -43,9 +43,7 @@ func (s *consentService) GetActiveDocuments(ctx context.Context) ([]ConsentItemR
 	return result, nil
 }
 
-func (s *consentService) SubmitConsents(ctx context.Context, req RenewConsentRequest) error {
-	// TODO: Parse orgID from JWT
-	orgID := uuid.MustParse("00000000-0000-0000-0000-000000000000")
+func (s *consentService) SubmitConsents(ctx context.Context, orgID uuid.UUID, req RenewConsentRequest) error {
 
 	adminID, err := s.repo.GetAdminIDByOrgID(ctx, orgID)
 	if err != nil {
@@ -74,16 +72,13 @@ func (s *consentService) SubmitConsents(ctx context.Context, req RenewConsentReq
 	return nil
 }
 
-func (s *consentService) ValidateConsents(ctx context.Context) (*ConsentValidationResponse, error) {
-	// TODO: Parse orgID from JWT
-	parsedOrgID := uuid.MustParse("00000000-0000-0000-0000-000000000000")
-
+func (s *consentService) ValidateConsents(ctx context.Context, orgID uuid.UUID) (*ConsentValidationResponse, error) {
 	activeDocs, err := s.repo.GetActiveDocuments(ctx)
 	if err != nil {
 		return nil, err
 	}
 
-	orgConsents, err := s.repo.GetConsentsByOrgID(ctx, parsedOrgID)
+	orgConsents, err := s.repo.GetConsentsByOrgID(ctx, orgID)
 	if err != nil {
 		return nil, err
 	}

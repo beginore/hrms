@@ -6,13 +6,23 @@ package postgres
 
 import (
 	"context"
+
+	"github.com/google/uuid"
 )
 
 type Querier interface {
 	CheckVATUnique(ctx context.Context, vatID string) (int64, error)
+	CountEmployeesByDepartment(ctx context.Context, departmentID uuid.UUID) (int64, error)
+	CountEmployeesByPosition(ctx context.Context, positionID uuid.UUID) (int64, error)
+	DeleteDepartment(ctx context.Context, arg DeleteDepartmentParams) error
+	DeletePosition(ctx context.Context, arg DeletePositionParams) error
+	GetDepartmentsByOrgID(ctx context.Context, orgID uuid.UUID) ([]Department, error)
+	GetPositionsByOrgID(ctx context.Context, orgID uuid.UUID) ([]Position, error)
 	GetUserByEmail(ctx context.Context, email string) (GetUserByEmailRow, error)
 	InsertConsent(ctx context.Context, arg InsertConsentParams) error
+	InsertDepartment(ctx context.Context, arg InsertDepartmentParams) error
 	InsertOrganization(ctx context.Context, arg InsertOrganizationParams) error
+	InsertPosition(ctx context.Context, arg InsertPositionParams) error
 	InsertUser(ctx context.Context, arg InsertUserParams) error
 	UpdateUserVerificationStatus(ctx context.Context, email string) error
 }
