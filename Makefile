@@ -7,7 +7,7 @@
 #-include Makefile.local
 MIGRATIONS_DIR=internal/infrastructure/storage/postgres/migrations
 
-DB_DSN=postgres://postgres:123@localhost:5432/hrms?sslmode=disable
+DB_DSN=postgres://postgres:0110@localhost:5432/hrms?sslmode=disable
 
 LINTER_VERSION=1.64.5
 

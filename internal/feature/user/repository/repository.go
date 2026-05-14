@@ -4,6 +4,7 @@ import (
 	"context"
 	"database/sql"
 	"errors"
+	"strings"
 
 	"github.com/google/uuid"
 )
@@ -22,6 +23,7 @@ type UserProfile struct {
 	VerificationStatus string
 	JoinedDate         sql.NullTime
 	Department         sql.NullString
+	DepartmentID       sql.NullString
 	Position           sql.NullString
 	Salary             sql.NullString
 	Location           sql.NullString
@@ -49,6 +51,7 @@ SELECT
     u.verification_status,
     u.created_at AS joined_date,
     d.name AS department_name,
+    e.department_id::text AS department_id,
     p.name AS position_name,
     CASE WHEN e.salary_rate IS NOT NULL THEN e.salary_rate::text ELSE NULL END AS salary_rate,
     o.address AS location
@@ -73,6 +76,7 @@ WHERE u.id = $1
 		&profile.VerificationStatus,
 		&profile.JoinedDate,
 		&profile.Department,
+		&profile.DepartmentID,
 		&profile.Position,
 		&profile.Salary,
 		&profile.Location,
@@ -85,4 +89,27 @@ WHERE u.id = $1
 	}
 
 	return profile, nil
+}
+
+func (r *Repository) GetUserRoleByID(ctx context.Context, userID uuid.UUID) (string, error) {
+	const query = `
+SELECT COALESCE(NULLIF(TRIM(e.role), ''), NULLIF(TRIM(u.role), ''))
+FROM users u
+LEFT JOIN employees e ON e.user_id = u.id
+WHERE u.id = $1
+`
+
+	var role sql.NullString
+	if err := r.db.QueryRowContext(ctx, query, userID).Scan(&role); err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return "", ErrUserNotFound
+		}
+		return "", err
+	}
+
+	if !role.Valid || strings.TrimSpace(role.String) == "" {
+		return "", ErrUserNotFound
+	}
+
+	return strings.TrimSpace(role.String), nil
 }

@@ -73,7 +73,7 @@ func main() {
 
 	attendanceRepo := attendanceRepository.NewRepository(postgres.DB, calendarRepo)
 	attendanceSvc := attendanceService.NewAttendanceService(attendanceRepo)
-	attendanceHTTPHandler := attendanceHandler.NewAttendanceHandler(attendanceSvc)
+	attendanceHTTPHandler := attendanceHandler.NewAttendanceHandler(attendanceSvc, cognitoSvc)
 
 	cityRepo := cityRepository.NewRepository(postgres.DB)
 	citySvc := cityService.NewCityService(cityRepo)
@@ -132,8 +132,6 @@ func main() {
 
 	// Protected routes
 	protected := v1.Group("/", authMw)
-	adminMw := middleware.RequireAnyRole(middleware.RoleSysAdmin, middleware.RoleAdmin, middleware.RoleHR)
-	admin := v1.Group("/", authMw, adminMw)
 
 	// Auth (protected)
 	protected.POST("/auth/logout", newAuthHTTPHandler.Logout)
@@ -143,50 +141,46 @@ func main() {
 	protected.GET("/organizations/consents/validate", handler.ValidateConsents)
 
 	// Departments
-	admin.POST("/organizations/departments", handler.CreateDepartment)
+	protected.POST("/organizations/departments", handler.CreateDepartment)
 	protected.GET("/organizations/departments", handler.ListDepartments)
-	admin.DELETE("/organizations/departments/:id", handler.DeleteDepartment)
+	protected.DELETE("/organizations/departments/:id", handler.DeleteDepartment)
 
 	// Positions
-	admin.POST("/organizations/positions", handler.CreatePosition)
+	protected.POST("/organizations/positions", handler.CreatePosition)
 	protected.GET("/organizations/positions", handler.ListPositions)
-	admin.DELETE("/organizations/positions/:id", handler.DeletePosition)
+	protected.DELETE("/organizations/positions/:id", handler.DeletePosition)
 
 	// Employees
-	admin.POST("/employees", employeeHTTPHandler.CreateEmployee)
+	protected.POST("/employees", employeeHTTPHandler.CreateEmployee)
 	protected.GET("/employees", employeeHTTPHandler.ListEmployees)
 	protected.GET("/employees/:id", employeeHTTPHandler.GetEmployee)
-	admin.PATCH("/employees/:id/role", employeeHTTPHandler.UpdateRole)
-	admin.PATCH("/employees/:id/salary", employeeHTTPHandler.UpdateSalary)
-	admin.PATCH("/employees/:id/status", employeeHTTPHandler.UpdateStatus)
-	admin.PATCH("/employees/:id/department", employeeHTTPHandler.UpdateDepartment)
-	admin.PATCH("/employees/:id/position", employeeHTTPHandler.UpdatePosition)
-	admin.DELETE("/employees/:id", employeeHTTPHandler.DeleteEmployee)
+	protected.PATCH("/employees/:id/role", employeeHTTPHandler.UpdateRole)
+	protected.PATCH("/employees/:id/salary", employeeHTTPHandler.UpdateSalary)
+	protected.PATCH("/employees/:id/status", employeeHTTPHandler.UpdateStatus)
+	protected.PATCH("/employees/:id/department", employeeHTTPHandler.UpdateDepartment)
+	protected.PATCH("/employees/:id/position", employeeHTTPHandler.UpdatePosition)
+	protected.DELETE("/employees/:id", employeeHTTPHandler.DeleteEmployee)
 
 	// Attendance — work schedules
-	admin.POST("/attendance/work-schedules", attendanceHTTPHandler.SetWorkSchedule)
+	protected.POST("/attendance/work-schedules", attendanceHTTPHandler.SetWorkSchedule)
 	protected.GET("/attendance/work-schedules/:employee_id", attendanceHTTPHandler.GetWorkSchedule)
 
 	// Attendance — СКУД events
 	protected.POST("/attendance/skud-events", attendanceHTTPHandler.CreateSkudEvent)
 
-	// Attendance manual check-in / check-out
-	protected.POST("/attendance/check-in", attendanceHTTPHandler.CheckIn)
-	protected.POST("/attendance/check-out", attendanceHTTPHandler.CheckOut)
-
 	// Attendance — leave requests
 	protected.POST("/attendance/leave-requests", attendanceHTTPHandler.CreateLeaveRequest)
 	protected.GET("/attendance/leave-requests", attendanceHTTPHandler.ListLeaveRequests)
 	protected.GET("/attendance/leave-requests/:id", attendanceHTTPHandler.GetLeaveRequest)
-	admin.PATCH("/attendance/leave-requests/:id/review", attendanceHTTPHandler.ReviewLeaveRequest)
+	protected.PATCH("/attendance/leave-requests/:id/review", attendanceHTTPHandler.ReviewLeaveRequest)
 
 	// Attendance — records
 	protected.GET("/attendance", attendanceHTTPHandler.ListAttendance)
 	protected.GET("/attendance/employees/:employee_id", attendanceHTTPHandler.ListEmployeeAttendance)
 
 	// Calendar
-	admin.POST("/calendar", calendarHTTPHandler.AddDay)
-	admin.DELETE("/calendar/:id", calendarHTTPHandler.DeleteDay)
+	protected.POST("/calendar", calendarHTTPHandler.AddDay)
+	protected.DELETE("/calendar/:id", calendarHTTPHandler.DeleteDay)
 	protected.GET("/calendar/summary", calendarHTTPHandler.GetMonthSummary)
 
 	// Payroll

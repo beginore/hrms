@@ -49,3 +49,15 @@ type EmployeeResponse struct {
 	DepartmentName string `json:"departmentName"`
 	PositionName   string `json:"positionName"`
 }
+
+type DepartmentResponse struct {
+	ID    string `json:"id"`
+	OrgID string `json:"orgId"`
+	Name  string `json:"name"`
+}
+
+type PositionResponse struct {
+	ID    string `json:"id"`
+	OrgID string `json:"orgId"`
+	Name  string `json:"name"`
+}

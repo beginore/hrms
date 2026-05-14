@@ -10,6 +10,8 @@ type EmployeeRepository interface {
 	CreateEmployee(ctx context.Context, params CreateEmployeeParams) error
 	GetByID(ctx context.Context, id uuid.UUID) (Employee, error)
 	GetByOrgID(ctx context.Context, orgID uuid.UUID) ([]Employee, error)
+	ListDepartmentsByOrgID(ctx context.Context, orgID uuid.UUID) ([]Department, error)
+	ListPositionsByOrgID(ctx context.Context, orgID uuid.UUID) ([]Position, error)
 	UpdateRole(ctx context.Context, id uuid.UUID, role string) error
 	UpdateSalary(ctx context.Context, id uuid.UUID, salaryRate string) error
 	UpdateStatus(ctx context.Context, id uuid.UUID, status string) error

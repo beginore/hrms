@@ -63,6 +63,7 @@ func (s *Service) GetMe(ctx context.Context, accessToken string) (*UserProfileRe
 		VerificationStatus: profile.VerificationStatus,
 		JoinedDate:         joinedDate,
 		Department:         nullStringValue(profile.Department),
+		DepartmentID:       nullStringValue(profile.DepartmentID),
 		Position:           nullStringValue(profile.Position),
 		Salary:             nullStringValue(profile.Salary),
 		Location:           nullStringValue(profile.Location),

@@ -16,6 +16,7 @@ type UserProfileResponse struct {
 	VerificationStatus string    `json:"verificationStatus"`
 	JoinedDate         time.Time `json:"joinedDate"`
 	Department         string    `json:"department"`
+	DepartmentID       string    `json:"departmentId"`
 	Position           string    `json:"position"`
 	Salary             string    `json:"salary"`
 	Location           string    `json:"location"`

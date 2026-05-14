@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	consentRepository "hrms/internal/feature/consent/repository"
+	notificationService "hrms/internal/feature/notification/service"
 	"hrms/internal/feature/organization/repository"
 	"hrms/internal/feature/organization/repository/postgres"
 	"hrms/internal/infrastructure/app/cognito"
@@ -28,6 +29,7 @@ var (
 type SignUpService struct {
 	repo        repository.OrganizationRepository
 	consentRepo consentRepository.ConsentRepository
+	notifySvc   *notificationService.Service
 	cognitoSvc  *cognito.Service
 	emailSvc    *email.Service
 }
@@ -35,12 +37,14 @@ type SignUpService struct {
 func NewSignUpService(
 	repo repository.OrganizationRepository,
 	consentRepo consentRepository.ConsentRepository,
+	notifySvc *notificationService.Service,
 	cognitoSvc *cognito.Service,
 	emailSvc *email.Service,
 ) *SignUpService {
 	return &SignUpService{
 		repo:        repo,
 		consentRepo: consentRepo,
+		notifySvc:   notifySvc,
 		cognitoSvc:  cognitoSvc,
 		emailSvc:    emailSvc,
 	}
@@ -88,6 +92,19 @@ func (s *SignUpService) CreateOrganization(ctx context.Context, req CreateOrgani
 	otp := s.emailSvc.GenerateOTP()
 	if err := s.emailSvc.SendOTP(ctx, req.Email, otp); err != nil {
 		log.Printf("[SignUp] OTP send failed (non-fatal): %v", err)
+	}
+
+	orgIDRaw := orgID.String()
+	if _, err := s.notifySvc.NotifySystemToUser(ctx, notificationService.NotifyUserRequest{
+		UserID: userID.String(),
+		OrgID:  &orgIDRaw,
+		Title:  "Organization created",
+		Message: fmt.Sprintf(
+			"Organization %s has been created successfully. You can continue setup in the portal.",
+			req.OrganizationName,
+		),
+	}); err != nil {
+		log.Printf("[SignUp] Welcome notification failed (non-fatal): %v", err)
 	}
 
 	log.Printf("[SignUp] Organization created successfully: %s", orgID)

@@ -133,6 +133,50 @@ func (h *EmployeeHandler) ListEmployees(c *gin.Context) {
 	c.JSON(http.StatusOK, resp)
 }
 
+// ListDepartments GET /departments
+func (h *EmployeeHandler) ListDepartments(c *gin.Context) {
+	callerUserID, ok := h.extractCallerUserID(c)
+	if !ok {
+		return
+	}
+
+	resp, err := h.service.ListDepartments(c.Request.Context(), callerUserID)
+	if err != nil {
+		switch {
+		case errors.Is(err, employeeService.ErrInvalidUserID):
+			c.JSON(http.StatusUnauthorized, gin.H{"error": "unauthorized"})
+		default:
+			log.Printf("[Handler] ListDepartments error: %v", err)
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "internal server error"})
+		}
+		return
+	}
+
+	c.JSON(http.StatusOK, resp)
+}
+
+// ListPositions GET /positions
+func (h *EmployeeHandler) ListPositions(c *gin.Context) {
+	callerUserID, ok := h.extractCallerUserID(c)
+	if !ok {
+		return
+	}
+
+	resp, err := h.service.ListPositions(c.Request.Context(), callerUserID)
+	if err != nil {
+		switch {
+		case errors.Is(err, employeeService.ErrInvalidUserID):
+			c.JSON(http.StatusUnauthorized, gin.H{"error": "unauthorized"})
+		default:
+			log.Printf("[Handler] ListPositions error: %v", err)
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "internal server error"})
+		}
+		return
+	}
+
+	c.JSON(http.StatusOK, resp)
+}
+
 // UpdateRole godoc
 // @Summary      Update employee role
 // @Description  Change the role of an employee

@@ -34,3 +34,15 @@ type CreateEmployeeParams struct {
 	SalaryRate   string
 	Status       string
 }
+
+type Department struct {
+	ID    uuid.UUID
+	OrgID uuid.UUID
+	Name  string
+}
+
+type Position struct {
+	ID    uuid.UUID
+	OrgID uuid.UUID
+	Name  string
+}

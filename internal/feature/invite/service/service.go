@@ -14,6 +14,7 @@ import (
 	"time"
 
 	"hrms/internal/feature/invite/repository"
+	notificationService "hrms/internal/feature/notification/service"
 	"hrms/internal/infrastructure/app/cognito"
 	"hrms/internal/infrastructure/config"
 
@@ -33,10 +34,11 @@ const (
 type Service struct {
 	repo          *repository.Repository
 	cognitoClient *cognito.Client
+	notifySvc     *notificationService.Service
 	mailer        *mailer
 }
 
-func NewInviteService(repo *repository.Repository, cfg *config.Config, cognitoClient *cognito.Client) (*Service, error) {
+func NewService(repo *repository.Repository, notifySvc *notificationService.Service, cfg *config.Config, cognitoClient *cognito.Client) (*Service, error) {
 	inviteMailer, err := newMailer(cfg)
 	if err != nil {
 		return nil, err
@@ -45,6 +47,7 @@ func NewInviteService(repo *repository.Repository, cfg *config.Config, cognitoCl
 	return &Service{
 		repo:          repo,
 		cognitoClient: cognitoClient,
+		notifySvc:     notifySvc,
 		mailer:        inviteMailer,
 	}, nil
 }
@@ -312,7 +315,6 @@ func (s *Service) CompleteRegistration(ctx context.Context, req CompleteRegistra
 
 		return nil, fmt.Errorf("insert invited user: %w", err)
 	}
-
 	log.Printf("[Invite CompleteRegistration] Marking invite as used: inviteID=%s code=%q", inviteID, code)
 	if err := s.repo.MarkInviteUsedTx(ctx, tx, inviteID, time.Now().UTC()); err != nil {
 		log.Printf("[Invite CompleteRegistration] Failed to mark invite as used for code=%q: %v", code, err)
@@ -327,6 +329,18 @@ func (s *Service) CompleteRegistration(ctx context.Context, req CompleteRegistra
 	}
 
 	log.Printf("[Invite CompleteRegistration] Registration completed successfully: code=%q email=%q userID=%s", code, invite.Email, userID)
+
+	if _, err := s.notifySvc.NotifySystemToUser(ctx, notificationService.NotifyUserRequest{
+		UserID: userID.String(),
+		OrgID:  &invite.OrgID,
+		Title:  "Registration completed",
+		Message: fmt.Sprintf(
+			"Your account for %s is active. You can now sign in and use the portal.",
+			invite.OrganizationName,
+		),
+	}); err != nil {
+		log.Printf("[Invite CompleteRegistration] Welcome notification failed (non-fatal): %v", err)
+	}
 
 	return &CompleteRegistrationResponse{
 		UserID:         userID.String(),

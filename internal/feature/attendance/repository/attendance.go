@@ -14,12 +14,13 @@ import (
 )
 
 type attendanceRepository struct {
+	db       *sql.DB
 	queries  attendancePostgres.Querier
 	calendar calendarRepository.CalendarRepository
 }
 
 func NewRepository(conn *sql.DB, calRepo calendarRepository.CalendarRepository) AttendanceRepository {
-	return &attendanceRepository{queries: attendancePostgres.New(conn), calendar: calRepo}
+	return &attendanceRepository{db: conn, queries: attendancePostgres.New(conn), calendar: calRepo}
 }
 
 // ─── Work Schedules ───────────────────────────────────────────────────────────
@@ -352,6 +353,27 @@ func (r *attendanceRepository) GetEmployeeIDByUserID(ctx context.Context, userID
 
 func (r *attendanceRepository) GetOrgIDByEmployeeID(ctx context.Context, employeeID uuid.UUID) (uuid.UUID, error) {
 	return r.queries.GetOrgIDByEmployeeID(ctx, employeeID)
+}
+
+func (r *attendanceRepository) GetEmployeeNotificationInfo(ctx context.Context, employeeID uuid.UUID) (EmployeeNotificationInfo, error) {
+	const query = `
+SELECT e.id, e.user_id, e.org_id, e.department_id, e.role, u.first_name, u.last_name
+FROM employees e
+JOIN users u ON u.id = e.user_id
+WHERE e.id = $1
+`
+
+	var info EmployeeNotificationInfo
+	err := r.db.QueryRowContext(ctx, query, employeeID).Scan(
+		&info.EmployeeID,
+		&info.UserID,
+		&info.OrgID,
+		&info.DepartmentID,
+		&info.Role,
+		&info.FirstName,
+		&info.LastName,
+	)
+	return info, err
 }
 
 func (r *attendanceRepository) EmployeeExists(ctx context.Context, employeeID uuid.UUID) (bool, error) {

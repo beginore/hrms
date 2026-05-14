@@ -6,7 +6,7 @@ import (
 )
 
 type City struct {
-	ID   string `json:"id"`
+	ID   int32  `json:"id"`
 	Name string `json:"name"`
 }
 

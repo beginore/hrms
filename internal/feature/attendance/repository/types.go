@@ -60,6 +60,16 @@ type LeaveRequest struct {
 	CreatedAt   time.Time
 }
 
+type EmployeeNotificationInfo struct {
+	EmployeeID   uuid.UUID
+	UserID       uuid.UUID
+	OrgID        uuid.UUID
+	DepartmentID uuid.UUID
+	Role         string
+	FirstName    string
+	LastName     string
+}
+
 type CreateLeaveRequestParams struct {
 	EmployeeID  uuid.UUID
 	Type        string
