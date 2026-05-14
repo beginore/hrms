@@ -28,16 +28,19 @@ type AttendanceService interface {
 	// skud
 	CreateSkudEvent(ctx context.Context, req CreateSkudEventRequest) (*CreateSkudEventResponse, error)
 
+	// manual check-in / check-out
+	CheckIn(ctx context.Context, callerUserID uuid.UUID, req CheckInRequest) (*CheckInResponse, error)
+	CheckOut(ctx context.Context, callerUserID uuid.UUID) (*CheckOutResponse, error)
+
 	// leave requests
 	CreateLeaveRequest(ctx context.Context, callerUserID uuid.UUID, req CreateLeaveRequest) (*CreateLeaveResponse, error)
 	GetLeaveRequestByID(ctx context.Context, id uuid.UUID) (*LeaveRequestResponse, error)
-	ListLeaveRequestsByOrg(ctx context.Context, callerUserID uuid.UUID) ([]LeaveRequestResponse, error)
-	ListLeaveRequestsByEmployee(ctx context.Context, employeeID uuid.UUID) ([]LeaveRequestResponse, error)
+	ListLeaveRequests(ctx context.Context, callerUserID uuid.UUID, callerRole string) ([]LeaveRequestResponse, error)
 	ReviewLeaveRequest(ctx context.Context, callerUserID uuid.UUID, id uuid.UUID, req ReviewLeaveRequest) error
 
 	// attendance records
-	ListAttendanceByOrg(ctx context.Context, callerUserID uuid.UUID, startDate, endDate string) ([]AttendanceResponse, error)
-	ListAttendanceByEmployee(ctx context.Context, employeeID uuid.UUID, startDate, endDate string) ([]AttendanceResponse, error)
+	ListAttendance(ctx context.Context, callerUserID uuid.UUID, callerRole string, startDate, endDate string) ([]AttendanceResponse, error)
+	ListAttendanceByEmployee(ctx context.Context, callerUserID uuid.UUID, callerRole string, employeeID uuid.UUID, startDate, endDate string) ([]AttendanceResponse, error)
 }
 
 type attendanceService struct {
@@ -127,10 +130,71 @@ func (s *attendanceService) CreateSkudEvent(ctx context.Context, req CreateSkudE
 
 // ─── Leave Requests ───────────────────────────────────────────────────────────
 
-func (s *attendanceService) CreateLeaveRequest(ctx context.Context, callerUserID uuid.UUID, req CreateLeaveRequest) (*CreateLeaveResponse, error) {
-	employeeID, err := uuid.Parse(req.EmployeeID)
+func (s *attendanceService) CheckIn(ctx context.Context, callerUserID uuid.UUID, req CheckInRequest) (*CheckInResponse, error) {
+	employeeID, err := s.repo.GetEmployeeIDByUserID(ctx, callerUserID)
 	if err != nil {
-		return nil, ErrInvalidEmployeeID
+		return nil, ErrEmployeeNotFound
+	}
+	orgID, err := s.repo.GetOrgIDByEmployeeID(ctx, employeeID)
+	if err != nil {
+		return nil, fmt.Errorf("%w: %v", ErrDatabaseQueryFailed, err)
+	}
+	existing, err := s.repo.GetTodayAttendance(ctx, employeeID)
+	if err == nil && existing.CheckIn != nil {
+		return nil, ErrAlreadyCheckedIn
+	}
+	if err != nil && !errors.Is(err, sql.ErrNoRows) {
+		return nil, fmt.Errorf("%w: %v", ErrDatabaseQueryFailed, err)
+	}
+
+	workType := req.WorkType
+	if workType == "" {
+		workType = "OFFICE"
+	}
+	if workType != "OFFICE" && workType != "REMOTE" {
+		return nil, ErrInvalidWorkType
+	}
+
+	now := time.Now()
+	status := resolveCheckInStatus(now, s.repo.GetWorkScheduleOrDefault(ctx, employeeID))
+	log.Printf("[Attendance] CheckIn employee=%s type=%s status=%s", employeeID, workType, status)
+	if err := s.repo.ManualCheckIn(ctx, attendanceRepository.ManualCheckInParams{
+		EmployeeID: employeeID,
+		OrgID:      orgID,
+		WorkType:   workType,
+		Status:     status,
+		CheckIn:    now,
+		Note:       req.Note,
+	}); err != nil {
+		return nil, fmt.Errorf("%w: %v", ErrDatabaseSaveFailed, err)
+	}
+	return &CheckInResponse{Status: status, CheckIn: now.Format(time.RFC3339)}, nil
+}
+
+func (s *attendanceService) CheckOut(ctx context.Context, callerUserID uuid.UUID) (*CheckOutResponse, error) {
+	employeeID, err := s.repo.GetEmployeeIDByUserID(ctx, callerUserID)
+	if err != nil {
+		return nil, ErrEmployeeNotFound
+	}
+	existing, err := s.repo.GetTodayAttendance(ctx, employeeID)
+	if err != nil || existing.CheckIn == nil {
+		return nil, ErrNotCheckedIn
+	}
+	if existing.CheckOut != nil {
+		return nil, ErrAlreadyCheckedOut
+	}
+	now := time.Now()
+	log.Printf("[Attendance] CheckOut employee=%s", employeeID)
+	if err := s.repo.ManualCheckOut(ctx, employeeID); err != nil {
+		return nil, fmt.Errorf("%w: %v", ErrDatabaseSaveFailed, err)
+	}
+	return &CheckOutResponse{CheckOut: now.Format(time.RFC3339)}, nil
+}
+
+func (s *attendanceService) CreateLeaveRequest(ctx context.Context, callerUserID uuid.UUID, req CreateLeaveRequest) (*CreateLeaveResponse, error) {
+	employeeID, err := s.repo.GetEmployeeIDByUserID(ctx, callerUserID)
+	if err != nil {
+		return nil, ErrEmployeeNotFound
 	}
 
 	if !validLeaveTypes[req.Type] {
@@ -176,15 +240,18 @@ func (s *attendanceService) GetLeaveRequestByID(ctx context.Context, id uuid.UUI
 	return &resp, nil
 }
 
-func (s *attendanceService) ListLeaveRequestsByOrg(ctx context.Context, callerUserID uuid.UUID) ([]LeaveRequestResponse, error) {
-	items, err := s.repo.GetLeaveRequestsByOrg(ctx, callerUserID)
-	if err != nil {
-		return nil, fmt.Errorf("%w: %v", ErrDatabaseQueryFailed, err)
+func (s *attendanceService) ListLeaveRequests(ctx context.Context, callerUserID uuid.UUID, callerRole string) ([]LeaveRequestResponse, error) {
+	if canManageAttendance(callerRole) {
+		items, err := s.repo.GetLeaveRequestsByOrg(ctx, callerUserID)
+		if err != nil {
+			return nil, fmt.Errorf("%w: %v", ErrDatabaseQueryFailed, err)
+		}
+		return mapLeaveResponses(items), nil
 	}
-	return mapLeaveResponses(items), nil
-}
-
-func (s *attendanceService) ListLeaveRequestsByEmployee(ctx context.Context, employeeID uuid.UUID) ([]LeaveRequestResponse, error) {
+	employeeID, err := s.repo.GetEmployeeIDByUserID(ctx, callerUserID)
+	if err != nil {
+		return nil, ErrEmployeeNotFound
+	}
 	items, err := s.repo.GetLeaveRequestsByEmployee(ctx, employeeID)
 	if err != nil {
 		return nil, fmt.Errorf("%w: %v", ErrDatabaseQueryFailed, err)
@@ -193,12 +260,15 @@ func (s *attendanceService) ListLeaveRequestsByEmployee(ctx context.Context, emp
 }
 
 func (s *attendanceService) ReviewLeaveRequest(ctx context.Context, callerUserID uuid.UUID, id uuid.UUID, req ReviewLeaveRequest) error {
-	exists, err := s.repo.LeaveRequestExists(ctx, id)
+	existing, err := s.repo.GetLeaveRequestByID(ctx, id)
+	if errors.Is(err, sql.ErrNoRows) {
+		return ErrLeaveRequestNotFound
+	}
 	if err != nil {
 		return fmt.Errorf("%w: %v", ErrDatabaseQueryFailed, err)
 	}
-	if !exists {
-		return ErrLeaveRequestNotFound
+	if existing.Status != "PENDING" {
+		return ErrLeaveAlreadyReviewed
 	}
 
 	var status string
@@ -224,10 +294,24 @@ func (s *attendanceService) ReviewLeaveRequest(ctx context.Context, callerUserID
 
 // ─── Attendance Records ───────────────────────────────────────────────────────
 
-func (s *attendanceService) ListAttendanceByOrg(ctx context.Context, callerUserID uuid.UUID, startDate, endDate string) ([]AttendanceResponse, error) {
+func (s *attendanceService) ListAttendance(ctx context.Context, callerUserID uuid.UUID, callerRole string, startDate, endDate string) ([]AttendanceResponse, error) {
 	start, end, err := parsePeriod(startDate, endDate)
 	if err != nil {
 		return nil, err
+	}
+	if !canManageAttendance(callerRole) {
+		employeeID, err := s.repo.GetEmployeeIDByUserID(ctx, callerUserID)
+		if err != nil {
+			return nil, ErrEmployeeNotFound
+		}
+		records, err := s.repo.GetAttendanceByEmployee(ctx, employeeID, attendanceRepository.GetByPeriodParams{
+			StartDate: start,
+			EndDate:   end,
+		})
+		if err != nil {
+			return nil, fmt.Errorf("%w: %v", ErrDatabaseQueryFailed, err)
+		}
+		return mapAttendanceResponses(records), nil
 	}
 	records, err := s.repo.GetAttendanceByOrg(ctx, callerUserID, attendanceRepository.GetByPeriodParams{
 		StartDate: start,
@@ -239,7 +323,16 @@ func (s *attendanceService) ListAttendanceByOrg(ctx context.Context, callerUserI
 	return mapAttendanceResponses(records), nil
 }
 
-func (s *attendanceService) ListAttendanceByEmployee(ctx context.Context, employeeID uuid.UUID, startDate, endDate string) ([]AttendanceResponse, error) {
+func (s *attendanceService) ListAttendanceByEmployee(ctx context.Context, callerUserID uuid.UUID, callerRole string, employeeID uuid.UUID, startDate, endDate string) ([]AttendanceResponse, error) {
+	if !canManageAttendance(callerRole) {
+		callerEmployeeID, err := s.repo.GetEmployeeIDByUserID(ctx, callerUserID)
+		if err != nil {
+			return nil, ErrEmployeeNotFound
+		}
+		if callerEmployeeID != employeeID {
+			return nil, ErrForbidden
+		}
+	}
 	start, end, err := parsePeriod(startDate, endDate)
 	if err != nil {
 		return nil, err
@@ -255,6 +348,31 @@ func (s *attendanceService) ListAttendanceByEmployee(ctx context.Context, employ
 }
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
+
+func resolveCheckInStatus(checkIn time.Time, ws attendanceRepository.WorkSchedule) string {
+	workStart, err := time.Parse("15:04:05", ws.WorkStart)
+	if err != nil {
+		return "PRESENT"
+	}
+	deadline := time.Date(
+		checkIn.Year(), checkIn.Month(), checkIn.Day(),
+		workStart.Hour(), workStart.Minute(), workStart.Second(), 0,
+		checkIn.Location(),
+	).Add(time.Duration(ws.LateThresholdMinutes) * time.Minute)
+	if checkIn.After(deadline) {
+		return "LATE"
+	}
+	return "PRESENT"
+}
+
+func canManageAttendance(role string) bool {
+	switch role {
+	case "SysAdmin", "Admin", "HR", "Manager":
+		return true
+	default:
+		return false
+	}
+}
 
 func parsePeriod(startDate, endDate string) (time.Time, time.Time, error) {
 	if startDate == "" {

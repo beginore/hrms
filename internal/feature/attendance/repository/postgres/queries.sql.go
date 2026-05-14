@@ -239,6 +239,17 @@ func (q *Queries) GetAttendanceByEmployeeAndPeriod(ctx context.Context, arg GetA
 	return scanAttendanceRows(rows)
 }
 
+const updateCheckOut = `
+UPDATE attendance_records
+SET check_out = $3, updated_at = now()
+WHERE employee_id = $1 AND date = $2
+`
+
+func (q *Queries) UpdateCheckOut(ctx context.Context, employeeID uuid.UUID, date time.Time, checkOut time.Time) error {
+	_, err := q.db.ExecContext(ctx, updateCheckOut, employeeID, date, checkOut)
+	return err
+}
+
 const getAttendanceByEmployeeAndDate = `
 SELECT id, org_id, employee_id, date, type, source, status, check_in, check_out, note, created_at, updated_at
 FROM attendance_records WHERE employee_id = $1 AND date = $2

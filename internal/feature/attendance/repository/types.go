@@ -90,6 +90,15 @@ type AttendanceRecord struct {
 	Note       string
 }
 
+type ManualCheckInParams struct {
+	EmployeeID uuid.UUID
+	OrgID      uuid.UUID
+	WorkType   string
+	Status     string
+	CheckIn    time.Time
+	Note       string
+}
+
 type UpsertAttendanceParams struct {
 	EmployeeID uuid.UUID
 	Date       time.Time

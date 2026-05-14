@@ -3,22 +3,20 @@ package http
 import (
 	"errors"
 	attendanceService "hrms/internal/feature/attendance/service"
-	"hrms/internal/infrastructure/app/cognito"
+	"hrms/internal/infrastructure/middleware"
 	"log"
 	"net/http"
-	"strings"
 
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
 )
 
 type AttendanceHandler struct {
-	service    attendanceService.AttendanceService
-	cognitoSvc *cognito.Service
+	service attendanceService.AttendanceService
 }
 
-func NewAttendanceHandler(service attendanceService.AttendanceService, cognitoSvc *cognito.Service) *AttendanceHandler {
-	return &AttendanceHandler{service: service, cognitoSvc: cognitoSvc}
+func NewAttendanceHandler(service attendanceService.AttendanceService) *AttendanceHandler {
+	return &AttendanceHandler{service: service}
 }
 
 // ─── Work Schedule ────────────────────────────────────────────────────────────
@@ -39,18 +37,13 @@ func NewAttendanceHandler(service attendanceService.AttendanceService, cognitoSv
 // @Security     BearerAuth
 // @Router       /attendance/work-schedules [post]
 func (h *AttendanceHandler) SetWorkSchedule(c *gin.Context) {
-	callerUserID, ok := h.extractCallerUserID(c)
-	if !ok {
-		return
-	}
-
 	var req attendanceService.SetWorkScheduleRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid request body"})
 		return
 	}
 
-	if err := h.service.SetWorkSchedule(c.Request.Context(), callerUserID, req); err != nil {
+	if err := h.service.SetWorkSchedule(c.Request.Context(), h.callerUserID(c), req); err != nil {
 		h.handleError(c, err)
 		return
 	}
@@ -128,19 +121,59 @@ func (h *AttendanceHandler) CreateSkudEvent(c *gin.Context) {
 // @Failure      500  {object}  map[string]string
 // @Security     BearerAuth
 // @Router       /attendance/leave-requests [post]
-func (h *AttendanceHandler) CreateLeaveRequest(c *gin.Context) {
-	callerUserID, ok := h.extractCallerUserID(c)
-	if !ok {
+// CheckIn godoc
+// @Summary      Manual check-in
+// @Description  Employee manually checks in for the day. Use work_type=REMOTE for remote work, OFFICE for office.
+// @Tags         Attendance
+// @Accept       json
+// @Produce      json
+// @Param        body  body      attendanceService.CheckInRequest  false  "Check-in options"
+// @Success      200   {object}  attendanceService.CheckInResponse
+// @Failure      400   {object}  map[string]string
+// @Failure      401   {object}  map[string]string
+// @Failure      409   {object}  map[string]string
+// @Failure      500   {object}  map[string]string
+// @Security     BearerAuth
+// @Router       /attendance/check-in [post]
+func (h *AttendanceHandler) CheckIn(c *gin.Context) {
+	var req attendanceService.CheckInRequest
+	_ = c.ShouldBindJSON(&req)
+	resp, err := h.service.CheckIn(c.Request.Context(), h.callerUserID(c), req)
+	if err != nil {
+		h.handleError(c, err)
 		return
 	}
+	c.JSON(http.StatusOK, resp)
+}
 
+// CheckOut godoc
+// @Summary      Manual check-out
+// @Description  Employee manually checks out for the day. Requires a prior check-in.
+// @Tags         Attendance
+// @Produce      json
+// @Success      200  {object}  attendanceService.CheckOutResponse
+// @Failure      401  {object}  map[string]string
+// @Failure      422  {object}  map[string]string
+// @Failure      500  {object}  map[string]string
+// @Security     BearerAuth
+// @Router       /attendance/check-out [post]
+func (h *AttendanceHandler) CheckOut(c *gin.Context) {
+	resp, err := h.service.CheckOut(c.Request.Context(), h.callerUserID(c))
+	if err != nil {
+		h.handleError(c, err)
+		return
+	}
+	c.JSON(http.StatusOK, resp)
+}
+
+func (h *AttendanceHandler) CreateLeaveRequest(c *gin.Context) {
 	var req attendanceService.CreateLeaveRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid request body"})
 		return
 	}
 
-	resp, err := h.service.CreateLeaveRequest(c.Request.Context(), callerUserID, req)
+	resp, err := h.service.CreateLeaveRequest(c.Request.Context(), h.callerUserID(c), req)
 	if err != nil {
 		h.handleError(c, err)
 		return
@@ -159,12 +192,7 @@ func (h *AttendanceHandler) CreateLeaveRequest(c *gin.Context) {
 // @Security     BearerAuth
 // @Router       /attendance/leave-requests [get]
 func (h *AttendanceHandler) ListLeaveRequests(c *gin.Context) {
-	callerUserID, ok := h.extractCallerUserID(c)
-	if !ok {
-		return
-	}
-
-	resp, err := h.service.ListLeaveRequestsByOrg(c.Request.Context(), callerUserID)
+	resp, err := h.service.ListLeaveRequests(c.Request.Context(), h.callerUserID(c), h.callerRole(c))
 	if err != nil {
 		h.handleError(c, err)
 		return
@@ -213,11 +241,6 @@ func (h *AttendanceHandler) GetLeaveRequest(c *gin.Context) {
 // @Security     BearerAuth
 // @Router       /attendance/leave-requests/{id}/review [patch]
 func (h *AttendanceHandler) ReviewLeaveRequest(c *gin.Context) {
-	callerUserID, ok := h.extractCallerUserID(c)
-	if !ok {
-		return
-	}
-
 	id, ok := h.parseUUIDParam(c, "id")
 	if !ok {
 		return
@@ -229,7 +252,7 @@ func (h *AttendanceHandler) ReviewLeaveRequest(c *gin.Context) {
 		return
 	}
 
-	if err := h.service.ReviewLeaveRequest(c.Request.Context(), callerUserID, id, req); err != nil {
+	if err := h.service.ReviewLeaveRequest(c.Request.Context(), h.callerUserID(c), id, req); err != nil {
 		h.handleError(c, err)
 		return
 	}
@@ -252,13 +275,8 @@ func (h *AttendanceHandler) ReviewLeaveRequest(c *gin.Context) {
 // @Security     BearerAuth
 // @Router       /attendance [get]
 func (h *AttendanceHandler) ListAttendance(c *gin.Context) {
-	callerUserID, ok := h.extractCallerUserID(c)
-	if !ok {
-		return
-	}
-
-	resp, err := h.service.ListAttendanceByOrg(
-		c.Request.Context(), callerUserID,
+	resp, err := h.service.ListAttendance(
+		c.Request.Context(), h.callerUserID(c), h.callerRole(c),
 		c.Query("start_date"), c.Query("end_date"),
 	)
 	if err != nil {
@@ -288,7 +306,7 @@ func (h *AttendanceHandler) ListEmployeeAttendance(c *gin.Context) {
 	}
 
 	resp, err := h.service.ListAttendanceByEmployee(
-		c.Request.Context(), employeeID,
+		c.Request.Context(), h.callerUserID(c), h.callerRole(c), employeeID,
 		c.Query("start_date"), c.Query("end_date"),
 	)
 	if err != nil {
@@ -300,24 +318,22 @@ func (h *AttendanceHandler) ListEmployeeAttendance(c *gin.Context) {
 
 // ─── Private helpers ──────────────────────────────────────────────────────────
 
-func (h *AttendanceHandler) extractCallerUserID(c *gin.Context) (uuid.UUID, bool) {
-	authHeader := c.GetHeader("Authorization")
-	if authHeader == "" {
-		c.JSON(http.StatusUnauthorized, gin.H{"error": "missing authorization header"})
-		return uuid.Nil, false
+func (h *AttendanceHandler) callerUserID(c *gin.Context) uuid.UUID {
+	if value, exists := c.Get(middleware.UserIDKey); exists {
+		if id, ok := value.(uuid.UUID); ok {
+			return id
+		}
 	}
-	token := strings.TrimPrefix(authHeader, "Bearer ")
-	if token == authHeader {
-		c.JSON(http.StatusUnauthorized, gin.H{"error": "invalid authorization header format"})
-		return uuid.Nil, false
+	return uuid.Nil
+}
+
+func (h *AttendanceHandler) callerRole(c *gin.Context) string {
+	if value, exists := c.Get(middleware.RoleKey); exists {
+		if role, ok := value.(string); ok {
+			return role
+		}
 	}
-	userID, _, err := h.cognitoSvc.ParseTokenClaims(token)
-	if err != nil {
-		log.Printf("[AttendanceHandler] ParseTokenClaims failed: %v", err)
-		c.JSON(http.StatusUnauthorized, gin.H{"error": "invalid or expired token"})
-		return uuid.Nil, false
-	}
-	return userID, true
+	return ""
 }
 
 func (h *AttendanceHandler) parseUUIDParam(c *gin.Context, param string) (uuid.UUID, bool) {
@@ -335,6 +351,16 @@ func (h *AttendanceHandler) handleError(c *gin.Context, err error) {
 		c.JSON(http.StatusNotFound, gin.H{"error": "employee not found"})
 	case errors.Is(err, attendanceService.ErrLeaveRequestNotFound):
 		c.JSON(http.StatusNotFound, gin.H{"error": "leave request not found"})
+	case errors.Is(err, attendanceService.ErrLeaveAlreadyReviewed):
+		c.JSON(http.StatusConflict, gin.H{"error": "leave request has already been reviewed"})
+	case errors.Is(err, attendanceService.ErrAlreadyCheckedIn):
+		c.JSON(http.StatusConflict, gin.H{"error": "already checked in today"})
+	case errors.Is(err, attendanceService.ErrAlreadyCheckedOut):
+		c.JSON(http.StatusConflict, gin.H{"error": "already checked out today"})
+	case errors.Is(err, attendanceService.ErrNotCheckedIn):
+		c.JSON(http.StatusUnprocessableEntity, gin.H{"error": "no check-in found for today"})
+	case errors.Is(err, attendanceService.ErrForbidden):
+		c.JSON(http.StatusForbidden, gin.H{"error": "forbidden"})
 	case errors.Is(err, attendanceService.ErrInvalidEmployeeID):
 		c.JSON(http.StatusUnprocessableEntity, gin.H{"error": "invalid employee id"})
 	case errors.Is(err, attendanceService.ErrInvalidLeaveRequestID):
@@ -345,6 +371,8 @@ func (h *AttendanceHandler) handleError(c *gin.Context, err error) {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "end date must be after or equal to start date"})
 	case errors.Is(err, attendanceService.ErrInvalidLeaveType):
 		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid leave type"})
+	case errors.Is(err, attendanceService.ErrInvalidWorkType):
+		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid work type, use OFFICE or REMOTE"})
 	case errors.Is(err, attendanceService.ErrInvalidSkudEventType):
 		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid event type, use ENTER or EXIT"})
 	default:

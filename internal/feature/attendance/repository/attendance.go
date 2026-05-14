@@ -105,7 +105,6 @@ func (r *attendanceRepository) ProcessSkudEvents(ctx context.Context, orgID uuid
 func (r *attendanceRepository) processOneSkudEvent(ctx context.Context, ev attendancePostgres.SkudEvent) error {
 	date := ev.OccurredAt.Truncate(24 * time.Hour)
 
-	// check if the day is a non-working day (holiday or weekend without override)
 	if r.calendar != nil {
 		nonWorking, err := r.calendar.IsNonWorkingDay(ctx, ev.OrgID, date)
 		if err != nil {
@@ -125,7 +124,6 @@ func (r *attendanceRepository) processOneSkudEvent(ctx context.Context, ev atten
 		}
 	}
 
-	// check if employee has approved leave for this day
 	leave, hasLeave, err := r.GetApprovedLeaveForDate(ctx, ev.EmployeeID, date)
 	if err != nil {
 		return err
@@ -142,13 +140,29 @@ func (r *attendanceRepository) processOneSkudEvent(ctx context.Context, ev atten
 		})
 	}
 
-	ws := r.GetWorkScheduleOrDefault(ctx, ev.EmployeeID)
-	status, attendanceType := r.resolveStatusAndType(ev, ws)
-
-	existing, err := r.queries.GetAttendanceByEmployeeAndDate(ctx, attendancePostgres.GetAttendanceByEmployeeAndDateParams{
+	existing, existErr := r.queries.GetAttendanceByEmployeeAndDate(ctx, attendancePostgres.GetAttendanceByEmployeeAndDateParams{
 		EmployeeID: ev.EmployeeID,
 		Date:       date,
 	})
+
+	if ev.EventType == "EXIT" {
+		if existErr == nil {
+			return r.queries.UpdateCheckOut(ctx, ev.EmployeeID, date, ev.OccurredAt)
+		}
+		return r.queries.UpsertAttendanceRecord(ctx, attendancePostgres.UpsertAttendanceRecordParams{
+			ID:         uuid.New(),
+			OrgID:      ev.OrgID,
+			EmployeeID: ev.EmployeeID,
+			Date:       date,
+			Type:       "OFFICE",
+			Source:     "SKUD",
+			Status:     "PRESENT",
+			CheckOut:   &ev.OccurredAt,
+		})
+	}
+
+	ws := r.GetWorkScheduleOrDefault(ctx, ev.EmployeeID)
+	status, attendanceType := r.resolveEnterStatus(ev, ws)
 
 	params := attendancePostgres.UpsertAttendanceRecordParams{
 		ID:         uuid.New(),
@@ -158,28 +172,17 @@ func (r *attendanceRepository) processOneSkudEvent(ctx context.Context, ev atten
 		Type:       attendanceType,
 		Source:     "SKUD",
 		Status:     status,
+		CheckIn:    &ev.OccurredAt,
 	}
 
-	if ev.EventType == "ENTER" {
-		params.CheckIn = &ev.OccurredAt
-		if err == nil && existing.CheckOut.Valid {
-			params.CheckOut = &existing.CheckOut.Time
-		}
-	} else {
-		params.CheckOut = &ev.OccurredAt
-		if err == nil && existing.CheckIn.Valid {
-			params.CheckIn = &existing.CheckIn.Time
-		}
+	if existErr == nil && existing.CheckOut.Valid {
+		params.CheckOut = &existing.CheckOut.Time
 	}
 
 	return r.queries.UpsertAttendanceRecord(ctx, params)
 }
 
-func (r *attendanceRepository) resolveStatusAndType(ev attendancePostgres.SkudEvent, ws WorkSchedule) (string, string) {
-	if ev.EventType != "ENTER" {
-		return "PRESENT", "OFFICE"
-	}
-
+func (r *attendanceRepository) resolveEnterStatus(ev attendancePostgres.SkudEvent, ws WorkSchedule) (string, string) {
 	workStartTime, err := time.Parse("15:04:05", ws.WorkStart)
 	if err != nil {
 		return "PRESENT", "OFFICE"
@@ -198,6 +201,38 @@ func (r *attendanceRepository) resolveStatusAndType(ev attendancePostgres.SkudEv
 }
 
 // ─── Leave Requests ───────────────────────────────────────────────────────────
+
+func (r *attendanceRepository) ManualCheckIn(ctx context.Context, params ManualCheckInParams) error {
+	return r.queries.UpsertAttendanceRecord(ctx, attendancePostgres.UpsertAttendanceRecordParams{
+		ID:         uuid.New(),
+		OrgID:      params.OrgID,
+		EmployeeID: params.EmployeeID,
+		Date:       params.CheckIn.Truncate(24 * time.Hour),
+		Type:       params.WorkType,
+		Source:     "MANUAL",
+		Status:     params.Status,
+		CheckIn:    &params.CheckIn,
+		Note:       params.Note,
+	})
+}
+
+func (r *attendanceRepository) ManualCheckOut(ctx context.Context, employeeID uuid.UUID) error {
+	now := time.Now()
+	date := now.Truncate(24 * time.Hour)
+	return r.queries.UpdateCheckOut(ctx, employeeID, date, now)
+}
+
+func (r *attendanceRepository) GetTodayAttendance(ctx context.Context, employeeID uuid.UUID) (AttendanceRecord, error) {
+	today := time.Now().Truncate(24 * time.Hour)
+	record, err := r.queries.GetAttendanceByEmployeeAndDate(ctx, attendancePostgres.GetAttendanceByEmployeeAndDateParams{
+		EmployeeID: employeeID,
+		Date:       today,
+	})
+	if err != nil {
+		return AttendanceRecord{}, err
+	}
+	return mapAttendanceRecord(record), nil
+}
 
 func (r *attendanceRepository) CreateLeaveRequest(ctx context.Context, callerUserID uuid.UUID, params CreateLeaveRequestParams) (uuid.UUID, error) {
 	orgID, err := r.GetOrgIDByUserID(ctx, callerUserID)
@@ -249,14 +284,10 @@ func (r *attendanceRepository) GetLeaveRequestsByEmployee(ctx context.Context, e
 }
 
 func (r *attendanceRepository) ReviewLeaveRequest(ctx context.Context, callerUserID uuid.UUID, params ReviewLeaveRequestParams) error {
-	reviewerEmployeeID, err := r.GetEmployeeIDByUserID(ctx, callerUserID)
-	if err != nil {
-		return fmt.Errorf("resolve reviewer employee: %w", err)
-	}
 	return r.queries.UpdateLeaveRequestStatus(ctx, attendancePostgres.UpdateLeaveRequestStatusParams{
 		ID:         params.ID,
 		Status:     params.Status,
-		ReviewedBy: reviewerEmployeeID,
+		ReviewedBy: callerUserID,
 	})
 }
 

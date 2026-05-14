@@ -21,6 +21,25 @@ definitions:
       type:
         type: string
     type: object
+  hrms_internal_feature_attendance_service.CheckInRequest:
+    properties:
+      note:
+        type: string
+      work_type:
+        type: string
+    type: object
+  hrms_internal_feature_attendance_service.CheckInResponse:
+    properties:
+      check_in:
+        type: string
+      status:
+        type: string
+    type: object
+  hrms_internal_feature_attendance_service.CheckOutResponse:
+    properties:
+      check_out:
+        type: string
+    type: object
   hrms_internal_feature_attendance_service.CreateLeaveRequest:
     properties:
       document_url:
@@ -39,7 +58,6 @@ definitions:
         description: SICK_LEAVE | VACATION | REMOTE | BUSINESS_TRIP | UNPAID_LEAVE
         type: string
     required:
-    - employee_id
     - end_date
     - start_date
     - type
@@ -1094,6 +1112,108 @@ paths:
       summary: List attendance records
       tags:
       - Attendance
+  /attendance/check-in:
+    post:
+      consumes:
+      - application/json
+      - application/json
+      description: |-
+        Submit a leave request (sick leave, vacation, remote work, etc.)
+        Employee manually checks in for the day. Use work_type=REMOTE for remote work, OFFICE for office.
+      parameters:
+      - description: Leave request data
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/hrms_internal_feature_attendance_service.CreateLeaveRequest'
+      - description: Check-in options
+        in: body
+        name: body
+        schema:
+          $ref: '#/definitions/hrms_internal_feature_attendance_service.CheckInRequest'
+      produces:
+      - application/json
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/hrms_internal_feature_attendance_service.CheckInResponse'
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/hrms_internal_feature_attendance_service.CreateLeaveResponse'
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "401":
+          description: Unauthorized
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "409":
+          description: Conflict
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "422":
+          description: Unprocessable Entity
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      - BearerAuth: []
+      summary: Manual check-in
+      tags:
+      - Attendance
+      - Attendance
+  /attendance/check-out:
+    post:
+      description: Employee manually checks out for the day. Requires a prior check-in.
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/hrms_internal_feature_attendance_service.CheckOutResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "422":
+          description: Unprocessable Entity
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Manual check-out
+      tags:
+      - Attendance
   /attendance/employees/{employee_id}:
     get:
       description: List attendance records for a specific employee filtered by period
@@ -1169,7 +1289,10 @@ paths:
     post:
       consumes:
       - application/json
-      description: Submit a leave request (sick leave, vacation, remote work, etc.)
+      - application/json
+      description: |-
+        Submit a leave request (sick leave, vacation, remote work, etc.)
+        Employee manually checks in for the day. Use work_type=REMOTE for remote work, OFFICE for office.
       parameters:
       - description: Leave request data
         in: body
@@ -1177,9 +1300,19 @@ paths:
         required: true
         schema:
           $ref: '#/definitions/hrms_internal_feature_attendance_service.CreateLeaveRequest'
+      - description: Check-in options
+        in: body
+        name: body
+        schema:
+          $ref: '#/definitions/hrms_internal_feature_attendance_service.CheckInRequest'
       produces:
       - application/json
+      - application/json
       responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/hrms_internal_feature_attendance_service.CheckInResponse'
         "201":
           description: Created
           schema:
@@ -1192,6 +1325,12 @@ paths:
             type: object
         "401":
           description: Unauthorized
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "409":
+          description: Conflict
           schema:
             additionalProperties:
               type: string
@@ -1210,8 +1349,10 @@ paths:
             type: object
       security:
       - BearerAuth: []
-      summary: Submit leave request
+      - BearerAuth: []
+      summary: Manual check-in
       tags:
+      - Attendance
       - Attendance
   /attendance/leave-requests/{id}:
     get:

@@ -18,9 +18,18 @@ const (
 	UserIDKey    = "userID"
 	RoleKey      = "role"
 	RoleSysAdmin = "SysAdmin"
+	RoleAdmin    = "Admin"
+	RoleHR       = "HR"
+	RoleManager  = "Manager"
+	RoleEmployee = "Employee"
 )
 
-func RequireRole(role string) gin.HandlerFunc {
+// RequireAnyRole allows access if the user has at least one of the given roles.
+func RequireAnyRole(roles ...string) gin.HandlerFunc {
+	allowed := make(map[string]struct{}, len(roles))
+	for _, role := range roles {
+		allowed[role] = struct{}{}
+	}
 	return func(c *gin.Context) {
 		userRole, exists := c.Get(RoleKey)
 		if !exists {
@@ -32,12 +41,16 @@ func RequireRole(role string) gin.HandlerFunc {
 			c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{"error": "invalid role type"})
 			return
 		}
-		if userRoleStr != role {
+		if _, ok := allowed[userRoleStr]; !ok {
 			c.AbortWithStatusJSON(http.StatusForbidden, gin.H{"error": "forbidden"})
 			return
 		}
 		c.Next()
 	}
+}
+
+func RequireRole(role string) gin.HandlerFunc {
+	return RequireAnyRole(role)
 }
 
 func AuthMiddlewareWithKeyfunc(

@@ -78,6 +78,162 @@
                 }
             }
         },
+        "/attendance/check-in": {
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    },
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Submit a leave request (sick leave, vacation, remote work, etc.)\nEmployee manually checks in for the day. Use work_type=REMOTE for remote work, OFFICE for office.",
+                "consumes": [
+                    "application/json",
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json",
+                    "application/json"
+                ],
+                "tags": [
+                    "Attendance",
+                    "Attendance"
+                ],
+                "summary": "Manual check-in",
+                "parameters": [
+                    {
+                        "description": "Leave request data",
+                        "name": "body",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/hrms_internal_feature_attendance_service.CreateLeaveRequest"
+                        }
+                    },
+                    {
+                        "description": "Check-in options",
+                        "name": "body",
+                        "in": "body",
+                        "schema": {
+                            "$ref": "#/definitions/hrms_internal_feature_attendance_service.CheckInRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/hrms_internal_feature_attendance_service.CheckInResponse"
+                        }
+                    },
+                    "201": {
+                        "description": "Created",
+                        "schema": {
+                            "$ref": "#/definitions/hrms_internal_feature_attendance_service.CreateLeaveResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "409": {
+                        "description": "Conflict",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "422": {
+                        "description": "Unprocessable Entity",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/attendance/check-out": {
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Employee manually checks out for the day. Requires a prior check-in.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Attendance"
+                ],
+                "summary": "Manual check-out",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/hrms_internal_feature_attendance_service.CheckOutResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "422": {
+                        "description": "Unprocessable Entity",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            }
+        },
         "/attendance/employees/{employee_id}": {
             "get": {
                 "security": [
@@ -194,19 +350,25 @@
                 "security": [
                     {
                         "BearerAuth": []
+                    },
+                    {
+                        "BearerAuth": []
                     }
                 ],
-                "description": "Submit a leave request (sick leave, vacation, remote work, etc.)",
+                "description": "Submit a leave request (sick leave, vacation, remote work, etc.)\nEmployee manually checks in for the day. Use work_type=REMOTE for remote work, OFFICE for office.",
                 "consumes": [
+                    "application/json",
                     "application/json"
                 ],
                 "produces": [
+                    "application/json",
                     "application/json"
                 ],
                 "tags": [
+                    "Attendance",
                     "Attendance"
                 ],
-                "summary": "Submit leave request",
+                "summary": "Manual check-in",
                 "parameters": [
                     {
                         "description": "Leave request data",
@@ -216,9 +378,23 @@
                         "schema": {
                             "$ref": "#/definitions/hrms_internal_feature_attendance_service.CreateLeaveRequest"
                         }
+                    },
+                    {
+                        "description": "Check-in options",
+                        "name": "body",
+                        "in": "body",
+                        "schema": {
+                            "$ref": "#/definitions/hrms_internal_feature_attendance_service.CheckInRequest"
+                        }
                     }
                 ],
                 "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/hrms_internal_feature_attendance_service.CheckInResponse"
+                        }
+                    },
                     "201": {
                         "description": "Created",
                         "schema": {
@@ -236,6 +412,15 @@
                     },
                     "401": {
                         "description": "Unauthorized",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "409": {
+                        "description": "Conflict",
                         "schema": {
                             "type": "object",
                             "additionalProperties": {
@@ -5116,10 +5301,39 @@
                 }
             }
         },
+        "hrms_internal_feature_attendance_service.CheckInRequest": {
+            "type": "object",
+            "properties": {
+                "note": {
+                    "type": "string"
+                },
+                "work_type": {
+                    "type": "string"
+                }
+            }
+        },
+        "hrms_internal_feature_attendance_service.CheckInResponse": {
+            "type": "object",
+            "properties": {
+                "check_in": {
+                    "type": "string"
+                },
+                "status": {
+                    "type": "string"
+                }
+            }
+        },
+        "hrms_internal_feature_attendance_service.CheckOutResponse": {
+            "type": "object",
+            "properties": {
+                "check_out": {
+                    "type": "string"
+                }
+            }
+        },
         "hrms_internal_feature_attendance_service.CreateLeaveRequest": {
             "type": "object",
             "required": [
-                "employee_id",
                 "end_date",
                 "start_date",
                 "type"

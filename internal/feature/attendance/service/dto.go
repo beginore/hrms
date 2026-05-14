@@ -6,7 +6,7 @@ type SetWorkScheduleRequest struct {
 	EmployeeID           string `json:"employee_id"           binding:"required"`
 	WorkStart            string `json:"work_start"            binding:"required"` // "09:00"
 	WorkEnd              string `json:"work_end"              binding:"required"` // "18:00"
-	LateThresholdMinutes int32  `json:"late_threshold_minutes"`                  // default 15
+	LateThresholdMinutes int32  `json:"late_threshold_minutes"`                   // default 15
 }
 
 type WorkScheduleResponse struct {
@@ -30,11 +30,25 @@ type CreateSkudEventResponse struct {
 	Message string `json:"message"`
 }
 
+type CheckInRequest struct {
+	WorkType string `json:"work_type"`
+	Note     string `json:"note"`
+}
+
+type CheckInResponse struct {
+	Status  string `json:"status"`
+	CheckIn string `json:"check_in"`
+}
+
+type CheckOutResponse struct {
+	CheckOut string `json:"check_out"`
+}
+
 // ─── Leave Request DTOs ───────────────────────────────────────────────────────
 
-// CreateLeaveRequest is submitted by an employee.
+// CreateLeaveRequest is submitted by the caller for themselves.
 type CreateLeaveRequest struct {
-	EmployeeID  string `json:"employee_id"  binding:"required"`
+	EmployeeID  string `json:"employee_id,omitempty"`
 	Type        string `json:"type"         binding:"required"` // SICK_LEAVE | VACATION | REMOTE | BUSINESS_TRIP | UNPAID_LEAVE
 	StartDate   string `json:"start_date"   binding:"required"` // YYYY-MM-DD
 	EndDate     string `json:"end_date"     binding:"required"` // YYYY-MM-DD

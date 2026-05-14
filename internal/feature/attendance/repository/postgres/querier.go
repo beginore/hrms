@@ -30,6 +30,7 @@ type Querier interface {
 	GetAttendanceByOrgAndPeriod(ctx context.Context, arg GetAttendanceByOrgAndPeriodParams) ([]AttendanceRecord, error)
 	GetAttendanceByEmployeeAndPeriod(ctx context.Context, arg GetAttendanceByEmployeeAndPeriodParams) ([]AttendanceRecord, error)
 	GetAttendanceByEmployeeAndDate(ctx context.Context, arg GetAttendanceByEmployeeAndDateParams) (AttendanceRecord, error)
+	UpdateCheckOut(ctx context.Context, employeeID uuid.UUID, date time.Time, checkOut time.Time) error
 	GetOrgIDByEmployeeID(ctx context.Context, employeeID uuid.UUID) (uuid.UUID, error)
 	GetOrgIDByUserID(ctx context.Context, userID uuid.UUID) (uuid.UUID, error)
 	GetEmployeeIDByUserID(ctx context.Context, userID uuid.UUID) (uuid.UUID, error)

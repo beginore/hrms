@@ -16,6 +16,11 @@ type AttendanceRepository interface {
 	CreateSkudEvent(ctx context.Context, callerUserID uuid.UUID, params CreateSkudEventParams) error
 	ProcessSkudEvents(ctx context.Context, orgID uuid.UUID) error
 
+	// manual check-in / check-out
+	ManualCheckIn(ctx context.Context, params ManualCheckInParams) error
+	ManualCheckOut(ctx context.Context, employeeID uuid.UUID) error
+	GetTodayAttendance(ctx context.Context, employeeID uuid.UUID) (AttendanceRecord, error)
+
 	// leave requests
 	CreateLeaveRequest(ctx context.Context, callerUserID uuid.UUID, params CreateLeaveRequestParams) (uuid.UUID, error)
 	GetLeaveRequestByID(ctx context.Context, id uuid.UUID) (LeaveRequest, error)
