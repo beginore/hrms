@@ -38,6 +38,9 @@ import (
 	payrollRepository "hrms/internal/feature/payroll/repository"
 	payrollService "hrms/internal/feature/payroll/service"
 	payrollHandler "hrms/internal/feature/payroll/transport/http"
+	payslipRepository "hrms/internal/feature/payslip/repository"
+	payslipService "hrms/internal/feature/payslip/service"
+	payslipHandler "hrms/internal/feature/payslip/transport/http"
 	"hrms/internal/infrastructure/app/cognito"
 	"hrms/internal/infrastructure/config"
 	"hrms/internal/infrastructure/email"
@@ -82,12 +85,14 @@ func main() {
 	authRepo := authRepository.NewAuthRepository(postgres.DB)
 	employeeRepo := employeeRepository.NewRepository(postgres.DB)
 	payrollRepo := payrollRepository.NewRepository(postgres.DB)
+	payslipRepo := payslipRepository.NewRepository(postgres.DB)
 
 	authSvc := authService.NewAuthService(cognitoSvc, authRepo)
 	consentSvc := consentService.NewConsentService(consentRepo)
 	orgSvc := organizationService.NewSignUpService(orgRepo, consentRepo, cognitoSvc, emailSvc)
 	employeeSvc := employeeService.NewEmployeeService(employeeRepo)
 	payrollSvc := payrollService.NewPayrollService(payrollRepo)
+	payslipSvc := payslipService.NewPayslipService(payslipRepo, emailSvc)
 	inviteSvc, err := inviteService.NewInviteService(inviteRepo, cfg, cognitoClient)
 	if err != nil {
 		logger.Fatal("Failed to initialize Invite service")
@@ -98,6 +103,7 @@ func main() {
 	handler := organizationHandler.NewOrganizationHandler(orgSvc, consentSvc)
 	inviteHTTPHandler := inviteHandler.NewHandler(inviteSvc)
 	payrollHTTPHandler := payrollHandler.NewPayrollHandler(payrollSvc, cognitoSvc)
+	payslipHTTPHandler := payslipHandler.NewPayslipHandler(payslipSvc, cognitoSvc)
 
 	authMw, err := middleware.AuthMiddleware(cfg.AWS.Region, cfg.Cognito.UserPoolID, employeeRepo)
 	if err != nil {
@@ -204,6 +210,20 @@ func main() {
 	protected.POST("/payroll/salary-history", payrollHTTPHandler.CreateSalaryHistory)
 	protected.PUT("/payroll/attendance-overrides", payrollHTTPHandler.UpsertAttendanceOverride)
 	protected.PATCH("/payroll/employees/:id/employment-period", payrollHTTPHandler.UpdateEmploymentPeriod)
+
+	// Payslips
+	protected.POST("/payslips", payslipHTTPHandler.GeneratePayslip)
+	protected.GET("/payslips", payslipHTTPHandler.ListPayslips)
+	protected.GET("/payslips/:id", payslipHTTPHandler.GetPayslip)
+	protected.GET("/payslips/:id/pdf", payslipHTTPHandler.ExportPayslipPDF)
+	protected.POST("/payslips/:id/send", payslipHTTPHandler.SendPayslip)
+	protected.PATCH("/payslips/:id/void", payslipHTTPHandler.VoidPayslip)
+	protected.POST("/payslips/:id/regenerate", payslipHTTPHandler.RegeneratePayslip)
+	protected.POST("/payroll/cycles/:id/payslips/generate", payslipHTTPHandler.GenerateCyclePayslips)
+	protected.POST("/payroll/cycles/:id/payslips/send", payslipHTTPHandler.SendCyclePayslips)
+	protected.GET("/me/payslips", payslipHTTPHandler.ListMyPayslips)
+	protected.GET("/me/payslips/:id", payslipHTTPHandler.GetMyPayslip)
+	protected.GET("/me/payslips/:id/pdf", payslipHTTPHandler.ExportMyPayslipPDF)
 
 	port := ":8080"
 	logger.Info("Starting HTTP server on port " + port)
