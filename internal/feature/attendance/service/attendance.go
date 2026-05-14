@@ -3,12 +3,15 @@ package service
 import (
 	"context"
 	"database/sql"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"log"
+	"strings"
 	"time"
 
 	attendanceRepository "hrms/internal/feature/attendance/repository"
+	notificationService "hrms/internal/feature/notification/service"
 
 	"github.com/google/uuid"
 )
@@ -41,11 +44,12 @@ type AttendanceService interface {
 }
 
 type attendanceService struct {
-	repo attendanceRepository.AttendanceRepository
+	repo      attendanceRepository.AttendanceRepository
+	notifySvc *notificationService.Service
 }
 
-func NewAttendanceService(repo attendanceRepository.AttendanceRepository) AttendanceService {
-	return &attendanceService{repo: repo}
+func NewAttendanceService(repo attendanceRepository.AttendanceRepository, notifySvc *notificationService.Service) AttendanceService {
+	return &attendanceService{repo: repo, notifySvc: notifySvc}
 }
 
 // ─── Work Schedule ────────────────────────────────────────────────────────────
@@ -161,6 +165,13 @@ func (s *attendanceService) CreateLeaveRequest(ctx context.Context, callerUserID
 	if err != nil {
 		return nil, fmt.Errorf("%w: %v", ErrDatabaseSaveFailed, err)
 	}
+	s.notifyLeaveRequestCreated(ctx, id, attendanceRepository.LeaveRequest{
+		ID:         id,
+		EmployeeID: employeeID,
+		Type:       req.Type,
+		StartDate:  startDate,
+		EndDate:    endDate,
+	})
 	return &CreateLeaveResponse{LeaveRequestID: id.String()}, nil
 }
 
@@ -193,12 +204,12 @@ func (s *attendanceService) ListLeaveRequestsByEmployee(ctx context.Context, emp
 }
 
 func (s *attendanceService) ReviewLeaveRequest(ctx context.Context, callerUserID uuid.UUID, id uuid.UUID, req ReviewLeaveRequest) error {
-	exists, err := s.repo.LeaveRequestExists(ctx, id)
+	leaveRequest, err := s.repo.GetLeaveRequestByID(ctx, id)
 	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return ErrLeaveRequestNotFound
+		}
 		return fmt.Errorf("%w: %v", ErrDatabaseQueryFailed, err)
-	}
-	if !exists {
-		return ErrLeaveRequestNotFound
 	}
 
 	var status string
@@ -219,6 +230,8 @@ func (s *attendanceService) ReviewLeaveRequest(ctx context.Context, callerUserID
 	}); err != nil {
 		return fmt.Errorf("%w: %v", ErrDatabaseSaveFailed, err)
 	}
+	leaveRequest.Status = status
+	s.notifyLeaveRequestReviewed(ctx, leaveRequest)
 	return nil
 }
 
@@ -336,4 +349,95 @@ func mapAttendanceResponses(items []attendanceRepository.AttendanceRecord) []Att
 		out[i] = mapAttendanceResponse(item)
 	}
 	return out
+}
+
+func (s *attendanceService) notifyLeaveRequestCreated(ctx context.Context, leaveRequestID uuid.UUID, lr attendanceRepository.LeaveRequest) {
+	if s.notifySvc == nil {
+		return
+	}
+
+	employee, err := s.repo.GetEmployeeNotificationInfo(ctx, lr.EmployeeID)
+	if err != nil {
+		log.Printf("[Attendance] resolve leave request notification employee failed: %v", err)
+		return
+	}
+
+	metadata := leaveMetadata(leaveRequestID, employee.EmployeeID, lr.Type, lr.StartDate, lr.EndDate, "PENDING")
+	employeeName := strings.TrimSpace(employee.FirstName + " " + employee.LastName)
+	if employeeName == "" {
+		employeeName = employee.EmployeeID.String()
+	}
+
+	if strings.EqualFold(employee.Role, notificationService.RoleAdmin) {
+		if _, err := s.notifySvc.NotifySystemToRole(ctx, notificationService.NotifyRoleRequest{
+			Role:     notificationService.RoleSuperAdmin,
+			Title:    "New admin leave request",
+			Message:  fmt.Sprintf("Admin %s submitted a leave request.", employeeName),
+			Metadata: metadata,
+		}); err != nil {
+			log.Printf("[Attendance] notify super admins about admin leave request failed: %v", err)
+		}
+		return
+	}
+
+	if _, err := s.notifySvc.NotifySystemToDepartmentRole(ctx, notificationService.NotifyDepartmentRoleRequest{
+		OrgID:        employee.OrgID.String(),
+		DepartmentID: employee.DepartmentID.String(),
+		Role:         notificationService.RoleAdmin,
+		Title:        "New leave request",
+		Message:      fmt.Sprintf("%s submitted a leave request.", employeeName),
+		Metadata:     metadata,
+	}); err != nil {
+		log.Printf("[Attendance] notify department admins about leave request failed: %v", err)
+	}
+}
+
+func (s *attendanceService) notifyLeaveRequestReviewed(ctx context.Context, lr attendanceRepository.LeaveRequest) {
+	if s.notifySvc == nil {
+		return
+	}
+
+	employee, err := s.repo.GetEmployeeNotificationInfo(ctx, lr.EmployeeID)
+	if err != nil {
+		log.Printf("[Attendance] resolve reviewed leave request employee failed: %v", err)
+		return
+	}
+
+	status := strings.ToLower(lr.Status)
+	if _, err := s.notifySvc.NotifySystemToUser(ctx, notificationService.NotifyUserRequest{
+		UserID:  employee.UserID.String(),
+		OrgID:   stringPtr(employee.OrgID.String()),
+		Title:   "Leave request " + status,
+		Message: fmt.Sprintf("Your leave request was %s.", status),
+		Metadata: leaveMetadata(
+			lr.ID,
+			employee.EmployeeID,
+			lr.Type,
+			lr.StartDate,
+			lr.EndDate,
+			lr.Status,
+		),
+	}); err != nil {
+		log.Printf("[Attendance] notify employee about leave request review failed: %v", err)
+	}
+}
+
+func leaveMetadata(leaveRequestID, employeeID uuid.UUID, leaveType string, startDate, endDate time.Time, status string) json.RawMessage {
+	data := map[string]string{
+		"leaveRequestId": leaveRequestID.String(),
+		"employeeId":     employeeID.String(),
+		"type":           leaveType,
+		"startDate":      startDate.Format(dateLayout),
+		"endDate":        endDate.Format(dateLayout),
+		"status":         status,
+	}
+	raw, err := json.Marshal(data)
+	if err != nil {
+		return json.RawMessage(`{}`)
+	}
+	return raw
+}
+
+func stringPtr(value string) *string {
+	return &value
 }

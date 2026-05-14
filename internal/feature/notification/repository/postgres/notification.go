@@ -126,6 +126,19 @@ WHERE u.org_id = $1
 	return r.listUserIDs(ctx, query, orgID, role)
 }
 
+func (r *notificationRepository) ListUserIDsByOrgDepartmentAndRole(ctx context.Context, orgID, departmentID uuid.UUID, role string) ([]uuid.UUID, error) {
+	const query = `
+SELECT u.id
+FROM users u
+JOIN employees e ON e.user_id = u.id
+WHERE u.org_id = $1
+  AND e.department_id = $2
+  AND LOWER(COALESCE(NULLIF(TRIM(e.role), ''), NULLIF(TRIM(u.role), ''))) = LOWER($3)
+`
+
+	return r.listUserIDs(ctx, query, orgID, departmentID, role)
+}
+
 func (r *notificationRepository) ListByUserID(ctx context.Context, params repository.ListNotificationsParams) ([]repository.Notification, error) {
 	baseQuery := `
 SELECT id, user_id, org_id, type, title, message, metadata, is_read, read_at, created_at

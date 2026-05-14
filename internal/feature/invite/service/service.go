@@ -315,7 +315,6 @@ func (s *Service) CompleteRegistration(ctx context.Context, req CompleteRegistra
 
 		return nil, fmt.Errorf("insert invited user: %w", err)
 	}
-
 	log.Printf("[Invite CompleteRegistration] Marking invite as used: inviteID=%s code=%q", inviteID, code)
 	if err := s.repo.MarkInviteUsedTx(ctx, tx, inviteID, time.Now().UTC()); err != nil {
 		log.Printf("[Invite CompleteRegistration] Failed to mark invite as used for code=%q: %v", code, err)

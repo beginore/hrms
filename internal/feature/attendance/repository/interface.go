@@ -32,6 +32,7 @@ type AttendanceRepository interface {
 	GetOrgIDByUserID(ctx context.Context, userID uuid.UUID) (uuid.UUID, error)
 	GetEmployeeIDByUserID(ctx context.Context, userID uuid.UUID) (uuid.UUID, error)
 	GetOrgIDByEmployeeID(ctx context.Context, employeeID uuid.UUID) (uuid.UUID, error)
+	GetEmployeeNotificationInfo(ctx context.Context, employeeID uuid.UUID) (EmployeeNotificationInfo, error)
 	EmployeeExists(ctx context.Context, employeeID uuid.UUID) (bool, error)
 	LeaveRequestExists(ctx context.Context, id uuid.UUID) (bool, error)
 	GetApprovedLeaveForDate(ctx context.Context, employeeID uuid.UUID, date time.Time) (LeaveRequest, bool, error)

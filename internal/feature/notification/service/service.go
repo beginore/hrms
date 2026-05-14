@@ -43,6 +43,10 @@ func (s *Service) NotifySystemToRole(ctx context.Context, req NotifyRoleRequest)
 	return s.notifyToRole(ctx, repository.TypeSystem, req)
 }
 
+func (s *Service) NotifySystemToDepartmentRole(ctx context.Context, req NotifyDepartmentRoleRequest) (*NotifyResult, error) {
+	return s.notifyToDepartmentRole(ctx, repository.TypeSystem, req)
+}
+
 func (s *Service) ListNotifications(ctx context.Context, userIDRaw string, req ListNotificationsRequest) ([]NotificationResponse, error) {
 	userID, err := parseUserID(userIDRaw)
 	if err != nil {
@@ -189,6 +193,57 @@ func (s *Service) notifyToRole(ctx context.Context, notificationType string, req
 			ID:       uuid.New(),
 			UserID:   userID,
 			OrgID:    orgID,
+			Type:     notificationType,
+			Title:    title,
+			Message:  message,
+			Metadata: normalizeMetadata(req.Metadata),
+		})
+	}
+
+	if err := s.repo.CreateBulk(ctx, params); err != nil {
+		return nil, err
+	}
+
+	return &NotifyResult{Created: len(params)}, nil
+}
+
+func (s *Service) notifyToDepartmentRole(ctx context.Context, notificationType string, req NotifyDepartmentRoleRequest) (*NotifyResult, error) {
+	role := strings.TrimSpace(req.Role)
+	if role == "" {
+		return nil, ErrRoleRequired
+	}
+
+	orgID, err := uuid.Parse(strings.TrimSpace(req.OrgID))
+	if err != nil {
+		return nil, ErrInvalidOrgID
+	}
+
+	departmentID, err := uuid.Parse(strings.TrimSpace(req.DepartmentID))
+	if err != nil {
+		return nil, ErrInvalidOrgID
+	}
+
+	title := strings.TrimSpace(req.Title)
+	if title == "" {
+		return nil, ErrTitleRequired
+	}
+
+	message := strings.TrimSpace(req.Message)
+	if message == "" {
+		return nil, ErrMessageRequired
+	}
+
+	userIDs, err := s.repo.ListUserIDsByOrgDepartmentAndRole(ctx, orgID, departmentID, role)
+	if err != nil {
+		return nil, err
+	}
+
+	params := make([]repository.CreateNotificationParams, 0, len(userIDs))
+	for _, userID := range userIDs {
+		params = append(params, repository.CreateNotificationParams{
+			ID:       uuid.New(),
+			UserID:   userID,
+			OrgID:    &orgID,
 			Type:     notificationType,
 			Title:    title,
 			Message:  message,

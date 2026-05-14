@@ -15,12 +15,12 @@ import (
 	attendanceRepository "hrms/internal/feature/attendance/repository"
 	attendanceService "hrms/internal/feature/attendance/service"
 	attendanceHandler "hrms/internal/feature/attendance/transport/http"
-	calendarRepository "hrms/internal/feature/calendar/repository"
-	calendarService "hrms/internal/feature/calendar/service"
-	calendarHandler "hrms/internal/feature/calendar/transport/http"
 	authRepository "hrms/internal/feature/auth/repository"
 	authService "hrms/internal/feature/auth/service"
 	authHandler "hrms/internal/feature/auth/transport/http"
+	calendarRepository "hrms/internal/feature/calendar/repository"
+	calendarService "hrms/internal/feature/calendar/service"
+	calendarHandler "hrms/internal/feature/calendar/transport/http"
 	cityRepository "hrms/internal/feature/city/repository"
 	cityService "hrms/internal/feature/city/service"
 	cityHandler "hrms/internal/feature/city/transport/http"
@@ -71,12 +71,15 @@ func main() {
 		logger.Fatal("Failed to initialize Email client")
 	}
 
+	notificationRepo := notificationRepository.NewNotificationRepository(postgres.DB)
+	notificationSvc := notificationService.NewService(notificationRepo)
+
 	calendarRepo := calendarRepository.NewRepository(postgres.DB)
-	calendarSvc := calendarService.NewCalendarService(calendarRepo)
+	calendarSvc := calendarService.NewCalendarService(calendarRepo, notificationSvc)
 	calendarHTTPHandler := calendarHandler.NewCalendarHandler(calendarSvc, cognitoSvc)
 
 	attendanceRepo := attendanceRepository.NewRepository(postgres.DB, calendarRepo)
-	attendanceSvc := attendanceService.NewAttendanceService(attendanceRepo)
+	attendanceSvc := attendanceService.NewAttendanceService(attendanceRepo, notificationSvc)
 	attendanceHTTPHandler := attendanceHandler.NewAttendanceHandler(attendanceSvc, cognitoSvc)
 
 	cityRepo := cityRepository.NewRepository(postgres.DB)
@@ -89,14 +92,12 @@ func main() {
 	authRepo := authRepository.NewAuthRepository(postgres.DB)
 	userRepo := userRepository.NewRepository(postgres.DB)
 	eventsRepo := eventsRepository.NewRepository(postgres.DB)
-	notificationRepo := notificationRepository.NewNotificationRepository(postgres.DB)
 	employeeRepo := employeeRepository.NewRepository(postgres.DB)
 
 	authSvc := authService.NewAuthService(cognitoSvc, authRepo)
 	consentSvc := consentService.NewConsentService(consentRepo)
 	userSvc := userService.NewService(cognitoSvc, userRepo)
 	eventsSvc := eventsService.NewService(eventsRepo)
-	notificationSvc := notificationService.NewService(notificationRepo)
 	orgSvc := organizationService.NewSignUpService(orgRepo, consentRepo, notificationSvc, cognitoSvc, emailSvc)
 	employeeSvc := employeeService.NewEmployeeService(employeeRepo)
 	inviteSvc, err := inviteService.NewService(inviteRepo, notificationSvc, cfg, cognitoClient)
@@ -154,6 +155,7 @@ func main() {
 	// Auth (protected)
 	protected.POST("/auth/logout", newAuthHTTPHandler.Logout)
 
+	// Events
 	events := v1.Group("/events")
 	events.Use(cognito.AuthMiddleware(cognitoSvc, userRepo))
 	events.GET("/upcoming", eventsHTTPHandler.Upcoming)
@@ -186,6 +188,14 @@ func main() {
 	// Employees
 	protected.POST("/employees", employeeHTTPHandler.CreateEmployee)
 	protected.GET("/employees", employeeHTTPHandler.ListEmployees)
+	protected.GET("/departments", employeeHTTPHandler.ListDepartments)
+	protected.GET("/positions", employeeHTTPHandler.ListPositions)
+	protected.GET("/reference/departments", employeeHTTPHandler.ListDepartments)
+	protected.GET("/reference/positions", employeeHTTPHandler.ListPositions)
+	protected.GET("/references/departments", employeeHTTPHandler.ListDepartments)
+	protected.GET("/references/positions", employeeHTTPHandler.ListPositions)
+	protected.GET("/lookup/departments", employeeHTTPHandler.ListDepartments)
+	protected.GET("/lookup/positions", employeeHTTPHandler.ListPositions)
 	protected.GET("/employees/:id", employeeHTTPHandler.GetEmployee)
 	protected.PATCH("/employees/:id/role", employeeHTTPHandler.UpdateRole)
 	protected.PATCH("/employees/:id/salary", employeeHTTPHandler.UpdateSalary)

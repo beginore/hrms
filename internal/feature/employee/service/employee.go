@@ -15,6 +15,8 @@ type EmployeeService interface {
 	CreateEmployee(ctx context.Context, callerUserID uuid.UUID, req CreateEmployeeRequest) (*CreateEmployeeResponse, error)
 	GetByID(ctx context.Context, id uuid.UUID) (*EmployeeResponse, error)
 	GetByOrgID(ctx context.Context, callerUserID uuid.UUID) ([]EmployeeResponse, error)
+	ListDepartments(ctx context.Context, callerUserID uuid.UUID) ([]DepartmentResponse, error)
+	ListPositions(ctx context.Context, callerUserID uuid.UUID) ([]PositionResponse, error)
 	UpdateRole(ctx context.Context, id uuid.UUID, req UpdateEmployeeRoleRequest) error
 	UpdateSalary(ctx context.Context, id uuid.UUID, req UpdateEmployeeSalaryRequest) error
 	UpdateStatus(ctx context.Context, id uuid.UUID, req UpdateEmployeeStatusRequest) error
@@ -117,6 +119,54 @@ func (s *employeeService) GetByOrgID(ctx context.Context, callerUserID uuid.UUID
 	for i, emp := range employees {
 		result[i] = mapToResponse(emp)
 	}
+	return result, nil
+}
+
+func (s *employeeService) ListDepartments(ctx context.Context, callerUserID uuid.UUID) ([]DepartmentResponse, error) {
+	orgID, err := s.resolveOrgID(ctx, callerUserID)
+	if err != nil {
+		return nil, err
+	}
+
+	departments, err := s.repo.ListDepartmentsByOrgID(ctx, orgID)
+	if err != nil {
+		log.Printf("[Employee] ListDepartments failed: %v", err)
+		return nil, fmt.Errorf("%w: %v", ErrDatabaseQueryFailed, err)
+	}
+
+	result := make([]DepartmentResponse, len(departments))
+	for i, department := range departments {
+		result[i] = DepartmentResponse{
+			ID:    department.ID.String(),
+			OrgID: department.OrgID.String(),
+			Name:  department.Name,
+		}
+	}
+
+	return result, nil
+}
+
+func (s *employeeService) ListPositions(ctx context.Context, callerUserID uuid.UUID) ([]PositionResponse, error) {
+	orgID, err := s.resolveOrgID(ctx, callerUserID)
+	if err != nil {
+		return nil, err
+	}
+
+	positions, err := s.repo.ListPositionsByOrgID(ctx, orgID)
+	if err != nil {
+		log.Printf("[Employee] ListPositions failed: %v", err)
+		return nil, fmt.Errorf("%w: %v", ErrDatabaseQueryFailed, err)
+	}
+
+	result := make([]PositionResponse, len(positions))
+	for i, position := range positions {
+		result[i] = PositionResponse{
+			ID:    position.ID.String(),
+			OrgID: position.OrgID.String(),
+			Name:  position.Name,
+		}
+	}
+
 	return result, nil
 }
 

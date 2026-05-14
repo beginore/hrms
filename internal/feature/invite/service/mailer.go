@@ -51,11 +51,11 @@ func (m *mailer) SendInvite(ctx context.Context, toEmail, firstName, organizatio
 
 	log.Printf("[Invite Mailer] Sending SMTP invite email to=%q via host=%q port=%d", toEmail, m.host, m.port)
 
-	subject := "You have been invited to join HRMS"
+	subject := "You have been invited to join Smart EMP"
 
 	bodyText := fmt.Sprintf(`Hello %s,
 
-Your company administrator invited you to join the HRMS platform for %s.
+Your company administrator invited you to join the Smart EMP for %s.
 
 Invitation Code: %s
 
@@ -66,7 +66,7 @@ Enter this code on the registration page to activate your account.
 This invitation expires in 24 hours and can only be used once.
 
 Best regards,
-HRMS System Team`, firstName, organizationName, inviteCode, platformURL)
+Smart EMP Team`, firstName, organizationName, inviteCode, platformURL)
 
 	message := strings.Join([]string{
 		fmt.Sprintf("From: %s", m.senderEmail),

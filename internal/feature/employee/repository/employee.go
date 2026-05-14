@@ -10,10 +10,14 @@ import (
 
 type employeeRepository struct {
 	queries postgres.Querier
+	conn    *sql.DB
 }
 
 func NewRepository(conn *sql.DB) EmployeeRepository {
-	return &employeeRepository{queries: postgres.New(conn)}
+	return &employeeRepository{
+		queries: postgres.New(conn),
+		conn:    conn,
+	}
 }
 
 func (r *employeeRepository) CreateEmployee(ctx context.Context, params CreateEmployeeParams) error {
@@ -47,6 +51,62 @@ func (r *employeeRepository) GetByOrgID(ctx context.Context, orgID uuid.UUID) ([
 		result[i] = mapGetByOrgIDRow(row)
 	}
 	return result, nil
+}
+
+func (r *employeeRepository) ListDepartmentsByOrgID(ctx context.Context, orgID uuid.UUID) ([]Department, error) {
+	rows, err := r.conn.QueryContext(ctx, `
+		SELECT id, org_id, name
+		FROM departments
+		WHERE org_id = $1
+		ORDER BY name
+	`, orgID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var departments []Department
+	for rows.Next() {
+		var department Department
+		if err := rows.Scan(&department.ID, &department.OrgID, &department.Name); err != nil {
+			return nil, err
+		}
+		departments = append(departments, department)
+	}
+
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+
+	return departments, nil
+}
+
+func (r *employeeRepository) ListPositionsByOrgID(ctx context.Context, orgID uuid.UUID) ([]Position, error) {
+	rows, err := r.conn.QueryContext(ctx, `
+		SELECT id, org_id, name
+		FROM positions
+		WHERE org_id = $1
+		ORDER BY name
+	`, orgID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var positions []Position
+	for rows.Next() {
+		var position Position
+		if err := rows.Scan(&position.ID, &position.OrgID, &position.Name); err != nil {
+			return nil, err
+		}
+		positions = append(positions, position)
+	}
+
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+
+	return positions, nil
 }
 
 func (r *employeeRepository) UpdateRole(ctx context.Context, id uuid.UUID, role string) error {

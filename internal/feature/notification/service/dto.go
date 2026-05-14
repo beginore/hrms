@@ -55,6 +55,15 @@ type NotifyRoleRequest struct {
 	Metadata json.RawMessage
 }
 
+type NotifyDepartmentRoleRequest struct {
+	OrgID        string
+	DepartmentID string
+	Role         string
+	Title        string
+	Message      string
+	Metadata     json.RawMessage
+}
+
 type NotifyResult struct {
 	Created int `json:"created"`
 }

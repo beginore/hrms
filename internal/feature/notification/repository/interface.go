@@ -49,6 +49,7 @@ type NotificationRepository interface {
 	CreateBulk(ctx context.Context, params []CreateNotificationParams) error
 	ListUserIDsByRole(ctx context.Context, role string) ([]uuid.UUID, error)
 	ListUserIDsByOrgAndRole(ctx context.Context, orgID uuid.UUID, role string) ([]uuid.UUID, error)
+	ListUserIDsByOrgDepartmentAndRole(ctx context.Context, orgID, departmentID uuid.UUID, role string) ([]uuid.UUID, error)
 	ListByUserID(ctx context.Context, params ListNotificationsParams) ([]Notification, error)
 	MarkAsRead(ctx context.Context, notificationID, userID uuid.UUID, readAt time.Time) (bool, error)
 	MarkAllAsRead(ctx context.Context, userID uuid.UUID, readAt time.Time) (int64, error)
