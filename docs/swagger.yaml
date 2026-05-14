@@ -508,6 +508,424 @@ definitions:
       email:
         type: string
     type: object
+  hrms_internal_feature_payroll_service.AttendanceOverrideResponse:
+    properties:
+      attendance_status:
+        type: string
+      attendance_type:
+        type: string
+      date:
+        type: string
+      employee_id:
+        type: string
+      id:
+        type: string
+      note:
+        type: string
+      overtime_minutes:
+        type: integer
+      paid_day:
+        type: boolean
+    type: object
+  hrms_internal_feature_payroll_service.CalculateCycleRequest:
+    properties:
+      recalculate:
+        type: boolean
+    type: object
+  hrms_internal_feature_payroll_service.CreateAdjustmentRequest:
+    properties:
+      amount:
+        type: string
+      category:
+        type: string
+      currency:
+        type: string
+      cycle_id:
+        type: string
+      employee_id:
+        type: string
+      is_taxable:
+        type: boolean
+      reason:
+        type: string
+      type:
+        description: BONUS | DEDUCTION
+        type: string
+    required:
+    - amount
+    - category
+    - employee_id
+    - type
+    type: object
+  hrms_internal_feature_payroll_service.CreateCorrectionRequest:
+    properties:
+      amount:
+        type: string
+      employee_id:
+        type: string
+      reason:
+        type: string
+      source_item_id:
+        type: string
+      target_cycle_id:
+        type: string
+      taxable:
+        type: boolean
+      type:
+        description: BONUS | DEDUCTION
+        type: string
+    required:
+    - amount
+    - employee_id
+    - reason
+    - target_cycle_id
+    - type
+    type: object
+  hrms_internal_feature_payroll_service.CreateCycleRequest:
+    properties:
+      currency:
+        type: string
+      period_end:
+        type: string
+      period_start:
+        type: string
+    required:
+    - period_end
+    - period_start
+    type: object
+  hrms_internal_feature_payroll_service.CreateSalaryHistoryRequest:
+    properties:
+      effective_from:
+        type: string
+      effective_to:
+        type: string
+      employee_id:
+        type: string
+      salary_rate:
+        type: string
+    required:
+    - effective_from
+    - employee_id
+    - salary_rate
+    type: object
+  hrms_internal_feature_payroll_service.CreateTaxRuleRequest:
+    properties:
+      applies_to:
+        description: GROSS | TAXABLE_INCOME | BASE_ONLY
+        type: string
+      country:
+        type: string
+      effective_from:
+        type: string
+      effective_to:
+        type: string
+      name:
+        type: string
+      payer:
+        description: EMPLOYEE | EMPLOYER
+        type: string
+      rate:
+        type: string
+      threshold_max:
+        type: string
+      threshold_min:
+        type: string
+    required:
+    - applies_to
+    - effective_from
+    - name
+    - rate
+    type: object
+  hrms_internal_feature_payroll_service.EmploymentPeriodResponse:
+    properties:
+      employee_id:
+        type: string
+      hire_date:
+        type: string
+      termination_date:
+        type: string
+    type: object
+  hrms_internal_feature_payroll_service.PayrollAdjustmentResponse:
+    properties:
+      amount:
+        type: string
+      category:
+        type: string
+      created_at:
+        type: string
+      created_by:
+        type: string
+      currency:
+        type: string
+      cycle_id:
+        type: string
+      employee_id:
+        type: string
+      id:
+        type: string
+      is_taxable:
+        type: boolean
+      org_id:
+        type: string
+      reason:
+        type: string
+      type:
+        type: string
+    type: object
+  hrms_internal_feature_payroll_service.PayrollCorrectionResponse:
+    properties:
+      adjustment_id:
+        type: string
+      amount:
+        type: string
+      created_at:
+        type: string
+      created_by:
+        type: string
+      employee_id:
+        type: string
+      id:
+        type: string
+      org_id:
+        type: string
+      reason:
+        type: string
+      source_item_id:
+        type: string
+      target_cycle_id:
+        type: string
+      type:
+        type: string
+    type: object
+  hrms_internal_feature_payroll_service.PayrollCycleResponse:
+    properties:
+      approved_at:
+        type: string
+      approved_by:
+        type: string
+      created_at:
+        type: string
+      created_by:
+        type: string
+      currency:
+        type: string
+      id:
+        type: string
+      org_id:
+        type: string
+      paid_at:
+        type: string
+      period_end:
+        type: string
+      period_start:
+        type: string
+      status:
+        type: string
+      updated_at:
+        type: string
+    type: object
+  hrms_internal_feature_payroll_service.PayrollItemResponse:
+    properties:
+      absent_days:
+        type: integer
+      attendance_adjustment:
+        type: string
+      base_salary:
+        type: string
+      bonuses_total:
+        type: string
+      calculation_snapshot: {}
+      created_at:
+        type: string
+      currency:
+        type: string
+      cycle_id:
+        type: string
+      deductions_total:
+        type: string
+      employee_id:
+        type: string
+      employer_taxes_total:
+        type: string
+      gross_salary:
+        type: string
+      id:
+        type: string
+      late_days:
+        type: integer
+      missing_days:
+        type: integer
+      net_salary:
+        type: string
+      org_id:
+        type: string
+      overtime_amount:
+        type: string
+      overtime_minutes:
+        type: integer
+      paid_days:
+        type: string
+      review_comment:
+        type: string
+      review_reasons: {}
+      review_required:
+        type: boolean
+      reviewed_at:
+        type: string
+      reviewed_by:
+        type: string
+      status:
+        type: string
+      taxes_total:
+        type: string
+      total_employer_cost:
+        type: string
+      unpaid_days:
+        type: string
+      updated_at:
+        type: string
+      working_days:
+        type: integer
+    type: object
+  hrms_internal_feature_payroll_service.PayrollPolicyResponse:
+    properties:
+      business_trip_pay_rate:
+        type: string
+      holiday_overtime_multiplier:
+        type: string
+      late_penalty_amount:
+        type: string
+      late_penalty_mode:
+        type: string
+      missing_attendance_policy:
+        type: string
+      org_id:
+        type: string
+      regular_overtime_multiplier:
+        type: string
+      remote_pay_rate:
+        type: string
+      rounding_mode:
+        type: string
+      sick_leave_pay_rate:
+        type: string
+      unpaid_leave_pay_rate:
+        type: string
+      vacation_pay_rate:
+        type: string
+    type: object
+  hrms_internal_feature_payroll_service.PayrollTaxRuleResponse:
+    properties:
+      applies_to:
+        type: string
+      country:
+        type: string
+      effective_from:
+        type: string
+      effective_to:
+        type: string
+      id:
+        type: string
+      is_active:
+        type: boolean
+      name:
+        type: string
+      org_id:
+        type: string
+      payer:
+        type: string
+      rate:
+        type: string
+      threshold_max:
+        type: string
+      threshold_min:
+        type: string
+    type: object
+  hrms_internal_feature_payroll_service.PreviewPayrollRequest:
+    properties:
+      employee_id:
+        type: string
+      period_end:
+        type: string
+      period_start:
+        type: string
+    required:
+    - employee_id
+    - period_end
+    - period_start
+    type: object
+  hrms_internal_feature_payroll_service.ReviewPayrollItemRequest:
+    properties:
+      comment:
+        type: string
+    type: object
+  hrms_internal_feature_payroll_service.SalaryHistoryResponse:
+    properties:
+      effective_from:
+        type: string
+      effective_to:
+        type: string
+      employee_id:
+        type: string
+      id:
+        type: string
+      salary_rate:
+        type: string
+    type: object
+  hrms_internal_feature_payroll_service.UpdateEmploymentPeriodRequest:
+    properties:
+      hire_date:
+        type: string
+      termination_date:
+        type: string
+    type: object
+  hrms_internal_feature_payroll_service.UpsertAttendanceOverrideRequest:
+    properties:
+      attendance_status:
+        type: string
+      attendance_type:
+        type: string
+      date:
+        type: string
+      employee_id:
+        type: string
+      note:
+        type: string
+      overtime_minutes:
+        type: integer
+      paid_day:
+        type: boolean
+    required:
+    - date
+    - employee_id
+    type: object
+  hrms_internal_feature_payroll_service.UpsertPolicyRequest:
+    properties:
+      business_trip_pay_rate:
+        type: string
+      holiday_overtime_multiplier:
+        type: string
+      late_penalty_amount:
+        type: string
+      late_penalty_mode:
+        description: NONE | FIXED_PER_LATE_DAY
+        type: string
+      missing_attendance_policy:
+        description: PAID_REVIEW_REQUIRED | ABSENT_UNPAID
+        type: string
+      regular_overtime_multiplier:
+        type: string
+      remote_pay_rate:
+        type: string
+      rounding_mode:
+        type: string
+      sick_leave_pay_rate:
+        type: string
+      unpaid_leave_pay_rate:
+        type: string
+      vacation_pay_rate:
+        type: string
+    type: object
 host: localhost:8080
 info:
   contact: {}
@@ -2169,6 +2587,1049 @@ paths:
       summary: Verify OTP
       tags:
       - Organizations
+  /payroll/adjustments:
+    get:
+      description: List bonuses and deductions, optionally filtered by cycle or employee
+      parameters:
+      - description: Payroll cycle ID
+        in: query
+        name: cycle_id
+        type: string
+      - description: Employee ID
+        in: query
+        name: employee_id
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/hrms_internal_feature_payroll_service.PayrollAdjustmentResponse'
+            type: array
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: List payroll adjustments
+      tags:
+      - Payroll
+    post:
+      consumes:
+      - application/json
+      description: Add a bonus or deduction to an employee payroll cycle
+      parameters:
+      - description: Adjustment data
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/hrms_internal_feature_payroll_service.CreateAdjustmentRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/hrms_internal_feature_payroll_service.PayrollAdjustmentResponse'
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Create payroll adjustment
+      tags:
+      - Payroll
+  /payroll/adjustments/{id}:
+    delete:
+      description: Remove a payroll adjustment while cycle is still editable
+      parameters:
+      - description: Adjustment ID
+        in: path
+        name: id
+        required: true
+        type: string
+      responses:
+        "204":
+          description: No Content
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Delete payroll adjustment
+      tags:
+      - Payroll
+  /payroll/attendance-overrides:
+    put:
+      consumes:
+      - application/json
+      description: Add a manual payroll attendance override for one employee/date
+      parameters:
+      - description: Attendance override
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/hrms_internal_feature_payroll_service.UpsertAttendanceOverrideRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/hrms_internal_feature_payroll_service.AttendanceOverrideResponse'
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "403":
+          description: Forbidden
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Upsert payroll attendance override
+      tags:
+      - Payroll
+  /payroll/corrections:
+    post:
+      consumes:
+      - application/json
+      description: Create a correction adjustment in an editable target cycle
+      parameters:
+      - description: Correction data
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/hrms_internal_feature_payroll_service.CreateCorrectionRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/hrms_internal_feature_payroll_service.PayrollCorrectionResponse'
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "401":
+          description: Unauthorized
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "403":
+          description: Forbidden
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "409":
+          description: Conflict
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Create payroll correction
+      tags:
+      - Payroll
+  /payroll/cycles:
+    get:
+      description: List payroll cycles for the caller's organisation
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/hrms_internal_feature_payroll_service.PayrollCycleResponse'
+            type: array
+        "401":
+          description: Unauthorized
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: List payroll cycles
+      tags:
+      - Payroll
+    post:
+      consumes:
+      - application/json
+      description: Create a payroll cycle for an organisation period
+      parameters:
+      - description: Payroll cycle period
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/hrms_internal_feature_payroll_service.CreateCycleRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/hrms_internal_feature_payroll_service.PayrollCycleResponse'
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "401":
+          description: Unauthorized
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Create payroll cycle
+      tags:
+      - Payroll
+  /payroll/cycles/{id}:
+    get:
+      description: Retrieve one payroll cycle
+      parameters:
+      - description: Payroll cycle ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/hrms_internal_feature_payroll_service.PayrollCycleResponse'
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "404":
+          description: Not Found
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Get payroll cycle
+      tags:
+      - Payroll
+  /payroll/cycles/{id}/approve:
+    patch:
+      description: Lock a calculated payroll cycle for payment
+      parameters:
+      - description: Payroll cycle ID
+        in: path
+        name: id
+        required: true
+        type: string
+      responses:
+        "204":
+          description: No Content
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "404":
+          description: Not Found
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "409":
+          description: Conflict
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Approve payroll cycle
+      tags:
+      - Payroll
+  /payroll/cycles/{id}/calculate:
+    patch:
+      consumes:
+      - application/json
+      description: Calculate payroll items from salary, attendance, overtime, bonuses,
+        deductions, and taxes
+      parameters:
+      - description: Payroll cycle ID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Calculate options
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/hrms_internal_feature_payroll_service.CalculateCycleRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/hrms_internal_feature_payroll_service.PayrollItemResponse'
+            type: array
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "404":
+          description: Not Found
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "409":
+          description: Conflict
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Calculate payroll cycle
+      tags:
+      - Payroll
+  /payroll/cycles/{id}/export:
+    get:
+      description: Export READY_FOR_PAYMENT or PAID payroll items as CSV payment batch
+        for accounting or bank upload
+      parameters:
+      - description: Payroll cycle ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - text/csv
+      responses:
+        "200":
+          description: OK
+          schema:
+            type: file
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "403":
+          description: Forbidden
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "404":
+          description: Not Found
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Export payroll cycle CSV
+      tags:
+      - Payroll
+  /payroll/cycles/{id}/items:
+    get:
+      description: List calculated payroll items for a cycle
+      parameters:
+      - description: Payroll cycle ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/hrms_internal_feature_payroll_service.PayrollItemResponse'
+            type: array
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "404":
+          description: Not Found
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: List payroll items
+      tags:
+      - Payroll
+  /payroll/cycles/{id}/mark-paid:
+    patch:
+      description: Mark a READY_FOR_PAYMENT cycle as paid after external payment is
+        completed
+      parameters:
+      - description: Payroll cycle ID
+        in: path
+        name: id
+        required: true
+        type: string
+      responses:
+        "204":
+          description: No Content
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "404":
+          description: Not Found
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "409":
+          description: Conflict
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Mark payroll cycle as paid
+      tags:
+      - Payroll
+  /payroll/cycles/{id}/prepare-payment:
+    patch:
+      description: Move an approved payroll cycle to READY_FOR_PAYMENT so it can be
+        exported and marked as paid after external payment
+      parameters:
+      - description: Payroll cycle ID
+        in: path
+        name: id
+        required: true
+        type: string
+      responses:
+        "204":
+          description: No Content
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "404":
+          description: Not Found
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "409":
+          description: Conflict
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Prepare payroll cycle payment batch
+      tags:
+      - Payroll
+  /payroll/cycles/{id}/preview:
+    post:
+      description: Calculate all employee payroll items for a cycle without saving
+        them
+      parameters:
+      - description: Payroll cycle ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/hrms_internal_feature_payroll_service.PayrollItemResponse'
+            type: array
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "403":
+          description: Forbidden
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "404":
+          description: Not Found
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Preview payroll cycle
+      tags:
+      - Payroll
+  /payroll/cycles/{id}/reopen:
+    patch:
+      description: Reopen an approved or READY_FOR_PAYMENT cycle back to calculated
+        status. Paid cycles cannot be reopened.
+      parameters:
+      - description: Payroll cycle ID
+        in: path
+        name: id
+        required: true
+        type: string
+      responses:
+        "204":
+          description: No Content
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "403":
+          description: Forbidden
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "404":
+          description: Not Found
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "409":
+          description: Conflict
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Reopen payroll cycle
+      tags:
+      - Payroll
+  /payroll/employees/{id}/employment-period:
+    patch:
+      consumes:
+      - application/json
+      description: Set hire and termination dates used by payroll calculations
+      parameters:
+      - description: Employee ID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Employment period
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/hrms_internal_feature_payroll_service.UpdateEmploymentPeriodRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/hrms_internal_feature_payroll_service.EmploymentPeriodResponse'
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "403":
+          description: Forbidden
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "404":
+          description: Not Found
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Update employee payroll employment period
+      tags:
+      - Payroll
+  /payroll/items/{id}:
+    get:
+      description: Retrieve one calculated payroll item
+      parameters:
+      - description: Payroll item ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/hrms_internal_feature_payroll_service.PayrollItemResponse'
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "404":
+          description: Not Found
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Get payroll item
+      tags:
+      - Payroll
+  /payroll/items/{id}/review:
+    patch:
+      consumes:
+      - application/json
+      description: Mark a payroll item as reviewed and save reviewer comment
+      parameters:
+      - description: Payroll item ID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Review comment
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/hrms_internal_feature_payroll_service.ReviewPayrollItemRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/hrms_internal_feature_payroll_service.PayrollItemResponse'
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "403":
+          description: Forbidden
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "404":
+          description: Not Found
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Review payroll item
+      tags:
+      - Payroll
+  /payroll/policy:
+    get:
+      description: Return payroll calculation policy for the caller's organisation
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/hrms_internal_feature_payroll_service.PayrollPolicyResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "403":
+          description: Forbidden
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Get payroll policy
+      tags:
+      - Payroll
+    put:
+      consumes:
+      - application/json
+      description: Create or update payroll calculation policy for the caller's organisation
+      parameters:
+      - description: Payroll policy
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/hrms_internal_feature_payroll_service.UpsertPolicyRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/hrms_internal_feature_payroll_service.PayrollPolicyResponse'
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "401":
+          description: Unauthorized
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "403":
+          description: Forbidden
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Upsert payroll policy
+      tags:
+      - Payroll
+  /payroll/preview:
+    post:
+      consumes:
+      - application/json
+      description: Calculate one employee payroll without saving a payroll item
+      parameters:
+      - description: Preview data
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/hrms_internal_feature_payroll_service.PreviewPayrollRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/hrms_internal_feature_payroll_service.PayrollItemResponse'
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "404":
+          description: Not Found
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Preview payroll calculation
+      tags:
+      - Payroll
+  /payroll/salary-history:
+    post:
+      consumes:
+      - application/json
+      description: Add salary history for an employee and effective date range
+      parameters:
+      - description: Salary history
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/hrms_internal_feature_payroll_service.CreateSalaryHistoryRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/hrms_internal_feature_payroll_service.SalaryHistoryResponse'
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "403":
+          description: Forbidden
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Create salary history record
+      tags:
+      - Payroll
+  /payroll/tax-rules:
+    get:
+      description: List default and organisation-specific active tax rules
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/hrms_internal_feature_payroll_service.PayrollTaxRuleResponse'
+            type: array
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: List active payroll tax rules
+      tags:
+      - Payroll
+    post:
+      consumes:
+      - application/json
+      description: Create an organisation-specific tax rule
+      parameters:
+      - description: Tax rule
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/hrms_internal_feature_payroll_service.CreateTaxRuleRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/hrms_internal_feature_payroll_service.PayrollTaxRuleResponse'
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Create payroll tax rule
+      tags:
+      - Payroll
+  /payroll/tax-rules/kz-preset:
+    post:
+      description: Add basic Kazakhstan employee and employer tax rules for the organisation
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            items:
+              $ref: '#/definitions/hrms_internal_feature_payroll_service.PayrollTaxRuleResponse'
+            type: array
+        "403":
+          description: Forbidden
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Create KZ payroll tax preset
+      tags:
+      - Payroll
 securityDefinitions:
   BearerAuth:
     description: Type "Bearer" followed by a space and your JWT token.
