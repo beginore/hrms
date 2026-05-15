@@ -1271,6 +1271,73 @@ definitions:
       value:
         type: number
     type: object
+  hrms_internal_feature_task_service.AssignTaskRequest:
+    properties:
+      assigned_to:
+        type: string
+      description:
+        type: string
+      due_date:
+        description: YYYY-MM-DD
+        type: string
+      title:
+        type: string
+    required:
+    - assigned_to
+    - due_date
+    - title
+    type: object
+  hrms_internal_feature_task_service.AssignTaskResponse:
+    properties:
+      task_id:
+        type: string
+    type: object
+  hrms_internal_feature_task_service.ReviewTaskRequest:
+    properties:
+      action:
+        description: approve | reject
+        type: string
+    required:
+    - action
+    type: object
+  hrms_internal_feature_task_service.SubmitReportRequest:
+    properties:
+      description:
+        type: string
+      report_url:
+        type: string
+    required:
+    - description
+    type: object
+  hrms_internal_feature_task_service.TaskResponse:
+    properties:
+      assigned_to:
+        type: string
+      created_at:
+        type: string
+      created_by:
+        type: string
+      description:
+        type: string
+      due_date:
+        type: string
+      id:
+        type: string
+      report_description:
+        type: string
+      report_url:
+        type: string
+      reviewed_at:
+        type: string
+      reviewed_by:
+        type: string
+      status:
+        type: string
+      submitted_at:
+        type: string
+      title:
+        type: string
+    type: object
 host: localhost:8080
 info:
   contact: {}
@@ -1327,17 +1394,9 @@ paths:
     post:
       consumes:
       - application/json
-      - application/json
-      description: |-
-        Submit a leave request (sick leave, vacation, remote work, etc.)
-        Employee manually checks in for the day. Use work_type=REMOTE for remote work, OFFICE for office.
+      description: Employee manually checks in for the day. Use work_type=REMOTE for
+        remote work, OFFICE for office.
       parameters:
-      - description: Leave request data
-        in: body
-        name: body
-        required: true
-        schema:
-          $ref: '#/definitions/hrms_internal_feature_attendance_service.CreateLeaveRequest'
       - description: Check-in options
         in: body
         name: body
@@ -1345,16 +1404,11 @@ paths:
           $ref: '#/definitions/hrms_internal_feature_attendance_service.CheckInRequest'
       produces:
       - application/json
-      - application/json
       responses:
         "200":
           description: OK
           schema:
             $ref: '#/definitions/hrms_internal_feature_attendance_service.CheckInResponse'
-        "201":
-          description: Created
-          schema:
-            $ref: '#/definitions/hrms_internal_feature_attendance_service.CreateLeaveResponse'
         "400":
           description: Bad Request
           schema:
@@ -1373,12 +1427,6 @@ paths:
             additionalProperties:
               type: string
             type: object
-        "422":
-          description: Unprocessable Entity
-          schema:
-            additionalProperties:
-              type: string
-            type: object
         "500":
           description: Internal Server Error
           schema:
@@ -1387,10 +1435,8 @@ paths:
             type: object
       security:
       - BearerAuth: []
-      - BearerAuth: []
       summary: Manual check-in
       tags:
-      - Attendance
       - Attendance
   /attendance/check-out:
     post:
@@ -1500,10 +1546,7 @@ paths:
     post:
       consumes:
       - application/json
-      - application/json
-      description: |-
-        Submit a leave request (sick leave, vacation, remote work, etc.)
-        Employee manually checks in for the day. Use work_type=REMOTE for remote work, OFFICE for office.
+      description: Submit a leave request (sick leave, vacation, remote work, etc.)
       parameters:
       - description: Leave request data
         in: body
@@ -1511,19 +1554,9 @@ paths:
         required: true
         schema:
           $ref: '#/definitions/hrms_internal_feature_attendance_service.CreateLeaveRequest'
-      - description: Check-in options
-        in: body
-        name: body
-        schema:
-          $ref: '#/definitions/hrms_internal_feature_attendance_service.CheckInRequest'
       produces:
       - application/json
-      - application/json
       responses:
-        "200":
-          description: OK
-          schema:
-            $ref: '#/definitions/hrms_internal_feature_attendance_service.CheckInResponse'
         "201":
           description: Created
           schema:
@@ -1536,12 +1569,6 @@ paths:
             type: object
         "401":
           description: Unauthorized
-          schema:
-            additionalProperties:
-              type: string
-            type: object
-        "409":
-          description: Conflict
           schema:
             additionalProperties:
               type: string
@@ -1560,10 +1587,8 @@ paths:
             type: object
       security:
       - BearerAuth: []
-      - BearerAuth: []
-      summary: Manual check-in
+      summary: Submit leave request
       tags:
-      - Attendance
       - Attendance
   /attendance/leave-requests/{id}:
     get:
@@ -5128,6 +5153,241 @@ paths:
       summary: Get payroll trend chart
       tags:
       - Reports
+  /tasks:
+    get:
+      description: Admin/SysAdmin sees all org tasks; Employee sees own assigned tasks
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/hrms_internal_feature_task_service.TaskResponse'
+            type: array
+        "401":
+          description: Unauthorized
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: List tasks
+      tags:
+      - Tasks
+    post:
+      consumes:
+      - application/json
+      description: Admin or SysAdmin assigns a task to an employee
+      parameters:
+      - description: Task data
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/hrms_internal_feature_task_service.AssignTaskRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/hrms_internal_feature_task_service.AssignTaskResponse'
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "401":
+          description: Unauthorized
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "422":
+          description: Unprocessable Entity
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Assign task to employee
+      tags:
+      - Tasks
+  /tasks/{id}:
+    get:
+      description: Retrieve a specific task by ID. Employee can only view their own
+        assigned tasks.
+      parameters:
+      - description: Task ID (UUID)
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/hrms_internal_feature_task_service.TaskResponse'
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "403":
+          description: Forbidden
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "404":
+          description: Not Found
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Get task
+      tags:
+      - Tasks
+  /tasks/{id}/review:
+    patch:
+      consumes:
+      - application/json
+      description: Admin or SysAdmin approves or rejects a submitted task report
+      parameters:
+      - description: Task ID (UUID)
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Action (approve|reject)
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/hrms_internal_feature_task_service.ReviewTaskRequest'
+      responses:
+        "204":
+          description: No Content
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "401":
+          description: Unauthorized
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "404":
+          description: Not Found
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "409":
+          description: Conflict
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Approve or reject task report
+      tags:
+      - Tasks
+  /tasks/{id}/submit:
+    post:
+      consumes:
+      - application/json
+      description: Assigned employee submits their work report for the task. Changes
+        status to SUBMITTED.
+      parameters:
+      - description: Task ID (UUID)
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Report data
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/hrms_internal_feature_task_service.SubmitReportRequest'
+      produces:
+      - application/json
+      responses:
+        "204":
+          description: No Content
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "403":
+          description: Forbidden
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "404":
+          description: Not Found
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "409":
+          description: Conflict
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Submit task report
+      tags:
+      - Tasks
 securityDefinitions:
   BearerAuth:
     description: Type "Bearer" followed by a space and your JWT token.

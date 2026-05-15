@@ -432,6 +432,69 @@ GET /v1/attendance/employees/:employee_id?start_date=2026-05-01&end_date=2026-05
 
 ---
 
+## 7. TASKS — задачи сотрудникам
+
+Назначать таски и ревьюить могут только **Admin** и **SysAdmin**.
+Сотрудник видит только свои таски. Статусы: PENDING → APPROVED | REJECTED.
+
+### 7.1 Назначить задачу сотруднику
+
+POST /v1/tasks  _(Admin / SysAdmin)_
+
+```json
+{
+  "assigned_to": "uuid-сотрудника",
+  "title": "Подготовить квартальный отчёт",
+  "description": "Включить данные по продажам за Q2",
+  "due_date": "2026-06-30"
+}
+```
+
+Ответ: `{ "task_id": "uuid" }`
+
+Поле `description` — необязательное.
+
+### 7.2 Список тасков
+
+GET /v1/tasks
+
+- Admin / SysAdmin → все таски организации
+- Employee / Manager / HR → только таски, назначенные на себя
+
+### 7.3 Получить конкретный таск
+
+GET /v1/tasks/:id
+
+Admin / SysAdmin видят любой таск. Сотрудник — только свой (403 если чужой).
+
+### 7.4 Одобрить или отклонить таск
+
+PATCH /v1/tasks/:id/review  _(Admin / SysAdmin)_
+
+```json
+{ "action": "approve" }
+```
+
+или
+
+```json
+{ "action": "reject" }
+```
+
+Статус меняется только из PENDING. Повторный вызов → 409 Conflict.
+
+---
+
+## Типичный сценарий с тасками
+
+1. Администратор назначает таск → `POST /v1/tasks`
+2. Сотрудник видит свои таски → `GET /v1/tasks`
+3. Сотрудник открывает конкретный таск, читает описание → `GET /v1/tasks/:id`
+4. Администратор проверяет все таски → `GET /v1/tasks`
+5. Администратор одобряет или отклоняет → `PATCH /v1/tasks/:id/review`
+
+---
+
 ## Справочник — все эндпоинты
 
 ### Публичные (без токена)
@@ -486,4 +549,9 @@ PATCH  /v1/attendance/leave-requests/:id/review
 
 GET    /v1/attendance
 GET    /v1/attendance/employees/:employee_id
+
+POST   /v1/tasks                  (Admin/SysAdmin)
+GET    /v1/tasks
+GET    /v1/tasks/:id
+PATCH  /v1/tasks/:id/review       (Admin/SysAdmin)
 ```

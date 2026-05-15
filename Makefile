@@ -7,13 +7,13 @@
 #-include Makefile.local
 MIGRATIONS_DIR=internal/infrastructure/storage/postgres/migrations
 
-DB_DSN=postgres://postgres:0110@localhost:5432/hrms?sslmode=disable
+DB_DSN=postgres://postgres:123@localhost:5432/hrms?sslmode=disable
 
 LINTER_VERSION=1.64.5
 
 migrate-up:
 	@echo "Applying migrations..."
-	@goose -dir $(MIGRATIONS_DIR) postgres "$(DB_DSN)" up
+	@goose -dir $(MIGRATIONS_DIR) postgres "$(DB_DSN)" up --allow-missing
 
 migrate-down:
 	@echo "Rolling back last migration..."

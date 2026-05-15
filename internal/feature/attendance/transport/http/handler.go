@@ -107,20 +107,6 @@ func (h *AttendanceHandler) CreateSkudEvent(c *gin.Context) {
 
 // ─── Leave Requests ───────────────────────────────────────────────────────────
 
-// CreateLeaveRequest godoc
-// @Summary      Submit leave request
-// @Description  Submit a leave request (sick leave, vacation, remote work, etc.)
-// @Tags         Attendance
-// @Accept       json
-// @Produce      json
-// @Param        body  body      attendanceService.CreateLeaveRequest  true  "Leave request data"
-// @Success      201  {object}  attendanceService.CreateLeaveResponse
-// @Failure      400  {object}  map[string]string
-// @Failure      401  {object}  map[string]string
-// @Failure      422  {object}  map[string]string
-// @Failure      500  {object}  map[string]string
-// @Security     BearerAuth
-// @Router       /attendance/leave-requests [post]
 // CheckIn godoc
 // @Summary      Manual check-in
 // @Description  Employee manually checks in for the day. Use work_type=REMOTE for remote work, OFFICE for office.
@@ -166,6 +152,20 @@ func (h *AttendanceHandler) CheckOut(c *gin.Context) {
 	c.JSON(http.StatusOK, resp)
 }
 
+// CreateLeaveRequest godoc
+// @Summary      Submit leave request
+// @Description  Submit a leave request (sick leave, vacation, remote work, etc.)
+// @Tags         Attendance
+// @Accept       json
+// @Produce      json
+// @Param        body  body      attendanceService.CreateLeaveRequest  true  "Leave request data"
+// @Success      201  {object}  attendanceService.CreateLeaveResponse
+// @Failure      400  {object}  map[string]string
+// @Failure      401  {object}  map[string]string
+// @Failure      422  {object}  map[string]string
+// @Failure      500  {object}  map[string]string
+// @Security     BearerAuth
+// @Router       /attendance/leave-requests [post]
 func (h *AttendanceHandler) CreateLeaveRequest(c *gin.Context) {
 	var req attendanceService.CreateLeaveRequest
 	if err := c.ShouldBindJSON(&req); err != nil {

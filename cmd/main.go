@@ -47,6 +47,9 @@ import (
 	reportsRepository "hrms/internal/feature/reports/repository"
 	reportsService "hrms/internal/feature/reports/service"
 	reportsHandler "hrms/internal/feature/reports/transport/http"
+	taskRepository "hrms/internal/feature/task/repository"
+	taskService "hrms/internal/feature/task/service"
+	taskHandler "hrms/internal/feature/task/transport/http"
 	"hrms/internal/infrastructure/app/cognito"
 	"hrms/internal/infrastructure/config"
 	"hrms/internal/infrastructure/email"
@@ -95,6 +98,7 @@ func main() {
 	payrollRepo := payrollRepository.NewRepository(postgres.DB)
 	payslipRepo := payslipRepository.NewRepository(postgres.DB)
 	reportsRepo := reportsRepository.NewRepository(postgres.DB)
+	taskRepo := taskRepository.NewRepository(postgres.DB)
 
 	authSvc := authService.NewAuthService(cognitoSvc, authRepo)
 	consentSvc := consentService.NewConsentService(consentRepo)
@@ -103,6 +107,7 @@ func main() {
 	payrollSvc := payrollService.NewPayrollService(payrollRepo)
 	payslipSvc := payslipService.NewPayslipService(payslipRepo, emailSvc)
 	reportsSvc := reportsService.NewReportsService(reportsRepo)
+	taskSvc := taskService.NewTaskService(taskRepo)
 	inviteSvc, err := inviteService.NewService(inviteRepo, notificationSvc, cfg, cognitoClient)
 	if err != nil {
 		logger.Fatal("Failed to initialize Invite service")
@@ -116,6 +121,7 @@ func main() {
 	payrollHTTPHandler := payrollHandler.NewPayrollHandler(payrollSvc, cognitoSvc)
 	payslipHTTPHandler := payslipHandler.NewPayslipHandler(payslipSvc, cognitoSvc)
 	reportsHTTPHandler := reportsHandler.NewReportsHandler(reportsSvc)
+	taskHTTPHandler := taskHandler.NewTaskHandler(taskSvc)
 
 	authMw, err := middleware.AuthMiddleware(cfg.AWS.Region, cfg.Cognito.UserPoolID, employeeRepo)
 	if err != nil {
@@ -245,6 +251,14 @@ func main() {
 	protected.GET("/me/payslips", payslipHTTPHandler.ListMyPayslips)
 	protected.GET("/me/payslips/:id", payslipHTTPHandler.GetMyPayslip)
 	protected.GET("/me/payslips/:id/pdf", payslipHTTPHandler.ExportMyPayslipPDF)
+
+	// Tasks
+	adminOnly := v1.Group("/", authMw, middleware.RequireAnyRole(middleware.RoleSysAdmin, middleware.RoleAdmin))
+	adminOnly.POST("/tasks", taskHTTPHandler.AssignTask)
+	adminOnly.PATCH("/tasks/:id/review", taskHTTPHandler.ReviewTask)
+	protected.GET("/tasks", taskHTTPHandler.ListTasks)
+	protected.GET("/tasks/:id", taskHTTPHandler.GetTask)
+	protected.POST("/tasks/:id/submit", taskHTTPHandler.SubmitReport)
 
 	// Reports & Analytics
 	protected.GET("/reports/dashboard", reportsHTTPHandler.GetDashboard)
