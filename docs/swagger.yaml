@@ -252,7 +252,7 @@ definitions:
   hrms_internal_feature_city_service.CityResponse:
     properties:
       id:
-        type: string
+        type: integer
       name:
         type: string
     type: object
@@ -1059,6 +1059,217 @@ definitions:
     properties:
       reason:
         type: string
+    type: object
+  hrms_internal_feature_reports_service.AttendanceTodayResponse:
+    properties:
+      absent:
+        type: integer
+      attendance_rate:
+        type: string
+      chart:
+        $ref: '#/definitions/hrms_internal_feature_reports_service.PieChartResponse'
+      date:
+        type: string
+      late:
+        type: integer
+      on_leave:
+        type: integer
+      present:
+        type: integer
+      remote:
+        type: integer
+      total_active:
+        type: integer
+    type: object
+  hrms_internal_feature_reports_service.BarChartResponse:
+    properties:
+      labels:
+        items:
+          type: string
+        type: array
+      series:
+        items:
+          $ref: '#/definitions/hrms_internal_feature_reports_service.ChartSeries'
+        type: array
+    type: object
+  hrms_internal_feature_reports_service.ChartSeries:
+    properties:
+      data:
+        items:
+          type: number
+        type: array
+      name:
+        type: string
+    type: object
+  hrms_internal_feature_reports_service.DashboardResponse:
+    properties:
+      absent_today:
+        type: integer
+      active_employees:
+        type: integer
+      attendance_rate:
+        type: string
+      employee_growth:
+        type: integer
+      late_today:
+        type: integer
+      monthly_payroll:
+        type: string
+      on_leave_today:
+        type: integer
+      payroll_currency:
+        type: string
+      payroll_growth_percent:
+        type: string
+      present_today:
+        type: integer
+      total_employees:
+        type: integer
+    type: object
+  hrms_internal_feature_reports_service.DepartmentPayrollItem:
+    properties:
+      average_salary:
+        type: string
+      bonuses_total:
+        type: string
+      currency:
+        type: string
+      deductions_total:
+        type: string
+      department_id:
+        type: string
+      department_name:
+        type: string
+      employees_count:
+        type: integer
+      employer_taxes_total:
+        type: string
+      gross_salary_total:
+        type: string
+      net_salary_total:
+        type: string
+      taxes_total:
+        type: string
+      total_employer_cost:
+        type: string
+    type: object
+  hrms_internal_feature_reports_service.DepartmentPayrollResponse:
+    properties:
+      chart:
+        $ref: '#/definitions/hrms_internal_feature_reports_service.BarChartResponse'
+      rows:
+        items:
+          $ref: '#/definitions/hrms_internal_feature_reports_service.DepartmentPayrollItem'
+        type: array
+    type: object
+  hrms_internal_feature_reports_service.DepartmentStatisticsItem:
+    properties:
+      absent_days:
+        type: integer
+      attendance_rate:
+        type: string
+      average_salary:
+        type: string
+      currency:
+        type: string
+      department_id:
+        type: string
+      department_name:
+        type: string
+      employees_count:
+        type: integer
+      late_days:
+        type: integer
+      net_salary_total:
+        type: string
+      overtime_minutes:
+        type: integer
+      total_employer_cost:
+        type: string
+    type: object
+  hrms_internal_feature_reports_service.DepartmentStatisticsResponse:
+    properties:
+      attendance_rate_chart:
+        $ref: '#/definitions/hrms_internal_feature_reports_service.BarChartResponse'
+      employee_chart:
+        $ref: '#/definitions/hrms_internal_feature_reports_service.BarChartResponse'
+      payroll_cost_chart:
+        $ref: '#/definitions/hrms_internal_feature_reports_service.BarChartResponse'
+      rows:
+        items:
+          $ref: '#/definitions/hrms_internal_feature_reports_service.DepartmentStatisticsItem'
+        type: array
+    type: object
+  hrms_internal_feature_reports_service.EmployeeStatisticsResponse:
+    properties:
+      active_employees:
+        type: integer
+      average_salary:
+        type: string
+      by_department:
+        $ref: '#/definitions/hrms_internal_feature_reports_service.BarChartResponse'
+      by_role:
+        $ref: '#/definitions/hrms_internal_feature_reports_service.PieChartResponse'
+      by_status:
+        $ref: '#/definitions/hrms_internal_feature_reports_service.PieChartResponse'
+      inactive_employees:
+        type: integer
+      total_employees:
+        type: integer
+    type: object
+  hrms_internal_feature_reports_service.LineChartResponse:
+    properties:
+      labels:
+        items:
+          type: string
+        type: array
+      series:
+        items:
+          $ref: '#/definitions/hrms_internal_feature_reports_service.ChartSeries'
+        type: array
+    type: object
+  hrms_internal_feature_reports_service.PayrollSummaryResponse:
+    properties:
+      average_net_salary:
+        type: string
+      bonuses_total:
+        type: string
+      currency:
+        type: string
+      cycles_count:
+        type: integer
+      deductions_total:
+        type: string
+      employees_paid:
+        type: integer
+      employer_taxes_total:
+        type: string
+      gross_salary_total:
+        type: string
+      net_salary_total:
+        type: string
+      period_end:
+        type: string
+      period_start:
+        type: string
+      taxes_total:
+        type: string
+      total_employer_cost:
+        type: string
+    type: object
+  hrms_internal_feature_reports_service.PieChartResponse:
+    properties:
+      items:
+        items:
+          $ref: '#/definitions/hrms_internal_feature_reports_service.PieItem'
+        type: array
+    type: object
+  hrms_internal_feature_reports_service.PieItem:
+    properties:
+      label:
+        type: string
+      value:
+        type: number
     type: object
 host: localhost:8080
 info:
@@ -4465,6 +4676,458 @@ paths:
       summary: Void payslip
       tags:
       - Payslips
+  /reports/attendance/today:
+    get:
+      description: Return present, late, leave, and absent counts as chart-ready data
+      parameters:
+      - description: Date YYYY-MM-DD
+        in: query
+        name: date
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/hrms_internal_feature_reports_service.AttendanceTodayResponse'
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "401":
+          description: Unauthorized
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "403":
+          description: Forbidden
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Get attendance breakdown for a day
+      tags:
+      - Reports
+  /reports/attendance/weekly:
+    get:
+      description: Return attendance counts for a 7-day period
+      parameters:
+      - description: Week start YYYY-MM-DD
+        in: query
+        name: week_start
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/hrms_internal_feature_reports_service.LineChartResponse'
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "401":
+          description: Unauthorized
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "403":
+          description: Forbidden
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Get weekly attendance chart
+      tags:
+      - Reports
+  /reports/dashboard:
+    get:
+      description: Return dashboard cards for employees, attendance, and monthly payroll
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/hrms_internal_feature_reports_service.DashboardResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "403":
+          description: Forbidden
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Get dashboard analytics
+      tags:
+      - Reports
+  /reports/departments/statistics:
+    get:
+      description: Return department employee, payroll, and attendance statistics
+      parameters:
+      - description: Period start YYYY-MM-DD
+        in: query
+        name: period_start
+        type: string
+      - description: Period end YYYY-MM-DD
+        in: query
+        name: period_end
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/hrms_internal_feature_reports_service.DepartmentStatisticsResponse'
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "401":
+          description: Unauthorized
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "403":
+          description: Forbidden
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Get department statistics
+      tags:
+      - Reports
+  /reports/employees/statistics:
+    get:
+      description: Return employee distribution by department, role, and status
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/hrms_internal_feature_reports_service.EmployeeStatisticsResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "403":
+          description: Forbidden
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Get employee statistics
+      tags:
+      - Reports
+  /reports/export/csv:
+    get:
+      description: Export payroll or attendance report as CSV
+      parameters:
+      - description: 'Report type: payroll or attendance'
+        in: query
+        name: type
+        required: true
+        type: string
+      - description: Period start YYYY-MM-DD
+        in: query
+        name: period_start
+        type: string
+      - description: Period end YYYY-MM-DD
+        in: query
+        name: period_end
+        type: string
+      produces:
+      - text/csv
+      responses:
+        "200":
+          description: OK
+          schema:
+            type: file
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "401":
+          description: Unauthorized
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "403":
+          description: Forbidden
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Export report as CSV
+      tags:
+      - Reports
+  /reports/export/pdf:
+    get:
+      description: Export payroll or attendance report as a downloadable PDF file
+      parameters:
+      - description: 'Report type: payroll or attendance'
+        in: query
+        name: type
+        required: true
+        type: string
+      - description: Period start YYYY-MM-DD
+        in: query
+        name: period_start
+        type: string
+      - description: Period end YYYY-MM-DD
+        in: query
+        name: period_end
+        type: string
+      produces:
+      - application/pdf
+      responses:
+        "200":
+          description: OK
+          schema:
+            type: file
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "401":
+          description: Unauthorized
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "403":
+          description: Forbidden
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Export report as PDF
+      tags:
+      - Reports
+  /reports/payroll:
+    get:
+      description: Return payroll totals for approved, ready, and paid payroll cycles
+      parameters:
+      - description: Period start YYYY-MM-DD
+        in: query
+        name: period_start
+        type: string
+      - description: Period end YYYY-MM-DD
+        in: query
+        name: period_end
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/hrms_internal_feature_reports_service.PayrollSummaryResponse'
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "401":
+          description: Unauthorized
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "403":
+          description: Forbidden
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Get payroll report summary
+      tags:
+      - Reports
+  /reports/payroll/departments:
+    get:
+      description: Return payroll breakdown by department with chart-ready data
+      parameters:
+      - description: Period start YYYY-MM-DD
+        in: query
+        name: period_start
+        type: string
+      - description: Period end YYYY-MM-DD
+        in: query
+        name: period_end
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/hrms_internal_feature_reports_service.DepartmentPayrollResponse'
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "401":
+          description: Unauthorized
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "403":
+          description: Forbidden
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Get department payroll report
+      tags:
+      - Reports
+  /reports/payroll/trends:
+    get:
+      description: Return monthly payroll totals as chart-ready labels and series
+      parameters:
+      - description: Period start YYYY-MM-DD
+        in: query
+        name: period_start
+        type: string
+      - description: Period end YYYY-MM-DD
+        in: query
+        name: period_end
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/hrms_internal_feature_reports_service.LineChartResponse'
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "401":
+          description: Unauthorized
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "403":
+          description: Forbidden
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Get payroll trend chart
+      tags:
+      - Reports
 securityDefinitions:
   BearerAuth:
     description: Type "Bearer" followed by a space and your JWT token.

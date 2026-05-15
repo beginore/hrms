@@ -8,6 +8,7 @@ import (
 
 	"hrms/internal/feature/notification/service"
 	"hrms/internal/infrastructure/app/cognito"
+	"hrms/internal/infrastructure/middleware"
 
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
@@ -102,7 +103,10 @@ func (h *Handler) MarkAllAsRead(c *gin.Context) {
 }
 
 func currentUserID(c *gin.Context) (string, error) {
-	value, exists := c.Get(cognito.ContextUserIDKey)
+	value, exists := c.Get(middleware.UserIDKey)
+	if !exists {
+		value, exists = c.Get(cognito.ContextUserIDKey)
+	}
 	if !exists {
 		return "", fmt.Errorf("missing authenticated user")
 	}

@@ -5266,6 +5266,712 @@
                     }
                 }
             }
+        },
+        "/reports/attendance/today": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Return present, late, leave, and absent counts as chart-ready data",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Reports"
+                ],
+                "summary": "Get attendance breakdown for a day",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Date YYYY-MM-DD",
+                        "name": "date",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/hrms_internal_feature_reports_service.AttendanceTodayResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/reports/attendance/weekly": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Return attendance counts for a 7-day period",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Reports"
+                ],
+                "summary": "Get weekly attendance chart",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Week start YYYY-MM-DD",
+                        "name": "week_start",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/hrms_internal_feature_reports_service.LineChartResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/reports/dashboard": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Return dashboard cards for employees, attendance, and monthly payroll",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Reports"
+                ],
+                "summary": "Get dashboard analytics",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/hrms_internal_feature_reports_service.DashboardResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/reports/departments/statistics": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Return department employee, payroll, and attendance statistics",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Reports"
+                ],
+                "summary": "Get department statistics",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Period start YYYY-MM-DD",
+                        "name": "period_start",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Period end YYYY-MM-DD",
+                        "name": "period_end",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/hrms_internal_feature_reports_service.DepartmentStatisticsResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/reports/employees/statistics": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Return employee distribution by department, role, and status",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Reports"
+                ],
+                "summary": "Get employee statistics",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/hrms_internal_feature_reports_service.EmployeeStatisticsResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/reports/export/csv": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Export payroll or attendance report as CSV",
+                "produces": [
+                    "text/csv"
+                ],
+                "tags": [
+                    "Reports"
+                ],
+                "summary": "Export report as CSV",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Report type: payroll or attendance",
+                        "name": "type",
+                        "in": "query",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "Period start YYYY-MM-DD",
+                        "name": "period_start",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Period end YYYY-MM-DD",
+                        "name": "period_end",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "file"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/reports/export/pdf": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Export payroll or attendance report as a downloadable PDF file",
+                "produces": [
+                    "application/pdf"
+                ],
+                "tags": [
+                    "Reports"
+                ],
+                "summary": "Export report as PDF",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Report type: payroll or attendance",
+                        "name": "type",
+                        "in": "query",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "Period start YYYY-MM-DD",
+                        "name": "period_start",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Period end YYYY-MM-DD",
+                        "name": "period_end",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "file"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/reports/payroll": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Return payroll totals for approved, ready, and paid payroll cycles",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Reports"
+                ],
+                "summary": "Get payroll report summary",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Period start YYYY-MM-DD",
+                        "name": "period_start",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Period end YYYY-MM-DD",
+                        "name": "period_end",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/hrms_internal_feature_reports_service.PayrollSummaryResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/reports/payroll/departments": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Return payroll breakdown by department with chart-ready data",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Reports"
+                ],
+                "summary": "Get department payroll report",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Period start YYYY-MM-DD",
+                        "name": "period_start",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Period end YYYY-MM-DD",
+                        "name": "period_end",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/hrms_internal_feature_reports_service.DepartmentPayrollResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/reports/payroll/trends": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Return monthly payroll totals as chart-ready labels and series",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Reports"
+                ],
+                "summary": "Get payroll trend chart",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Period start YYYY-MM-DD",
+                        "name": "period_start",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Period end YYYY-MM-DD",
+                        "name": "period_end",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/hrms_internal_feature_reports_service.LineChartResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            }
         }
     },
     "definitions": {
@@ -5648,7 +6354,7 @@
             "type": "object",
             "properties": {
                 "id": {
-                    "type": "string"
+                    "type": "integer"
                 },
                 "name": {
                     "type": "string"
@@ -6872,6 +7578,329 @@
             "properties": {
                 "reason": {
                     "type": "string"
+                }
+            }
+        },
+        "hrms_internal_feature_reports_service.AttendanceTodayResponse": {
+            "type": "object",
+            "properties": {
+                "absent": {
+                    "type": "integer"
+                },
+                "attendance_rate": {
+                    "type": "string"
+                },
+                "chart": {
+                    "$ref": "#/definitions/hrms_internal_feature_reports_service.PieChartResponse"
+                },
+                "date": {
+                    "type": "string"
+                },
+                "late": {
+                    "type": "integer"
+                },
+                "on_leave": {
+                    "type": "integer"
+                },
+                "present": {
+                    "type": "integer"
+                },
+                "remote": {
+                    "type": "integer"
+                },
+                "total_active": {
+                    "type": "integer"
+                }
+            }
+        },
+        "hrms_internal_feature_reports_service.BarChartResponse": {
+            "type": "object",
+            "properties": {
+                "labels": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
+                },
+                "series": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/hrms_internal_feature_reports_service.ChartSeries"
+                    }
+                }
+            }
+        },
+        "hrms_internal_feature_reports_service.ChartSeries": {
+            "type": "object",
+            "properties": {
+                "data": {
+                    "type": "array",
+                    "items": {
+                        "type": "number"
+                    }
+                },
+                "name": {
+                    "type": "string"
+                }
+            }
+        },
+        "hrms_internal_feature_reports_service.DashboardResponse": {
+            "type": "object",
+            "properties": {
+                "absent_today": {
+                    "type": "integer"
+                },
+                "active_employees": {
+                    "type": "integer"
+                },
+                "attendance_rate": {
+                    "type": "string"
+                },
+                "employee_growth": {
+                    "type": "integer"
+                },
+                "late_today": {
+                    "type": "integer"
+                },
+                "monthly_payroll": {
+                    "type": "string"
+                },
+                "on_leave_today": {
+                    "type": "integer"
+                },
+                "payroll_currency": {
+                    "type": "string"
+                },
+                "payroll_growth_percent": {
+                    "type": "string"
+                },
+                "present_today": {
+                    "type": "integer"
+                },
+                "total_employees": {
+                    "type": "integer"
+                }
+            }
+        },
+        "hrms_internal_feature_reports_service.DepartmentPayrollItem": {
+            "type": "object",
+            "properties": {
+                "average_salary": {
+                    "type": "string"
+                },
+                "bonuses_total": {
+                    "type": "string"
+                },
+                "currency": {
+                    "type": "string"
+                },
+                "deductions_total": {
+                    "type": "string"
+                },
+                "department_id": {
+                    "type": "string"
+                },
+                "department_name": {
+                    "type": "string"
+                },
+                "employees_count": {
+                    "type": "integer"
+                },
+                "employer_taxes_total": {
+                    "type": "string"
+                },
+                "gross_salary_total": {
+                    "type": "string"
+                },
+                "net_salary_total": {
+                    "type": "string"
+                },
+                "taxes_total": {
+                    "type": "string"
+                },
+                "total_employer_cost": {
+                    "type": "string"
+                }
+            }
+        },
+        "hrms_internal_feature_reports_service.DepartmentPayrollResponse": {
+            "type": "object",
+            "properties": {
+                "chart": {
+                    "$ref": "#/definitions/hrms_internal_feature_reports_service.BarChartResponse"
+                },
+                "rows": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/hrms_internal_feature_reports_service.DepartmentPayrollItem"
+                    }
+                }
+            }
+        },
+        "hrms_internal_feature_reports_service.DepartmentStatisticsItem": {
+            "type": "object",
+            "properties": {
+                "absent_days": {
+                    "type": "integer"
+                },
+                "attendance_rate": {
+                    "type": "string"
+                },
+                "average_salary": {
+                    "type": "string"
+                },
+                "currency": {
+                    "type": "string"
+                },
+                "department_id": {
+                    "type": "string"
+                },
+                "department_name": {
+                    "type": "string"
+                },
+                "employees_count": {
+                    "type": "integer"
+                },
+                "late_days": {
+                    "type": "integer"
+                },
+                "net_salary_total": {
+                    "type": "string"
+                },
+                "overtime_minutes": {
+                    "type": "integer"
+                },
+                "total_employer_cost": {
+                    "type": "string"
+                }
+            }
+        },
+        "hrms_internal_feature_reports_service.DepartmentStatisticsResponse": {
+            "type": "object",
+            "properties": {
+                "attendance_rate_chart": {
+                    "$ref": "#/definitions/hrms_internal_feature_reports_service.BarChartResponse"
+                },
+                "employee_chart": {
+                    "$ref": "#/definitions/hrms_internal_feature_reports_service.BarChartResponse"
+                },
+                "payroll_cost_chart": {
+                    "$ref": "#/definitions/hrms_internal_feature_reports_service.BarChartResponse"
+                },
+                "rows": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/hrms_internal_feature_reports_service.DepartmentStatisticsItem"
+                    }
+                }
+            }
+        },
+        "hrms_internal_feature_reports_service.EmployeeStatisticsResponse": {
+            "type": "object",
+            "properties": {
+                "active_employees": {
+                    "type": "integer"
+                },
+                "average_salary": {
+                    "type": "string"
+                },
+                "by_department": {
+                    "$ref": "#/definitions/hrms_internal_feature_reports_service.BarChartResponse"
+                },
+                "by_role": {
+                    "$ref": "#/definitions/hrms_internal_feature_reports_service.PieChartResponse"
+                },
+                "by_status": {
+                    "$ref": "#/definitions/hrms_internal_feature_reports_service.PieChartResponse"
+                },
+                "inactive_employees": {
+                    "type": "integer"
+                },
+                "total_employees": {
+                    "type": "integer"
+                }
+            }
+        },
+        "hrms_internal_feature_reports_service.LineChartResponse": {
+            "type": "object",
+            "properties": {
+                "labels": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
+                },
+                "series": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/hrms_internal_feature_reports_service.ChartSeries"
+                    }
+                }
+            }
+        },
+        "hrms_internal_feature_reports_service.PayrollSummaryResponse": {
+            "type": "object",
+            "properties": {
+                "average_net_salary": {
+                    "type": "string"
+                },
+                "bonuses_total": {
+                    "type": "string"
+                },
+                "currency": {
+                    "type": "string"
+                },
+                "cycles_count": {
+                    "type": "integer"
+                },
+                "deductions_total": {
+                    "type": "string"
+                },
+                "employees_paid": {
+                    "type": "integer"
+                },
+                "employer_taxes_total": {
+                    "type": "string"
+                },
+                "gross_salary_total": {
+                    "type": "string"
+                },
+                "net_salary_total": {
+                    "type": "string"
+                },
+                "period_end": {
+                    "type": "string"
+                },
+                "period_start": {
+                    "type": "string"
+                },
+                "taxes_total": {
+                    "type": "string"
+                },
+                "total_employer_cost": {
+                    "type": "string"
+                }
+            }
+        },
+        "hrms_internal_feature_reports_service.PieChartResponse": {
+            "type": "object",
+            "properties": {
+                "items": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/hrms_internal_feature_reports_service.PieItem"
+                    }
+                }
+            }
+        },
+        "hrms_internal_feature_reports_service.PieItem": {
+            "type": "object",
+            "properties": {
+                "label": {
+                    "type": "string"
+                },
+                "value": {
+                    "type": "number"
                 }
             }
         }

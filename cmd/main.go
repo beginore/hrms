@@ -32,6 +32,9 @@ import (
 	inviteRepository "hrms/internal/feature/invite/repository"
 	inviteService "hrms/internal/feature/invite/service"
 	inviteHandler "hrms/internal/feature/invite/transport/http"
+	notificationRepository "hrms/internal/feature/notification/repository/postgres"
+	notificationService "hrms/internal/feature/notification/service"
+	notificationHandler "hrms/internal/feature/notification/transport/http"
 	oganizationRepository "hrms/internal/feature/organization/repository"
 	organizationService "hrms/internal/feature/organization/service"
 	organizationHandler "hrms/internal/feature/organization/transport/http"
@@ -41,6 +44,9 @@ import (
 	payslipRepository "hrms/internal/feature/payslip/repository"
 	payslipService "hrms/internal/feature/payslip/service"
 	payslipHandler "hrms/internal/feature/payslip/transport/http"
+	reportsRepository "hrms/internal/feature/reports/repository"
+	reportsService "hrms/internal/feature/reports/service"
+	reportsHandler "hrms/internal/feature/reports/transport/http"
 	"hrms/internal/infrastructure/app/cognito"
 	"hrms/internal/infrastructure/config"
 	"hrms/internal/infrastructure/email"
@@ -68,12 +74,14 @@ func main() {
 	}
 
 	calendarRepo := calendarRepository.NewRepository(postgres.DB)
-	calendarSvc := calendarService.NewCalendarService(calendarRepo)
+	notificationRepo := notificationRepository.NewNotificationRepository(postgres.DB)
+	notificationSvc := notificationService.NewService(notificationRepo)
+	calendarSvc := calendarService.NewCalendarService(calendarRepo, notificationSvc)
 	calendarHTTPHandler := calendarHandler.NewCalendarHandler(calendarSvc, cognitoSvc)
 
 	attendanceRepo := attendanceRepository.NewRepository(postgres.DB, calendarRepo)
 	attendanceSvc := attendanceService.NewAttendanceService(attendanceRepo)
-	attendanceHTTPHandler := attendanceHandler.NewAttendanceHandler(attendanceSvc, cognitoSvc)
+	attendanceHTTPHandler := attendanceHandler.NewAttendanceHandler(attendanceSvc)
 
 	cityRepo := cityRepository.NewRepository(postgres.DB)
 	citySvc := cityService.NewCityService(cityRepo)
@@ -86,14 +94,16 @@ func main() {
 	employeeRepo := employeeRepository.NewRepository(postgres.DB)
 	payrollRepo := payrollRepository.NewRepository(postgres.DB)
 	payslipRepo := payslipRepository.NewRepository(postgres.DB)
+	reportsRepo := reportsRepository.NewRepository(postgres.DB)
 
 	authSvc := authService.NewAuthService(cognitoSvc, authRepo)
 	consentSvc := consentService.NewConsentService(consentRepo)
-	orgSvc := organizationService.NewSignUpService(orgRepo, consentRepo, cognitoSvc, emailSvc)
+	orgSvc := organizationService.NewSignUpService(orgRepo, consentRepo, notificationSvc, cognitoSvc, emailSvc)
 	employeeSvc := employeeService.NewEmployeeService(employeeRepo)
 	payrollSvc := payrollService.NewPayrollService(payrollRepo)
 	payslipSvc := payslipService.NewPayslipService(payslipRepo, emailSvc)
-	inviteSvc, err := inviteService.NewInviteService(inviteRepo, cfg, cognitoClient)
+	reportsSvc := reportsService.NewReportsService(reportsRepo)
+	inviteSvc, err := inviteService.NewService(inviteRepo, notificationSvc, cfg, cognitoClient)
 	if err != nil {
 		logger.Fatal("Failed to initialize Invite service")
 	}
@@ -102,8 +112,10 @@ func main() {
 	employeeHTTPHandler := employeeHandler.NewEmployeeHandler(employeeSvc, cognitoSvc)
 	handler := organizationHandler.NewOrganizationHandler(orgSvc, consentSvc)
 	inviteHTTPHandler := inviteHandler.NewHandler(inviteSvc)
+	notificationHTTPHandler := notificationHandler.NewHandler(notificationSvc)
 	payrollHTTPHandler := payrollHandler.NewPayrollHandler(payrollSvc, cognitoSvc)
 	payslipHTTPHandler := payslipHandler.NewPayslipHandler(payslipSvc, cognitoSvc)
+	reportsHTTPHandler := reportsHandler.NewReportsHandler(reportsSvc)
 
 	authMw, err := middleware.AuthMiddleware(cfg.AWS.Region, cfg.Cognito.UserPoolID, employeeRepo)
 	if err != nil {
@@ -132,6 +144,8 @@ func main() {
 
 	// Protected routes
 	protected := v1.Group("/", authMw)
+	adminMw := middleware.RequireAnyRole(middleware.RoleSysAdmin, middleware.RoleAdmin, middleware.RoleHR)
+	admin := v1.Group("/", authMw, adminMw)
 
 	// Auth (protected)
 	protected.POST("/auth/logout", newAuthHTTPHandler.Logout)
@@ -140,47 +154,54 @@ func main() {
 	protected.POST("/organizations/consents", handler.SubmitConsents)
 	protected.GET("/organizations/consents/validate", handler.ValidateConsents)
 
+	// Notifications
+	protected.GET("/notifications", notificationHTTPHandler.ListNotifications)
+	protected.PATCH("/notifications/read-all", notificationHTTPHandler.MarkAllAsRead)
+	protected.PATCH("/notifications/:id/read", notificationHTTPHandler.MarkAsRead)
+
 	// Departments
-	protected.POST("/organizations/departments", handler.CreateDepartment)
+	admin.POST("/organizations/departments", handler.CreateDepartment)
 	protected.GET("/organizations/departments", handler.ListDepartments)
-	protected.DELETE("/organizations/departments/:id", handler.DeleteDepartment)
+	admin.DELETE("/organizations/departments/:id", handler.DeleteDepartment)
 
 	// Positions
-	protected.POST("/organizations/positions", handler.CreatePosition)
+	admin.POST("/organizations/positions", handler.CreatePosition)
 	protected.GET("/organizations/positions", handler.ListPositions)
-	protected.DELETE("/organizations/positions/:id", handler.DeletePosition)
+	admin.DELETE("/organizations/positions/:id", handler.DeletePosition)
 
 	// Employees
-	protected.POST("/employees", employeeHTTPHandler.CreateEmployee)
+	admin.POST("/employees", employeeHTTPHandler.CreateEmployee)
 	protected.GET("/employees", employeeHTTPHandler.ListEmployees)
 	protected.GET("/employees/:id", employeeHTTPHandler.GetEmployee)
-	protected.PATCH("/employees/:id/role", employeeHTTPHandler.UpdateRole)
-	protected.PATCH("/employees/:id/salary", employeeHTTPHandler.UpdateSalary)
-	protected.PATCH("/employees/:id/status", employeeHTTPHandler.UpdateStatus)
-	protected.PATCH("/employees/:id/department", employeeHTTPHandler.UpdateDepartment)
-	protected.PATCH("/employees/:id/position", employeeHTTPHandler.UpdatePosition)
-	protected.DELETE("/employees/:id", employeeHTTPHandler.DeleteEmployee)
+	admin.PATCH("/employees/:id/role", employeeHTTPHandler.UpdateRole)
+	admin.PATCH("/employees/:id/salary", employeeHTTPHandler.UpdateSalary)
+	admin.PATCH("/employees/:id/status", employeeHTTPHandler.UpdateStatus)
+	admin.PATCH("/employees/:id/department", employeeHTTPHandler.UpdateDepartment)
+	admin.PATCH("/employees/:id/position", employeeHTTPHandler.UpdatePosition)
+	admin.DELETE("/employees/:id", employeeHTTPHandler.DeleteEmployee)
 
 	// Attendance — work schedules
-	protected.POST("/attendance/work-schedules", attendanceHTTPHandler.SetWorkSchedule)
+	admin.POST("/attendance/work-schedules", attendanceHTTPHandler.SetWorkSchedule)
 	protected.GET("/attendance/work-schedules/:employee_id", attendanceHTTPHandler.GetWorkSchedule)
 
 	// Attendance — СКУД events
 	protected.POST("/attendance/skud-events", attendanceHTTPHandler.CreateSkudEvent)
+	protected.POST("/attendance/check-in", attendanceHTTPHandler.CheckIn)
+	protected.POST("/attendance/check-out", attendanceHTTPHandler.CheckOut)
 
 	// Attendance — leave requests
 	protected.POST("/attendance/leave-requests", attendanceHTTPHandler.CreateLeaveRequest)
 	protected.GET("/attendance/leave-requests", attendanceHTTPHandler.ListLeaveRequests)
 	protected.GET("/attendance/leave-requests/:id", attendanceHTTPHandler.GetLeaveRequest)
-	protected.PATCH("/attendance/leave-requests/:id/review", attendanceHTTPHandler.ReviewLeaveRequest)
+	admin.PATCH("/attendance/leave-requests/:id/review", attendanceHTTPHandler.ReviewLeaveRequest)
 
 	// Attendance — records
 	protected.GET("/attendance", attendanceHTTPHandler.ListAttendance)
 	protected.GET("/attendance/employees/:employee_id", attendanceHTTPHandler.ListEmployeeAttendance)
 
 	// Calendar
-	protected.POST("/calendar", calendarHTTPHandler.AddDay)
-	protected.DELETE("/calendar/:id", calendarHTTPHandler.DeleteDay)
+	admin.POST("/calendar", calendarHTTPHandler.AddDay)
+	admin.DELETE("/calendar/:id", calendarHTTPHandler.DeleteDay)
 	protected.GET("/calendar/summary", calendarHTTPHandler.GetMonthSummary)
 
 	// Payroll
@@ -224,6 +245,18 @@ func main() {
 	protected.GET("/me/payslips", payslipHTTPHandler.ListMyPayslips)
 	protected.GET("/me/payslips/:id", payslipHTTPHandler.GetMyPayslip)
 	protected.GET("/me/payslips/:id/pdf", payslipHTTPHandler.ExportMyPayslipPDF)
+
+	// Reports & Analytics
+	protected.GET("/reports/dashboard", reportsHTTPHandler.GetDashboard)
+	protected.GET("/reports/payroll", reportsHTTPHandler.GetPayrollSummary)
+	protected.GET("/reports/payroll/trends", reportsHTTPHandler.GetPayrollTrends)
+	protected.GET("/reports/payroll/departments", reportsHTTPHandler.GetDepartmentPayroll)
+	protected.GET("/reports/attendance/today", reportsHTTPHandler.GetAttendanceToday)
+	protected.GET("/reports/attendance/weekly", reportsHTTPHandler.GetAttendanceWeekly)
+	protected.GET("/reports/employees/statistics", reportsHTTPHandler.GetEmployeeStatistics)
+	protected.GET("/reports/departments/statistics", reportsHTTPHandler.GetDepartmentStatistics)
+	protected.GET("/reports/export/pdf", reportsHTTPHandler.ExportReportPDF)
+	protected.GET("/reports/export/csv", reportsHTTPHandler.ExportReportCSV)
 
 	port := ":8080"
 	logger.Info("Starting HTTP server on port " + port)
