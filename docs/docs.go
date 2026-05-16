@@ -5214,6 +5214,40 @@ const docTemplate = `{
                 }
             }
         },
+        "/reports/ai-summary": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Generate a natural language executive summary of the current HR analytics",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "AI"
+                ],
+                "summary": "AI analytics summary",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/hrms_internal_feature_ai_service.AnalyticsSummaryResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            }
+        },
         "/reports/attendance/today": {
             "get": {
                 "security": [
@@ -6109,6 +6143,67 @@ const docTemplate = `{
                 }
             }
         },
+        "/tasks/{id}/ai-review": {
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Admin requests an AI analysis of a submitted task report before approving or rejecting",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "AI"
+                ],
+                "summary": "AI review of task report",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Task ID (UUID)",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/hrms_internal_feature_ai_service.TaskReviewResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            }
+        },
         "/tasks/{id}/review": {
             "patch": {
                 "security": [
@@ -6284,6 +6379,48 @@ const docTemplate = `{
         }
     },
     "definitions": {
+        "hrms_internal_feature_ai_service.AnalyticsSummaryResponse": {
+            "type": "object",
+            "properties": {
+                "concerns": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
+                },
+                "generated_at": {
+                    "type": "string"
+                },
+                "highlights": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
+                },
+                "summary": {
+                    "type": "string"
+                }
+            }
+        },
+        "hrms_internal_feature_ai_service.TaskReviewResponse": {
+            "type": "object",
+            "properties": {
+                "quality": {
+                    "description": "complete | incomplete | needs_revision",
+                    "type": "string"
+                },
+                "reasoning": {
+                    "type": "string"
+                },
+                "recommendation": {
+                    "description": "approve | reject",
+                    "type": "string"
+                },
+                "summary": {
+                    "type": "string"
+                }
+            }
+        },
         "hrms_internal_feature_attendance_service.AttendanceResponse": {
             "type": "object",
             "properties": {

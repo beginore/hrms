@@ -7,7 +7,9 @@
       "Bash(go install *)",
       "Bash(swag init *)",
       "Bash(go mod *)",
-      "Bash(xargs grep *)"
+      "Bash(xargs grep *)",
+      "WebFetch(domain:www.figma.com)",
+      "Bash(npm create *)"
     ]
   }
 }

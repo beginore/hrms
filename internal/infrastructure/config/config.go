@@ -41,6 +41,10 @@ type Config struct {
 		Password    string `toml:"password" env:"SMTP_PASSWORD"`
 		SenderEmail string `toml:"sender_email" env:"SMTP_SENDER_EMAIL"`
 	} `toml:"smtp"`
+
+	Anthropic struct {
+		APIKey string `toml:"api_key" env:"ANTHROPIC_API_KEY"`
+	} `toml:"anthropic"`
 }
 
 var (

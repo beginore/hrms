@@ -50,6 +50,9 @@ import (
 	taskRepository "hrms/internal/feature/task/repository"
 	taskService "hrms/internal/feature/task/service"
 	taskHandler "hrms/internal/feature/task/transport/http"
+	aiService "hrms/internal/feature/ai/service"
+	aiHandler "hrms/internal/feature/ai/transport/http"
+	"hrms/internal/infrastructure/app/anthropic"
 	"hrms/internal/infrastructure/app/cognito"
 	"hrms/internal/infrastructure/config"
 	"hrms/internal/infrastructure/email"
@@ -108,6 +111,13 @@ func main() {
 	payslipSvc := payslipService.NewPayslipService(payslipRepo, emailSvc)
 	reportsSvc := reportsService.NewReportsService(reportsRepo)
 	taskSvc := taskService.NewTaskService(taskRepo)
+
+	if cfg.Anthropic.APIKey == "" {
+		logger.Fatal("Anthropic API key is not configured — add [anthropic] api_key to config.toml")
+	}
+	claudeClient := anthropic.NewClient(cfg.Anthropic.APIKey)
+	aiSvc := aiService.NewAIService(claudeClient, taskRepo, reportsSvc)
+	aiHTTPHandler := aiHandler.NewAIHandler(aiSvc)
 	inviteSvc, err := inviteService.NewService(inviteRepo, notificationSvc, cfg, cognitoClient)
 	if err != nil {
 		logger.Fatal("Failed to initialize Invite service")
@@ -259,6 +269,10 @@ func main() {
 	protected.GET("/tasks", taskHTTPHandler.ListTasks)
 	protected.GET("/tasks/:id", taskHTTPHandler.GetTask)
 	protected.POST("/tasks/:id/submit", taskHTTPHandler.SubmitReport)
+
+	// AI
+	adminOnly.POST("/tasks/:id/ai-review", aiHTTPHandler.ReviewTaskReport)
+	adminOnly.GET("/reports/ai-summary", aiHTTPHandler.GetAnalyticsSummary)
 
 	// Reports & Analytics
 	protected.GET("/reports/dashboard", reportsHTTPHandler.GetDashboard)

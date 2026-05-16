@@ -1,5 +1,33 @@
 basePath: /v1
 definitions:
+  hrms_internal_feature_ai_service.AnalyticsSummaryResponse:
+    properties:
+      concerns:
+        items:
+          type: string
+        type: array
+      generated_at:
+        type: string
+      highlights:
+        items:
+          type: string
+        type: array
+      summary:
+        type: string
+    type: object
+  hrms_internal_feature_ai_service.TaskReviewResponse:
+    properties:
+      quality:
+        description: complete | incomplete | needs_revision
+        type: string
+      reasoning:
+        type: string
+      recommendation:
+        description: approve | reject
+        type: string
+      summary:
+        type: string
+    type: object
   hrms_internal_feature_attendance_service.AttendanceResponse:
     properties:
       check_in:
@@ -4701,6 +4729,28 @@ paths:
       summary: Void payslip
       tags:
       - Payslips
+  /reports/ai-summary:
+    get:
+      description: Generate a natural language executive summary of the current HR
+        analytics
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/hrms_internal_feature_ai_service.AnalyticsSummaryResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: AI analytics summary
+      tags:
+      - AI
   /reports/attendance/today:
     get:
       description: Return present, late, leave, and absent counts as chart-ready data
@@ -5275,6 +5325,46 @@ paths:
       summary: Get task
       tags:
       - Tasks
+  /tasks/{id}/ai-review:
+    post:
+      description: Admin requests an AI analysis of a submitted task report before
+        approving or rejecting
+      parameters:
+      - description: Task ID (UUID)
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/hrms_internal_feature_ai_service.TaskReviewResponse'
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "404":
+          description: Not Found
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: AI review of task report
+      tags:
+      - AI
   /tasks/{id}/review:
     patch:
       consumes:
