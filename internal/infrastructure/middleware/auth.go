@@ -28,7 +28,7 @@ const (
 func RequireAnyRole(roles ...string) gin.HandlerFunc {
 	allowed := make(map[string]struct{}, len(roles))
 	for _, role := range roles {
-		allowed[role] = struct{}{}
+		allowed[normalizeRole(role)] = struct{}{}
 	}
 	return func(c *gin.Context) {
 		userRole, exists := c.Get(RoleKey)
@@ -41,7 +41,7 @@ func RequireAnyRole(roles ...string) gin.HandlerFunc {
 			c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{"error": "invalid role type"})
 			return
 		}
-		if _, ok := allowed[userRoleStr]; !ok {
+		if _, ok := allowed[normalizeRole(userRoleStr)]; !ok {
 			c.AbortWithStatusJSON(http.StatusForbidden, gin.H{"error": "forbidden"})
 			return
 		}
@@ -112,4 +112,21 @@ func AuthMiddleware(region, userPoolID string, empRepo employeeRepo.EmployeeRepo
 	}
 
 	return AuthMiddlewareWithKeyfunc(k.Keyfunc, empRepo), nil
+}
+
+func normalizeRole(role string) string {
+	switch strings.ToLower(strings.TrimSpace(role)) {
+	case "sysadmin", "superadmin", "super_admin":
+		return "sysadmin"
+	case "admin":
+		return "admin"
+	case "hr":
+		return "hr"
+	case "manager":
+		return "manager"
+	case "employee":
+		return "employee"
+	default:
+		return strings.ToLower(strings.TrimSpace(role))
+	}
 }

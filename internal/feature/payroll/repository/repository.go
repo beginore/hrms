@@ -3,7 +3,6 @@ package repository
 import (
 	"context"
 	"database/sql"
-	"fmt"
 	"time"
 
 	"github.com/google/uuid"
@@ -31,9 +30,11 @@ func (r *payrollRepository) GetEmployeeIDByUserID(ctx context.Context, userID uu
 
 func (r *payrollRepository) GetActorAccess(ctx context.Context, userID uuid.UUID) (*ActorAccess, error) {
 	row := r.db.QueryRowContext(ctx, `
-		SELECT u.id, u.org_id, e.id, e.role
+		SELECT u.id, u.org_id,
+		       COALESCE(e.id, '00000000-0000-0000-0000-000000000000'::uuid),
+		       COALESCE(e.role, u.role)
 		FROM users u
-		JOIN employees e ON e.user_id = u.id
+		LEFT JOIN employees e ON e.user_id = u.id
 		WHERE u.id = $1
 	`, userID)
 	var access ActorAccess
@@ -147,7 +148,7 @@ func (r *payrollRepository) ListActiveEmployees(ctx context.Context, orgID uuid.
 	rows, err := r.db.QueryContext(ctx, `
 		SELECT id, org_id, user_id, salary_rate::text, status, hire_date, termination_date
 		FROM employees
-		WHERE org_id = $1 AND status = 'Active'
+		WHERE org_id = $1 AND LOWER(status) = 'active'
 		ORDER BY id
 	`, orgID)
 	if err != nil {
@@ -854,4 +855,3 @@ func ptrString(id *uuid.UUID) string {
 	return id.String()
 }
 
-var _ = fmt.Sprintf

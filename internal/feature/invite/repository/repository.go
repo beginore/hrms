@@ -11,15 +11,19 @@ import (
 )
 
 type CreateInviteParams struct {
-	ID        uuid.UUID
-	OrgID     uuid.UUID
-	FirstName string
-	LastName  string
-	Email     string
-	Code      string
-	Role      string
-	Position  *string
-	ExpiresAt time.Time
+	ID             uuid.UUID
+	OrgID          uuid.UUID
+	FirstName      string
+	LastName       string
+	Email          string
+	Code           string
+	Role           string
+	Position       *string
+	DepartmentID   uuid.UUID
+	PositionID     uuid.UUID
+	SalaryRate     string
+	EmployeeStatus string
+	ExpiresAt      time.Time
 }
 
 type CreateInvitedUserParams struct {
@@ -30,6 +34,17 @@ type CreateInvitedUserParams struct {
 	FirstName   string
 	LastName    string
 	PhoneNumber string
+}
+
+type CreateInvitedEmployeeParams struct {
+	ID           uuid.UUID
+	OrgID        uuid.UUID
+	UserID       uuid.UUID
+	DepartmentID uuid.UUID
+	PositionID   uuid.UUID
+	Role         string
+	SalaryRate   string
+	Status       string
 }
 
 type Repository struct {
@@ -51,9 +66,13 @@ INSERT INTO invites (
     code,
     role,
     position,
+    department_id,
+    position_id,
+    salary_rate,
+    employee_status,
     expires_at
 )
-VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)
 `
 
 	_, err := r.db.ExecContext(
@@ -67,6 +86,10 @@ VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
 		params.Code,
 		params.Role,
 		params.Position,
+		params.DepartmentID,
+		params.PositionID,
+		params.SalaryRate,
+		params.EmployeeStatus,
 		params.ExpiresAt,
 	)
 
@@ -87,9 +110,27 @@ func (r *Repository) GetOrganizationNameByID(ctx context.Context, orgID uuid.UUI
 	return organizationName, err
 }
 
+func (r *Repository) DepartmentExistsInOrg(ctx context.Context, orgID, departmentID uuid.UUID) (bool, error) {
+	const query = `SELECT EXISTS(SELECT 1 FROM departments WHERE id = $1 AND org_id = $2)`
+
+	var exists bool
+	err := r.db.QueryRowContext(ctx, query, departmentID, orgID).Scan(&exists)
+	return exists, err
+}
+
+func (r *Repository) PositionExistsInOrg(ctx context.Context, orgID, positionID uuid.UUID) (bool, error) {
+	const query = `SELECT EXISTS(SELECT 1 FROM positions WHERE id = $1 AND org_id = $2)`
+
+	var exists bool
+	err := r.db.QueryRowContext(ctx, query, positionID, orgID).Scan(&exists)
+	return exists, err
+}
+
 func (r *Repository) GetInviteByCode(ctx context.Context, code string) (Invite, error) {
 	const query = `
-SELECT i.id, i.org_id, o.name, i.first_name, i.last_name, i.email, i.code, i.role, i.position, i.expires_at, i.is_used, i.used_at, i.created_at
+SELECT i.id, i.org_id, o.name, i.first_name, i.last_name, i.email, i.code, i.role, i.position,
+       i.department_id, i.position_id, i.salary_rate::text, i.employee_status,
+       i.expires_at, i.is_used, i.used_at, i.created_at
 FROM invites i
 JOIN organizations o ON o.id = i.org_id
 WHERE i.code = $1
@@ -104,7 +145,9 @@ func (r *Repository) BeginTx(ctx context.Context) (*sql.Tx, error) {
 
 func (r *Repository) GetInviteByCodeTx(ctx context.Context, tx *sql.Tx, code string) (Invite, error) {
 	const query = `
-SELECT i.id, i.org_id, o.name, i.first_name, i.last_name, i.email, i.code, i.role, i.position, i.expires_at, i.is_used, i.used_at, i.created_at
+SELECT i.id, i.org_id, o.name, i.first_name, i.last_name, i.email, i.code, i.role, i.position,
+       i.department_id, i.position_id, i.salary_rate::text, i.employee_status,
+       i.expires_at, i.is_used, i.used_at, i.created_at
 FROM invites i
 JOIN organizations o ON o.id = i.org_id
 WHERE i.code = $1
@@ -144,6 +187,37 @@ VALUES ($1, $2, $3, $4, $5, $6, $7, 'Verified')
 	return err
 }
 
+func (r *Repository) InsertEmployeeTx(ctx context.Context, tx *sql.Tx, params CreateInvitedEmployeeParams) error {
+	const query = `
+INSERT INTO employees (
+    id,
+    org_id,
+    user_id,
+    department_id,
+    position_id,
+    role,
+    salary_rate,
+    status
+)
+VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+`
+
+	_, err := tx.ExecContext(
+		ctx,
+		query,
+		params.ID,
+		params.OrgID,
+		params.UserID,
+		params.DepartmentID,
+		params.PositionID,
+		params.Role,
+		params.SalaryRate,
+		params.Status,
+	)
+
+	return err
+}
+
 func (r *Repository) MarkInviteUsedTx(ctx context.Context, tx *sql.Tx, inviteID uuid.UUID, usedAt time.Time) error {
 	const query = `
 UPDATE invites
@@ -174,6 +248,10 @@ func scanInvite(scanner interface {
 }) (Invite, error) {
 	var invite Invite
 	var position sql.NullString
+	var departmentID sql.NullString
+	var positionID sql.NullString
+	var salaryRate sql.NullString
+	var employeeStatus sql.NullString
 
 	err := scanner.Scan(
 		&invite.ID,
@@ -185,6 +263,10 @@ func scanInvite(scanner interface {
 		&invite.Code,
 		&invite.Role,
 		&position,
+		&departmentID,
+		&positionID,
+		&salaryRate,
+		&employeeStatus,
 		&invite.ExpiresAt,
 		&invite.IsUsed,
 		&invite.UsedAt,
@@ -196,6 +278,18 @@ func scanInvite(scanner interface {
 
 	if position.Valid {
 		invite.Position = &position.String
+	}
+	if departmentID.Valid {
+		invite.DepartmentID = departmentID.String
+	}
+	if positionID.Valid {
+		invite.PositionID = positionID.String
+	}
+	if salaryRate.Valid {
+		invite.SalaryRate = salaryRate.String
+	}
+	if employeeStatus.Valid {
+		invite.EmployeeStatus = employeeStatus.String
 	}
 
 	return invite, nil

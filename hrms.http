@@ -98,10 +98,16 @@ Content-Type: application/json
 Authorization: Bearer {{accessToken}}
 
 {
+  "organizationId": "{{orgId}}",
   "firstName": "Jane",
   "lastName": "Smith",
   "email": "jane.smith@example.com",
-  "role": "Employee"
+  "role": "Employee",
+  "position": "Developer",
+  "departmentId": "DEPARTMENT_UUID_HERE",
+  "positionId": "POSITION_UUID_HERE",
+  "salaryRate": "150000.00",
+  "status": "Active"
 }
 
 ###

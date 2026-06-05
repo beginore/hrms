@@ -123,7 +123,12 @@ func (h *AttendanceHandler) CreateSkudEvent(c *gin.Context) {
 // @Router       /attendance/check-in [post]
 func (h *AttendanceHandler) CheckIn(c *gin.Context) {
 	var req attendanceService.CheckInRequest
-	_ = c.ShouldBindJSON(&req)
+	if c.Request.ContentLength > 0 {
+		if err := c.ShouldBindJSON(&req); err != nil {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "invalid request body"})
+			return
+		}
+	}
 	resp, err := h.service.CheckIn(c.Request.Context(), h.callerUserID(c), req)
 	if err != nil {
 		h.handleError(c, err)

@@ -4,22 +4,20 @@ import (
 	"context"
 	"errors"
 	payslipService "hrms/internal/feature/payslip/service"
-	"hrms/internal/infrastructure/app/cognito"
+	"hrms/internal/infrastructure/middleware"
 	"log"
 	"net/http"
-	"strings"
 
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
 )
 
 type PayslipHandler struct {
-	service    payslipService.PayslipService
-	cognitoSvc *cognito.Service
+	service payslipService.PayslipService
 }
 
-func NewPayslipHandler(service payslipService.PayslipService, cognitoSvc *cognito.Service) *PayslipHandler {
-	return &PayslipHandler{service: service, cognitoSvc: cognitoSvc}
+func NewPayslipHandler(service payslipService.PayslipService) *PayslipHandler {
+	return &PayslipHandler{service: service}
 }
 
 // GeneratePayslip godoc
@@ -384,20 +382,14 @@ func (h *PayslipHandler) renderPDF(c *gin.Context, fn func(context.Context, uuid
 }
 
 func (h *PayslipHandler) extractCallerUserID(c *gin.Context) (uuid.UUID, bool) {
-	authHeader := c.GetHeader("Authorization")
-	if authHeader == "" {
-		c.JSON(http.StatusUnauthorized, gin.H{"error": "missing authorization header"})
+	value, exists := c.Get(middleware.UserIDKey)
+	if !exists {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "unauthorized"})
 		return uuid.Nil, false
 	}
-	token := strings.TrimPrefix(authHeader, "Bearer ")
-	if token == authHeader {
-		c.JSON(http.StatusUnauthorized, gin.H{"error": "invalid authorization header format"})
-		return uuid.Nil, false
-	}
-	userID, _, err := h.cognitoSvc.ParseTokenClaims(token)
-	if err != nil {
-		log.Printf("[PayslipHandler] ParseTokenClaims failed: %v", err)
-		c.JSON(http.StatusUnauthorized, gin.H{"error": "invalid or expired token"})
+	userID, ok := value.(uuid.UUID)
+	if !ok {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "unauthorized"})
 		return uuid.Nil, false
 	}
 	return userID, true

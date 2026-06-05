@@ -8,7 +8,10 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	notificationService "hrms/internal/feature/notification/service"
 	payrollRepository "hrms/internal/feature/payroll/repository"
+	"log"
+	"strings"
 	"time"
 
 	"github.com/google/uuid"
@@ -47,11 +50,12 @@ type PayrollService interface {
 }
 
 type payrollService struct {
-	repo payrollRepository.PayrollRepository
+	repo      payrollRepository.PayrollRepository
+	notifySvc *notificationService.Service
 }
 
-func NewPayrollService(repo payrollRepository.PayrollRepository) PayrollService {
-	return &payrollService{repo: repo}
+func NewPayrollService(repo payrollRepository.PayrollRepository, notifySvc *notificationService.Service) PayrollService {
+	return &payrollService{repo: repo, notifySvc: notifySvc}
 }
 
 func (s *payrollService) CreateCycle(ctx context.Context, callerUserID uuid.UUID, req CreateCycleRequest) (*PayrollCycleResponse, error) {
@@ -214,6 +218,7 @@ func (s *payrollService) MarkCyclePaid(ctx context.Context, callerUserID uuid.UU
 		return fmt.Errorf("%w: mark paid: %v", ErrDatabaseSaveFailed, err)
 	}
 	_ = s.repo.InsertAuditLog(ctx, orgID, &id, nil, callerUserID, "MARK_CYCLE_PAID", mustJSON(cycle), nil)
+	s.notifyCyclePaid(ctx, *cycle)
 	return nil
 }
 
@@ -854,6 +859,30 @@ func (s *payrollService) getCycleForActor(ctx context.Context, callerUserID uuid
 	return cycle, actor.OrgID, err
 }
 
+func (s *payrollService) notifyCyclePaid(ctx context.Context, cycle payrollRepository.PayrollCycle) {
+	if s.notifySvc == nil {
+		return
+	}
+
+	orgIDRaw := cycle.OrgID.String()
+	metadata := mustJSON(map[string]string{
+		"cycleId":     cycle.ID.String(),
+		"periodStart": cycle.PeriodStart.Format(dateLayout),
+		"periodEnd":   cycle.PeriodEnd.Format(dateLayout),
+		"status":      statusPaid,
+	})
+
+	if _, err := s.notifySvc.NotifyPayrollToAdmins(ctx, notificationService.NotifyRoleRequest{
+		OrgID:    &orgIDRaw,
+		Role:     notificationService.RoleSuperAdmin,
+		Title:    "Payroll marked as paid",
+		Message:  fmt.Sprintf("Payroll for %s - %s has been marked as paid.", cycle.PeriodStart.Format(dateLayout), cycle.PeriodEnd.Format(dateLayout)),
+		Metadata: metadata,
+	}); err != nil {
+		log.Printf("[Payroll] notify sysadmin about paid cycle failed: %v", err)
+	}
+}
+
 func (s *payrollService) getCycleInOrg(ctx context.Context, id uuid.UUID, orgID uuid.UUID) (*payrollRepository.PayrollCycle, error) {
 	cycle, err := s.repo.GetCycle(ctx, id)
 	if errors.Is(err, sql.ErrNoRows) {
@@ -902,11 +931,20 @@ func (s *payrollService) requirePayrollManager(ctx context.Context, callerUserID
 }
 
 func canManagePayroll(role string) bool {
-	switch role {
-	case "SysAdmin", "Admin", "HR", "Manager":
+	switch normalizeRole(role) {
+	case "sysadmin", "admin", "hr", "manager":
 		return true
 	default:
 		return false
+	}
+}
+
+func normalizeRole(role string) string {
+	switch strings.ToLower(strings.TrimSpace(role)) {
+	case "sysadmin", "superadmin", "super_admin":
+		return "sysadmin"
+	default:
+		return strings.ToLower(strings.TrimSpace(role))
 	}
 }
 

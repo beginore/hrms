@@ -6,9 +6,11 @@ import (
 	"errors"
 	"fmt"
 	"log"
+	"strings"
 	"time"
 
 	attendanceRepository "hrms/internal/feature/attendance/repository"
+	notificationService "hrms/internal/feature/notification/service"
 
 	"github.com/google/uuid"
 )
@@ -44,11 +46,12 @@ type AttendanceService interface {
 }
 
 type attendanceService struct {
-	repo attendanceRepository.AttendanceRepository
+	repo        attendanceRepository.AttendanceRepository
+	notifySvc   *notificationService.Service
 }
 
-func NewAttendanceService(repo attendanceRepository.AttendanceRepository) AttendanceService {
-	return &attendanceService{repo: repo}
+func NewAttendanceService(repo attendanceRepository.AttendanceRepository, notifySvc *notificationService.Service) AttendanceService {
+	return &attendanceService{repo: repo, notifySvc: notifySvc}
 }
 
 // ─── Work Schedule ────────────────────────────────────────────────────────────
@@ -289,6 +292,27 @@ func (s *attendanceService) ReviewLeaveRequest(ctx context.Context, callerUserID
 	}); err != nil {
 		return fmt.Errorf("%w: %v", ErrDatabaseSaveFailed, err)
 	}
+
+	if s.notifySvc != nil {
+		info, err := s.repo.GetEmployeeNotificationInfo(ctx, existing.EmployeeID)
+		if err == nil {
+			orgIDStr := info.OrgID.String()
+			var title, message string
+			if status == "APPROVED" {
+				title = "Leave request approved"
+				message = fmt.Sprintf("Your %s leave request (%s – %s) has been approved.", existing.Type, existing.StartDate.Format(dateLayout), existing.EndDate.Format(dateLayout))
+			} else {
+				title = "Leave request rejected"
+				message = fmt.Sprintf("Your %s leave request (%s – %s) has been rejected.", existing.Type, existing.StartDate.Format(dateLayout), existing.EndDate.Format(dateLayout))
+			}
+			_, _ = s.notifySvc.NotifySystemToUser(ctx, notificationService.NotifyUserRequest{
+				UserID:  info.UserID.String(),
+				OrgID:   &orgIDStr,
+				Title:   title,
+				Message: message,
+			})
+		}
+	}
 	return nil
 }
 
@@ -366,11 +390,20 @@ func resolveCheckInStatus(checkIn time.Time, ws attendanceRepository.WorkSchedul
 }
 
 func canManageAttendance(role string) bool {
-	switch role {
-	case "SysAdmin", "Admin", "HR", "Manager":
+	switch normalizeRole(role) {
+	case "sysadmin", "admin", "hr", "manager":
 		return true
 	default:
 		return false
+	}
+}
+
+func normalizeRole(role string) string {
+	switch strings.ToLower(strings.TrimSpace(role)) {
+	case "sysadmin", "superadmin", "super_admin":
+		return "sysadmin"
+	default:
+		return strings.ToLower(strings.TrimSpace(role))
 	}
 }
 

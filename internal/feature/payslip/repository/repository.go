@@ -17,9 +17,11 @@ func NewRepository(db *sql.DB) PayslipRepository {
 
 func (r *payslipRepository) GetActorAccess(ctx context.Context, userID uuid.UUID) (*ActorAccess, error) {
 	row := r.db.QueryRowContext(ctx, `
-		SELECT u.id, u.org_id, e.id, e.role
+		SELECT u.id, u.org_id,
+		       COALESCE(e.id, '00000000-0000-0000-0000-000000000000'::uuid),
+		       COALESCE(e.role, u.role)
 		FROM users u
-		JOIN employees e ON e.user_id = u.id
+		LEFT JOIN employees e ON e.user_id = u.id
 		WHERE u.id = $1
 	`, userID)
 	var access ActorAccess

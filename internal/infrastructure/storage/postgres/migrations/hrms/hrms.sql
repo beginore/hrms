@@ -1,0 +1,3001 @@
+--
+-- PostgreSQL database dump
+--
+
+-- Dumped from database version 16.1
+-- Dumped by pg_dump version 16.1
+
+SET statement_timeout = 0;
+SET lock_timeout = 0;
+SET idle_in_transaction_session_timeout = 0;
+SET client_encoding = 'UTF8';
+SET standard_conforming_strings = on;
+SELECT pg_catalog.set_config('search_path', '', false);
+SET check_function_bodies = false;
+SET xmloption = content;
+SET client_min_messages = warning;
+SET row_security = off;
+
+SET default_tablespace = '';
+
+SET default_table_access_method = heap;
+
+--
+-- Name: attendance_records; Type: TABLE; Schema: public; Owner: postgres
+--
+
+CREATE TABLE public.attendance_records (
+    id uuid NOT NULL,
+    org_id uuid NOT NULL,
+    employee_id uuid NOT NULL,
+    date date NOT NULL,
+    type character varying(20) NOT NULL,
+    source character varying(10) NOT NULL,
+    status character varying(20) NOT NULL,
+    check_in timestamp with time zone,
+    check_out timestamp with time zone,
+    note text,
+    created_at timestamp with time zone DEFAULT now() NOT NULL,
+    updated_at timestamp with time zone DEFAULT now() NOT NULL
+);
+
+
+ALTER TABLE public.attendance_records OWNER TO postgres;
+
+--
+-- Name: cities; Type: TABLE; Schema: public; Owner: postgres
+--
+
+CREATE TABLE public.cities (
+    id integer NOT NULL,
+    name character varying(100) NOT NULL
+);
+
+
+ALTER TABLE public.cities OWNER TO postgres;
+
+--
+-- Name: cities_id_seq; Type: SEQUENCE; Schema: public; Owner: postgres
+--
+
+CREATE SEQUENCE public.cities_id_seq
+    AS integer
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1;
+
+
+ALTER SEQUENCE public.cities_id_seq OWNER TO postgres;
+
+--
+-- Name: cities_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: postgres
+--
+
+ALTER SEQUENCE public.cities_id_seq OWNED BY public.cities.id;
+
+
+--
+-- Name: consents; Type: TABLE; Schema: public; Owner: postgres
+--
+
+CREATE TABLE public.consents (
+    id uuid NOT NULL,
+    user_id uuid NOT NULL,
+    org_id uuid NOT NULL,
+    document_type character varying(20) NOT NULL,
+    version character varying(20) NOT NULL,
+    created_at timestamp with time zone DEFAULT now() NOT NULL
+);
+
+
+ALTER TABLE public.consents OWNER TO postgres;
+
+--
+-- Name: departments; Type: TABLE; Schema: public; Owner: postgres
+--
+
+CREATE TABLE public.departments (
+    id uuid NOT NULL,
+    org_id uuid NOT NULL,
+    name character varying(255) NOT NULL
+);
+
+
+ALTER TABLE public.departments OWNER TO postgres;
+
+--
+-- Name: documents; Type: TABLE; Schema: public; Owner: postgres
+--
+
+CREATE TABLE public.documents (
+    id uuid DEFAULT gen_random_uuid() NOT NULL,
+    type character varying(30) NOT NULL,
+    version character varying(20) NOT NULL,
+    url text NOT NULL,
+    is_active boolean DEFAULT true NOT NULL,
+    created_at timestamp with time zone DEFAULT now() NOT NULL,
+    CONSTRAINT documents_type_check CHECK (((type)::text = ANY (ARRAY[('PRIVACY_POLICY'::character varying)::text, ('TERMS_AND_CONDITIONS'::character varying)::text])))
+);
+
+
+ALTER TABLE public.documents OWNER TO postgres;
+
+--
+-- Name: employees; Type: TABLE; Schema: public; Owner: postgres
+--
+
+CREATE TABLE public.employees (
+    id uuid NOT NULL,
+    org_id uuid NOT NULL,
+    user_id uuid NOT NULL,
+    department_id uuid NOT NULL,
+    position_id uuid NOT NULL,
+    role character varying(100) NOT NULL,
+    salary_rate numeric(10,2) NOT NULL,
+    status character varying(50) NOT NULL,
+    hire_date date,
+    termination_date date
+);
+
+
+ALTER TABLE public.employees OWNER TO postgres;
+
+--
+-- Name: events; Type: TABLE; Schema: public; Owner: postgres
+--
+
+CREATE TABLE public.events (
+    id uuid NOT NULL,
+    title character varying(150) NOT NULL,
+    description text NOT NULL,
+    starts_at timestamp with time zone NOT NULL,
+    ends_at timestamp with time zone NOT NULL,
+    scope character varying(20) NOT NULL,
+    department_id uuid,
+    created_by uuid NOT NULL,
+    created_by_role character varying(50) NOT NULL,
+    organization_id uuid NOT NULL,
+    created_at timestamp with time zone DEFAULT now() NOT NULL,
+    updated_at timestamp with time zone DEFAULT now() NOT NULL,
+    CONSTRAINT events_department_scope_check CHECK (((((scope)::text = 'global'::text) AND (department_id IS NULL)) OR (((scope)::text = 'department'::text) AND (department_id IS NOT NULL)))),
+    CONSTRAINT events_scope_check CHECK (((scope)::text = ANY (ARRAY[('global'::character varying)::text, ('department'::character varying)::text])))
+);
+
+
+ALTER TABLE public.events OWNER TO postgres;
+
+--
+-- Name: goose_db_version; Type: TABLE; Schema: public; Owner: postgres
+--
+
+CREATE TABLE public.goose_db_version (
+    id integer NOT NULL,
+    version_id bigint NOT NULL,
+    is_applied boolean NOT NULL,
+    tstamp timestamp without time zone DEFAULT now() NOT NULL
+);
+
+
+ALTER TABLE public.goose_db_version OWNER TO postgres;
+
+--
+-- Name: goose_db_version_id_seq; Type: SEQUENCE; Schema: public; Owner: postgres
+--
+
+ALTER TABLE public.goose_db_version ALTER COLUMN id ADD GENERATED BY DEFAULT AS IDENTITY (
+    SEQUENCE NAME public.goose_db_version_id_seq
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1
+);
+
+
+--
+-- Name: invites; Type: TABLE; Schema: public; Owner: postgres
+--
+
+CREATE TABLE public.invites (
+    id uuid NOT NULL,
+    org_id uuid NOT NULL,
+    first_name character varying(30) NOT NULL,
+    last_name character varying(30) NOT NULL,
+    email character varying(255) NOT NULL,
+    code character varying(9) NOT NULL,
+    role character varying(100) DEFAULT 'Employee'::character varying NOT NULL,
+    "position" character varying(100),
+    expires_at timestamp with time zone NOT NULL,
+    is_used boolean DEFAULT false NOT NULL,
+    used_at timestamp with time zone,
+    created_at timestamp with time zone DEFAULT now() NOT NULL,
+    department_id uuid,
+    position_id uuid,
+    salary_rate numeric(10,2),
+    employee_status character varying(50)
+);
+
+
+ALTER TABLE public.invites OWNER TO postgres;
+
+--
+-- Name: leave_requests; Type: TABLE; Schema: public; Owner: postgres
+--
+
+CREATE TABLE public.leave_requests (
+    id uuid NOT NULL,
+    org_id uuid NOT NULL,
+    employee_id uuid NOT NULL,
+    type character varying(20) NOT NULL,
+    start_date date NOT NULL,
+    end_date date NOT NULL,
+    reason text,
+    document_url text,
+    status character varying(20) DEFAULT 'PENDING'::character varying NOT NULL,
+    reviewed_by uuid,
+    reviewed_at timestamp with time zone,
+    created_at timestamp with time zone DEFAULT now() NOT NULL,
+    updated_at timestamp with time zone DEFAULT now() NOT NULL
+);
+
+
+ALTER TABLE public.leave_requests OWNER TO postgres;
+
+--
+-- Name: notifications; Type: TABLE; Schema: public; Owner: postgres
+--
+
+CREATE TABLE public.notifications (
+    id uuid NOT NULL,
+    user_id uuid NOT NULL,
+    org_id uuid,
+    type character varying(20) NOT NULL,
+    title character varying(120) NOT NULL,
+    message text NOT NULL,
+    metadata jsonb DEFAULT '{}'::jsonb NOT NULL,
+    is_read boolean DEFAULT false NOT NULL,
+    read_at timestamp with time zone,
+    created_at timestamp with time zone DEFAULT now() NOT NULL,
+    CONSTRAINT notifications_type_check CHECK (((type)::text = ANY (ARRAY[('payroll'::character varying)::text, ('salary'::character varying)::text, ('system'::character varying)::text])))
+);
+
+
+ALTER TABLE public.notifications OWNER TO postgres;
+
+--
+-- Name: organizations; Type: TABLE; Schema: public; Owner: postgres
+--
+
+CREATE TABLE public.organizations (
+    id uuid NOT NULL,
+    admin_id uuid NOT NULL,
+    name character varying(50) NOT NULL,
+    vat_id character varying(30) NOT NULL,
+    description character varying(250) NOT NULL,
+    address character varying(50) NOT NULL,
+    city_id integer NOT NULL,
+    created_at timestamp with time zone DEFAULT now() NOT NULL
+);
+
+
+ALTER TABLE public.organizations OWNER TO postgres;
+
+--
+-- Name: payroll_adjustments; Type: TABLE; Schema: public; Owner: postgres
+--
+
+CREATE TABLE public.payroll_adjustments (
+    id uuid NOT NULL,
+    org_id uuid NOT NULL,
+    employee_id uuid NOT NULL,
+    cycle_id uuid,
+    type character varying(20) NOT NULL,
+    category character varying(50) NOT NULL,
+    amount numeric(12,2) NOT NULL,
+    is_taxable boolean DEFAULT true NOT NULL,
+    reason text,
+    created_by uuid NOT NULL,
+    created_at timestamp with time zone DEFAULT now() NOT NULL,
+    currency character varying(3) DEFAULT 'KZT'::character varying NOT NULL
+);
+
+
+ALTER TABLE public.payroll_adjustments OWNER TO postgres;
+
+--
+-- Name: payroll_attendance_overrides; Type: TABLE; Schema: public; Owner: postgres
+--
+
+CREATE TABLE public.payroll_attendance_overrides (
+    id uuid NOT NULL,
+    org_id uuid NOT NULL,
+    employee_id uuid NOT NULL,
+    date date NOT NULL,
+    paid_day boolean NOT NULL,
+    attendance_type character varying(30) DEFAULT 'MANUAL'::character varying NOT NULL,
+    attendance_status character varying(30) DEFAULT 'PRESENT'::character varying NOT NULL,
+    overtime_minutes integer DEFAULT 0 NOT NULL,
+    note text,
+    created_by uuid NOT NULL,
+    created_at timestamp with time zone DEFAULT now() NOT NULL
+);
+
+
+ALTER TABLE public.payroll_attendance_overrides OWNER TO postgres;
+
+--
+-- Name: payroll_audit_logs; Type: TABLE; Schema: public; Owner: postgres
+--
+
+CREATE TABLE public.payroll_audit_logs (
+    id uuid NOT NULL,
+    org_id uuid NOT NULL,
+    cycle_id uuid,
+    payroll_item_id uuid,
+    actor_user_id uuid NOT NULL,
+    action character varying(50) NOT NULL,
+    before_state jsonb,
+    after_state jsonb,
+    created_at timestamp with time zone DEFAULT now() NOT NULL
+);
+
+
+ALTER TABLE public.payroll_audit_logs OWNER TO postgres;
+
+--
+-- Name: payroll_corrections; Type: TABLE; Schema: public; Owner: postgres
+--
+
+CREATE TABLE public.payroll_corrections (
+    id uuid NOT NULL,
+    org_id uuid NOT NULL,
+    employee_id uuid NOT NULL,
+    source_item_id uuid,
+    target_cycle_id uuid NOT NULL,
+    adjustment_id uuid NOT NULL,
+    amount numeric(12,2) NOT NULL,
+    type character varying(20) NOT NULL,
+    reason text NOT NULL,
+    created_by uuid NOT NULL,
+    created_at timestamp with time zone DEFAULT now() NOT NULL,
+    currency character varying(3) DEFAULT 'KZT'::character varying NOT NULL
+);
+
+
+ALTER TABLE public.payroll_corrections OWNER TO postgres;
+
+--
+-- Name: payroll_cycles; Type: TABLE; Schema: public; Owner: postgres
+--
+
+CREATE TABLE public.payroll_cycles (
+    id uuid NOT NULL,
+    org_id uuid NOT NULL,
+    period_start date NOT NULL,
+    period_end date NOT NULL,
+    status character varying(20) DEFAULT 'DRAFT'::character varying NOT NULL,
+    created_by uuid NOT NULL,
+    approved_by uuid,
+    approved_at timestamp with time zone,
+    paid_at timestamp with time zone,
+    created_at timestamp with time zone DEFAULT now() NOT NULL,
+    updated_at timestamp with time zone DEFAULT now() NOT NULL,
+    currency character varying(3) DEFAULT 'KZT'::character varying NOT NULL
+);
+
+
+ALTER TABLE public.payroll_cycles OWNER TO postgres;
+
+--
+-- Name: payroll_items; Type: TABLE; Schema: public; Owner: postgres
+--
+
+CREATE TABLE public.payroll_items (
+    id uuid NOT NULL,
+    cycle_id uuid NOT NULL,
+    org_id uuid NOT NULL,
+    employee_id uuid NOT NULL,
+    base_salary numeric(12,2) NOT NULL,
+    attendance_adjustment numeric(12,2) DEFAULT 0 NOT NULL,
+    overtime_amount numeric(12,2) DEFAULT 0 NOT NULL,
+    bonuses_total numeric(12,2) DEFAULT 0 NOT NULL,
+    deductions_total numeric(12,2) DEFAULT 0 NOT NULL,
+    taxes_total numeric(12,2) DEFAULT 0 NOT NULL,
+    gross_salary numeric(12,2) NOT NULL,
+    net_salary numeric(12,2) NOT NULL,
+    working_days integer NOT NULL,
+    paid_days numeric(5,2) NOT NULL,
+    unpaid_days numeric(5,2) NOT NULL,
+    late_days integer NOT NULL,
+    absent_days integer NOT NULL,
+    overtime_minutes integer NOT NULL,
+    status character varying(20) DEFAULT 'DRAFT'::character varying NOT NULL,
+    calculation_snapshot jsonb NOT NULL,
+    created_at timestamp with time zone DEFAULT now() NOT NULL,
+    updated_at timestamp with time zone DEFAULT now() NOT NULL,
+    missing_days integer DEFAULT 0 NOT NULL,
+    review_required boolean DEFAULT false NOT NULL,
+    review_reasons jsonb DEFAULT '[]'::jsonb NOT NULL,
+    employer_taxes_total numeric(12,2) DEFAULT 0 NOT NULL,
+    total_employer_cost numeric(12,2) DEFAULT 0 NOT NULL,
+    currency character varying(3) DEFAULT 'KZT'::character varying NOT NULL,
+    reviewed_by uuid,
+    reviewed_at timestamp with time zone,
+    review_comment text
+);
+
+
+ALTER TABLE public.payroll_items OWNER TO postgres;
+
+--
+-- Name: payroll_policies; Type: TABLE; Schema: public; Owner: postgres
+--
+
+CREATE TABLE public.payroll_policies (
+    id uuid NOT NULL,
+    org_id uuid NOT NULL,
+    missing_attendance_policy character varying(40) DEFAULT 'PAID_REVIEW_REQUIRED'::character varying NOT NULL,
+    regular_overtime_multiplier numeric(8,6) DEFAULT 1.500000 NOT NULL,
+    holiday_overtime_multiplier numeric(8,6) DEFAULT 2.000000 NOT NULL,
+    late_penalty_mode character varying(30) DEFAULT 'NONE'::character varying NOT NULL,
+    late_penalty_amount numeric(12,2) DEFAULT 0 NOT NULL,
+    rounding_mode character varying(20) DEFAULT 'CENT'::character varying NOT NULL,
+    vacation_pay_rate numeric(8,6) DEFAULT 1.000000 NOT NULL,
+    sick_leave_pay_rate numeric(8,6) DEFAULT 1.000000 NOT NULL,
+    remote_pay_rate numeric(8,6) DEFAULT 1.000000 NOT NULL,
+    business_trip_pay_rate numeric(8,6) DEFAULT 1.000000 NOT NULL,
+    unpaid_leave_pay_rate numeric(8,6) DEFAULT 0.000000 NOT NULL,
+    created_at timestamp with time zone DEFAULT now() NOT NULL,
+    updated_at timestamp with time zone DEFAULT now() NOT NULL
+);
+
+
+ALTER TABLE public.payroll_policies OWNER TO postgres;
+
+--
+-- Name: payroll_tax_rules; Type: TABLE; Schema: public; Owner: postgres
+--
+
+CREATE TABLE public.payroll_tax_rules (
+    id uuid NOT NULL,
+    org_id uuid,
+    country character varying(2) DEFAULT 'KZ'::character varying NOT NULL,
+    name character varying(100) NOT NULL,
+    rate numeric(8,6) NOT NULL,
+    applies_to character varying(30) NOT NULL,
+    threshold_min numeric(12,2),
+    threshold_max numeric(12,2),
+    is_active boolean DEFAULT true NOT NULL,
+    effective_from date NOT NULL,
+    effective_to date,
+    created_at timestamp with time zone DEFAULT now() NOT NULL,
+    updated_at timestamp with time zone DEFAULT now() NOT NULL,
+    payer character varying(20) DEFAULT 'EMPLOYEE'::character varying NOT NULL
+);
+
+
+ALTER TABLE public.payroll_tax_rules OWNER TO postgres;
+
+--
+-- Name: payslips; Type: TABLE; Schema: public; Owner: postgres
+--
+
+CREATE TABLE public.payslips (
+    id uuid NOT NULL,
+    org_id uuid NOT NULL,
+    employee_id uuid NOT NULL,
+    payroll_cycle_id uuid NOT NULL,
+    payroll_item_id uuid NOT NULL,
+    period_start date NOT NULL,
+    period_end date NOT NULL,
+    status character varying(20) DEFAULT 'GENERATED'::character varying NOT NULL,
+    currency character varying(3) DEFAULT 'KZT'::character varying NOT NULL,
+    base_salary numeric(12,2) NOT NULL,
+    overtime_amount numeric(12,2) DEFAULT 0 NOT NULL,
+    bonuses_total numeric(12,2) DEFAULT 0 NOT NULL,
+    deductions_total numeric(12,2) DEFAULT 0 NOT NULL,
+    taxes_total numeric(12,2) DEFAULT 0 NOT NULL,
+    gross_salary numeric(12,2) NOT NULL,
+    net_salary numeric(12,2) NOT NULL,
+    employer_taxes_total numeric(12,2) DEFAULT 0 NOT NULL,
+    total_employer_cost numeric(12,2) DEFAULT 0 NOT NULL,
+    payload_snapshot jsonb NOT NULL,
+    sent_to_email character varying(255),
+    sent_at timestamp with time zone,
+    generated_by uuid NOT NULL,
+    generated_at timestamp with time zone DEFAULT now() NOT NULL,
+    voided_by uuid,
+    voided_at timestamp with time zone,
+    void_reason text,
+    created_at timestamp with time zone DEFAULT now() NOT NULL,
+    updated_at timestamp with time zone DEFAULT now() NOT NULL,
+    pdf_content bytea,
+    pdf_filename character varying(255),
+    pdf_generated_at timestamp with time zone,
+    pdf_sha256 character varying(64)
+);
+
+
+ALTER TABLE public.payslips OWNER TO postgres;
+
+--
+-- Name: positions; Type: TABLE; Schema: public; Owner: postgres
+--
+
+CREATE TABLE public.positions (
+    id uuid NOT NULL,
+    org_id uuid NOT NULL,
+    name character varying(255) NOT NULL
+);
+
+
+ALTER TABLE public.positions OWNER TO postgres;
+
+--
+-- Name: salary_history; Type: TABLE; Schema: public; Owner: postgres
+--
+
+CREATE TABLE public.salary_history (
+    id uuid NOT NULL,
+    org_id uuid NOT NULL,
+    employee_id uuid NOT NULL,
+    salary_rate numeric(12,2) NOT NULL,
+    effective_from date NOT NULL,
+    effective_to date,
+    created_by uuid NOT NULL,
+    created_at timestamp with time zone DEFAULT now() NOT NULL
+);
+
+
+ALTER TABLE public.salary_history OWNER TO postgres;
+
+--
+-- Name: skud_events; Type: TABLE; Schema: public; Owner: postgres
+--
+
+CREATE TABLE public.skud_events (
+    id uuid NOT NULL,
+    org_id uuid NOT NULL,
+    employee_id uuid NOT NULL,
+    event_type character varying(10) NOT NULL,
+    device_id character varying(100),
+    occurred_at timestamp with time zone NOT NULL,
+    processed boolean DEFAULT false NOT NULL,
+    created_at timestamp with time zone DEFAULT now() NOT NULL
+);
+
+
+ALTER TABLE public.skud_events OWNER TO postgres;
+
+--
+-- Name: tasks; Type: TABLE; Schema: public; Owner: postgres
+--
+
+CREATE TABLE public.tasks (
+    id uuid NOT NULL,
+    org_id uuid NOT NULL,
+    created_by uuid NOT NULL,
+    assigned_to uuid NOT NULL,
+    title character varying(255) NOT NULL,
+    description text,
+    due_date date NOT NULL,
+    status character varying(20) DEFAULT 'PENDING'::character varying NOT NULL,
+    reviewed_by uuid,
+    reviewed_at timestamp with time zone,
+    created_at timestamp with time zone DEFAULT now() NOT NULL,
+    updated_at timestamp with time zone DEFAULT now() NOT NULL,
+    report_description text,
+    report_url text,
+    submitted_at timestamp with time zone
+);
+
+
+ALTER TABLE public.tasks OWNER TO postgres;
+
+--
+-- Name: user_sessions; Type: TABLE; Schema: public; Owner: postgres
+--
+
+CREATE TABLE public.user_sessions (
+    id uuid DEFAULT gen_random_uuid() NOT NULL,
+    user_id uuid NOT NULL,
+    cognito_username character varying(255) NOT NULL,
+    refresh_token text NOT NULL,
+    created_at timestamp with time zone DEFAULT now() NOT NULL,
+    expires_at timestamp with time zone NOT NULL
+);
+
+
+ALTER TABLE public.user_sessions OWNER TO postgres;
+
+--
+-- Name: users; Type: TABLE; Schema: public; Owner: postgres
+--
+
+CREATE TABLE public.users (
+    id uuid NOT NULL,
+    org_id uuid NOT NULL,
+    email character varying(255) NOT NULL,
+    role character varying(255) NOT NULL,
+    first_name character varying(30) NOT NULL,
+    last_name character varying(30) NOT NULL,
+    phone_number character varying(20) NOT NULL,
+    verification_status character varying(20) DEFAULT 'Unverified'::character varying NOT NULL,
+    created_at timestamp with time zone DEFAULT now() NOT NULL
+);
+
+
+ALTER TABLE public.users OWNER TO postgres;
+
+--
+-- Name: work_schedules; Type: TABLE; Schema: public; Owner: postgres
+--
+
+CREATE TABLE public.work_schedules (
+    id uuid NOT NULL,
+    org_id uuid NOT NULL,
+    employee_id uuid NOT NULL,
+    work_start time without time zone DEFAULT '09:00:00'::time without time zone NOT NULL,
+    work_end time without time zone DEFAULT '18:00:00'::time without time zone NOT NULL,
+    late_threshold_minutes integer DEFAULT 15 NOT NULL,
+    created_at timestamp with time zone DEFAULT now() NOT NULL,
+    updated_at timestamp with time zone DEFAULT now() NOT NULL
+);
+
+
+ALTER TABLE public.work_schedules OWNER TO postgres;
+
+--
+-- Name: working_calendar; Type: TABLE; Schema: public; Owner: postgres
+--
+
+CREATE TABLE public.working_calendar (
+    id uuid NOT NULL,
+    org_id uuid NOT NULL,
+    date date NOT NULL,
+    type character varying(20) NOT NULL,
+    name character varying(100),
+    created_at timestamp with time zone DEFAULT now() NOT NULL
+);
+
+
+ALTER TABLE public.working_calendar OWNER TO postgres;
+
+--
+-- Name: cities id; Type: DEFAULT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY public.cities ALTER COLUMN id SET DEFAULT nextval('public.cities_id_seq'::regclass);
+
+
+--
+-- Data for Name: attendance_records; Type: TABLE DATA; Schema: public; Owner: postgres
+--
+
+COPY public.attendance_records (id, org_id, employee_id, date, type, source, status, check_in, check_out, note, created_at, updated_at) FROM stdin;
+77e18f02-a14a-f478-409c-a4989333227e	ab80824b-3296-4aa1-b122-79f058a73875	33f9e677-d27f-3997-aab5-ff7013710e53	2026-04-01	OFFICE	SKUD	PRESENT	2026-04-01 09:57:00+06	2026-04-01 19:20:00+06	\N	2026-06-04 05:29:46.427487+06	2026-06-04 05:29:46.427487+06
+371be294-8817-08ed-4593-7aa728833baf	ab80824b-3296-4aa1-b122-79f058a73875	33f9e677-d27f-3997-aab5-ff7013710e53	2026-04-02	OFFICE	SKUD	PRESENT	2026-04-02 09:57:00+06	2026-04-02 19:20:00+06	\N	2026-06-04 05:29:46.427487+06	2026-06-04 05:29:46.427487+06
+620ee464-a733-43d2-e74f-f44b10d3506e	ab80824b-3296-4aa1-b122-79f058a73875	33f9e677-d27f-3997-aab5-ff7013710e53	2026-04-03	OFFICE	SKUD	PRESENT	2026-04-03 09:57:00+06	2026-04-03 19:20:00+06	\N	2026-06-04 05:29:46.427487+06	2026-06-04 05:29:46.427487+06
+29d773d0-56ee-a3ba-afba-4cfc1fbdd7e1	ab80824b-3296-4aa1-b122-79f058a73875	33f9e677-d27f-3997-aab5-ff7013710e53	2026-04-06	OFFICE	SKUD	PRESENT	2026-04-06 09:57:00+06	2026-04-06 19:20:00+06	\N	2026-06-04 05:29:46.427487+06	2026-06-04 05:29:46.427487+06
+4ace4daa-cbe4-bdbc-7408-4597bea2d6b2	ab80824b-3296-4aa1-b122-79f058a73875	33f9e677-d27f-3997-aab5-ff7013710e53	2026-04-07	OFFICE	SKUD	PRESENT	2026-04-07 09:57:00+06	2026-04-07 19:20:00+06	\N	2026-06-04 05:29:46.427487+06	2026-06-04 05:29:46.427487+06
+79525f3a-b1d2-c5ac-f13b-324640e0cc0d	ab80824b-3296-4aa1-b122-79f058a73875	33f9e677-d27f-3997-aab5-ff7013710e53	2026-04-08	OFFICE	SKUD	PRESENT	2026-04-08 09:57:00+06	2026-04-08 19:20:00+06	\N	2026-06-04 05:29:46.427487+06	2026-06-04 05:29:46.427487+06
+3268c7d7-2339-7635-54d5-5494277fa73d	ab80824b-3296-4aa1-b122-79f058a73875	33f9e677-d27f-3997-aab5-ff7013710e53	2026-04-09	OFFICE	SKUD	PRESENT	2026-04-09 09:57:00+06	2026-04-09 19:20:00+06	\N	2026-06-04 05:29:46.427487+06	2026-06-04 05:29:46.427487+06
+09b78f49-166d-0ad6-d847-704ea0666abe	ab80824b-3296-4aa1-b122-79f058a73875	33f9e677-d27f-3997-aab5-ff7013710e53	2026-04-10	OFFICE	SKUD	PRESENT	2026-04-10 09:57:00+06	2026-04-10 19:20:00+06	\N	2026-06-04 05:29:46.427487+06	2026-06-04 05:29:46.427487+06
+2b633c9e-0752-adcd-af23-6a6f681a59a0	ab80824b-3296-4aa1-b122-79f058a73875	33f9e677-d27f-3997-aab5-ff7013710e53	2026-04-13	OFFICE	SKUD	PRESENT	2026-04-13 09:57:00+06	2026-04-13 19:20:00+06	\N	2026-06-04 05:29:46.427487+06	2026-06-04 05:29:46.427487+06
+831b7cb3-42a7-f0ff-6d3c-7246b31a3a09	ab80824b-3296-4aa1-b122-79f058a73875	33f9e677-d27f-3997-aab5-ff7013710e53	2026-04-14	OFFICE	SKUD	PRESENT	2026-04-14 09:57:00+06	2026-04-14 19:20:00+06	\N	2026-06-04 05:29:46.427487+06	2026-06-04 05:29:46.427487+06
+44ac118e-0795-ebf1-973c-9d8fda20acc8	ab80824b-3296-4aa1-b122-79f058a73875	33f9e677-d27f-3997-aab5-ff7013710e53	2026-04-15	OFFICE	SKUD	PRESENT	2026-04-15 09:57:00+06	2026-04-15 19:20:00+06	\N	2026-06-04 05:29:46.427487+06	2026-06-04 05:29:46.427487+06
+18470475-4c73-187f-8ae7-7db11f9a684a	ab80824b-3296-4aa1-b122-79f058a73875	33f9e677-d27f-3997-aab5-ff7013710e53	2026-04-16	OFFICE	SKUD	PRESENT	2026-04-16 09:57:00+06	2026-04-16 19:20:00+06	\N	2026-06-04 05:29:46.427487+06	2026-06-04 05:29:46.427487+06
+023f3422-2c3c-a20b-05d6-93440d672fed	ab80824b-3296-4aa1-b122-79f058a73875	33f9e677-d27f-3997-aab5-ff7013710e53	2026-04-17	OFFICE	SKUD	PRESENT	2026-04-17 09:57:00+06	2026-04-17 19:20:00+06	\N	2026-06-04 05:29:46.427487+06	2026-06-04 05:29:46.427487+06
+405017f3-1ecc-295d-6ce6-c97c8731db41	ab80824b-3296-4aa1-b122-79f058a73875	33f9e677-d27f-3997-aab5-ff7013710e53	2026-04-20	OFFICE	SKUD	PRESENT	2026-04-20 09:57:00+06	2026-04-20 19:20:00+06	\N	2026-06-04 05:29:46.427487+06	2026-06-04 05:29:46.427487+06
+e430bce1-b778-0706-189d-5039a8c1c958	ab80824b-3296-4aa1-b122-79f058a73875	33f9e677-d27f-3997-aab5-ff7013710e53	2026-04-21	OFFICE	SKUD	PRESENT	2026-04-21 09:57:00+06	2026-04-21 19:20:00+06	\N	2026-06-04 05:29:46.427487+06	2026-06-04 05:29:46.427487+06
+a507f824-d87f-8ff8-3959-7cf2cbf9ffd7	ab80824b-3296-4aa1-b122-79f058a73875	33f9e677-d27f-3997-aab5-ff7013710e53	2026-04-22	OFFICE	SKUD	PRESENT	2026-04-22 09:57:00+06	2026-04-22 19:20:00+06	\N	2026-06-04 05:29:46.427487+06	2026-06-04 05:29:46.427487+06
+f370cdea-11a7-06c0-b56e-48216e8752c1	ab80824b-3296-4aa1-b122-79f058a73875	33f9e677-d27f-3997-aab5-ff7013710e53	2026-04-23	OFFICE	SKUD	PRESENT	2026-04-23 09:57:00+06	2026-04-23 19:20:00+06	\N	2026-06-04 05:29:46.427487+06	2026-06-04 05:29:46.427487+06
+87bbddff-bc78-e14f-d16a-3774cf7c9011	ab80824b-3296-4aa1-b122-79f058a73875	33f9e677-d27f-3997-aab5-ff7013710e53	2026-04-24	OFFICE	SKUD	PRESENT	2026-04-24 09:57:00+06	2026-04-24 19:20:00+06	\N	2026-06-04 05:29:46.427487+06	2026-06-04 05:29:46.427487+06
+f229e8b5-4ee0-28b6-3c7b-d6ca90faee3f	ab80824b-3296-4aa1-b122-79f058a73875	33f9e677-d27f-3997-aab5-ff7013710e53	2026-04-27	OFFICE	SKUD	PRESENT	2026-04-27 09:57:00+06	2026-04-27 19:20:00+06	\N	2026-06-04 05:29:46.427487+06	2026-06-04 05:29:46.427487+06
+bee081ea-5f7e-55a6-3712-6f061fc7fdfc	ab80824b-3296-4aa1-b122-79f058a73875	33f9e677-d27f-3997-aab5-ff7013710e53	2026-04-28	OFFICE	SKUD	PRESENT	2026-04-28 09:57:00+06	2026-04-28 19:20:00+06	\N	2026-06-04 05:29:46.427487+06	2026-06-04 05:29:46.427487+06
+f903a032-cd96-43a5-dbc4-dbe7ef4cddb6	ab80824b-3296-4aa1-b122-79f058a73875	33f9e677-d27f-3997-aab5-ff7013710e53	2026-04-29	OFFICE	SKUD	PRESENT	2026-04-29 09:57:00+06	2026-04-29 19:20:00+06	\N	2026-06-04 05:29:46.427487+06	2026-06-04 05:29:46.427487+06
+12270c23-ff8e-7b0d-b690-6d104013d650	ab80824b-3296-4aa1-b122-79f058a73875	33f9e677-d27f-3997-aab5-ff7013710e53	2026-04-30	OFFICE	SKUD	PRESENT	2026-04-30 09:57:00+06	2026-04-30 19:20:00+06	\N	2026-06-04 05:29:46.427487+06	2026-06-04 05:29:46.427487+06
+b3975046-e0fc-98ed-1d15-8736af217fe8	ab80824b-3296-4aa1-b122-79f058a73875	33f9e677-d27f-3997-aab5-ff7013710e53	2026-05-04	OFFICE	SKUD	PRESENT	2026-05-04 09:57:00+06	2026-05-04 19:20:00+06	\N	2026-06-04 05:29:46.427487+06	2026-06-04 05:29:46.427487+06
+e02d187f-e7ef-5a03-b790-815379175d32	ab80824b-3296-4aa1-b122-79f058a73875	33f9e677-d27f-3997-aab5-ff7013710e53	2026-05-05	OFFICE	SKUD	PRESENT	2026-05-05 09:57:00+06	2026-05-05 19:20:00+06	\N	2026-06-04 05:29:46.427487+06	2026-06-04 05:29:46.427487+06
+ae9eef7b-a117-efbf-fd71-efe0bcba14eb	ab80824b-3296-4aa1-b122-79f058a73875	33f9e677-d27f-3997-aab5-ff7013710e53	2026-05-06	OFFICE	SKUD	PRESENT	2026-05-06 09:57:00+06	2026-05-06 19:20:00+06	\N	2026-06-04 05:29:46.427487+06	2026-06-04 05:29:46.427487+06
+a41c4c33-d6d2-2a96-d4db-1de90223cace	ab80824b-3296-4aa1-b122-79f058a73875	33f9e677-d27f-3997-aab5-ff7013710e53	2026-05-08	OFFICE	SKUD	PRESENT	2026-05-08 09:57:00+06	2026-05-08 19:20:00+06	\N	2026-06-04 05:29:46.427487+06	2026-06-04 05:29:46.427487+06
+1747a97d-bc1a-c71e-34cf-a5b0432dbb3e	ab80824b-3296-4aa1-b122-79f058a73875	33f9e677-d27f-3997-aab5-ff7013710e53	2026-05-11	OFFICE	SKUD	PRESENT	2026-05-11 09:57:00+06	2026-05-11 19:20:00+06	\N	2026-06-04 05:29:46.427487+06	2026-06-04 05:29:46.427487+06
+a02eb1e6-4762-e320-ba3a-91df0d2d4d31	ab80824b-3296-4aa1-b122-79f058a73875	33f9e677-d27f-3997-aab5-ff7013710e53	2026-05-12	OFFICE	SKUD	PRESENT	2026-05-12 09:57:00+06	2026-05-12 19:20:00+06	\N	2026-06-04 05:29:46.427487+06	2026-06-04 05:29:46.427487+06
+5e3c9bbc-288a-834b-6100-b3f3c4866c5e	ab80824b-3296-4aa1-b122-79f058a73875	33f9e677-d27f-3997-aab5-ff7013710e53	2026-05-13	OFFICE	SKUD	PRESENT	2026-05-13 09:57:00+06	2026-05-13 19:20:00+06	\N	2026-06-04 05:29:46.427487+06	2026-06-04 05:29:46.427487+06
+d07f10cb-1e23-7dc2-8703-6facd9cdb72b	ab80824b-3296-4aa1-b122-79f058a73875	33f9e677-d27f-3997-aab5-ff7013710e53	2026-05-14	OFFICE	SKUD	PRESENT	2026-05-14 09:57:00+06	2026-05-14 19:20:00+06	\N	2026-06-04 05:29:46.427487+06	2026-06-04 05:29:46.427487+06
+a9d59e4d-613c-3097-48ea-876280090dde	ab80824b-3296-4aa1-b122-79f058a73875	33f9e677-d27f-3997-aab5-ff7013710e53	2026-05-15	OFFICE	SKUD	PRESENT	2026-05-15 09:57:00+06	2026-05-15 19:20:00+06	\N	2026-06-04 05:29:46.427487+06	2026-06-04 05:29:46.427487+06
+bc4990c7-1057-5915-b4ed-ec7b57222f43	ab80824b-3296-4aa1-b122-79f058a73875	33f9e677-d27f-3997-aab5-ff7013710e53	2026-05-16	OFFICE	SKUD	PRESENT	2026-05-16 09:57:00+06	2026-05-16 19:20:00+06	\N	2026-06-04 05:29:46.427487+06	2026-06-04 05:29:46.427487+06
+9b8fbf0b-62a5-f9fe-d294-744ab0d13a8f	ab80824b-3296-4aa1-b122-79f058a73875	33f9e677-d27f-3997-aab5-ff7013710e53	2026-05-18	OFFICE	SKUD	PRESENT	2026-05-18 09:57:00+06	2026-05-18 19:20:00+06	\N	2026-06-04 05:29:46.427487+06	2026-06-04 05:29:46.427487+06
+a0266f76-9a73-4672-9695-4ab8316b6f5e	ab80824b-3296-4aa1-b122-79f058a73875	33f9e677-d27f-3997-aab5-ff7013710e53	2026-05-19	OFFICE	SKUD	PRESENT	2026-05-19 09:57:00+06	2026-05-19 19:20:00+06	\N	2026-06-04 05:29:46.427487+06	2026-06-04 05:29:46.427487+06
+1dd595bc-dc04-cdc8-a298-26f24e7d7644	ab80824b-3296-4aa1-b122-79f058a73875	33f9e677-d27f-3997-aab5-ff7013710e53	2026-05-20	OFFICE	SKUD	PRESENT	2026-05-20 09:57:00+06	2026-05-20 19:20:00+06	\N	2026-06-04 05:29:46.427487+06	2026-06-04 05:29:46.427487+06
+748783bf-ad74-40f8-8f37-7f9eccb04a0d	ab80824b-3296-4aa1-b122-79f058a73875	33f9e677-d27f-3997-aab5-ff7013710e53	2026-05-21	OFFICE	SKUD	PRESENT	2026-05-21 09:57:00+06	2026-05-21 19:20:00+06	\N	2026-06-04 05:29:46.427487+06	2026-06-04 05:29:46.427487+06
+d9ccb736-c535-b8f0-5110-7a894b50a64f	ab80824b-3296-4aa1-b122-79f058a73875	33f9e677-d27f-3997-aab5-ff7013710e53	2026-05-22	OFFICE	SKUD	PRESENT	2026-05-22 09:57:00+06	2026-05-22 19:20:00+06	\N	2026-06-04 05:29:46.427487+06	2026-06-04 05:29:46.427487+06
+8f8a9ec2-8994-0809-316d-12848c22169f	ab80824b-3296-4aa1-b122-79f058a73875	33f9e677-d27f-3997-aab5-ff7013710e53	2026-05-25	OFFICE	SKUD	PRESENT	2026-05-25 09:57:00+06	2026-05-25 19:20:00+06	\N	2026-06-04 05:29:46.427487+06	2026-06-04 05:29:46.427487+06
+d985fbe6-f889-d149-5df3-2f44a3905895	ab80824b-3296-4aa1-b122-79f058a73875	33f9e677-d27f-3997-aab5-ff7013710e53	2026-05-26	OFFICE	SKUD	PRESENT	2026-05-26 09:57:00+06	2026-05-26 19:20:00+06	\N	2026-06-04 05:29:46.427487+06	2026-06-04 05:29:46.427487+06
+4d0937bf-0915-5f9c-a5ea-3a1a996de7bf	ab80824b-3296-4aa1-b122-79f058a73875	33f9e677-d27f-3997-aab5-ff7013710e53	2026-05-27	OFFICE	SKUD	PRESENT	2026-05-27 09:57:00+06	2026-05-27 19:20:00+06	\N	2026-06-04 05:29:46.427487+06	2026-06-04 05:29:46.427487+06
+b948e588-3026-211b-2ae8-b6d2d9797df1	ab80824b-3296-4aa1-b122-79f058a73875	33f9e677-d27f-3997-aab5-ff7013710e53	2026-05-28	OFFICE	SKUD	PRESENT	2026-05-28 09:57:00+06	2026-05-28 19:20:00+06	\N	2026-06-04 05:29:46.427487+06	2026-06-04 05:29:46.427487+06
+1843c222-a34e-c821-fafb-f053c9877a99	ab80824b-3296-4aa1-b122-79f058a73875	33f9e677-d27f-3997-aab5-ff7013710e53	2026-05-29	OFFICE	SKUD	PRESENT	2026-05-29 09:57:00+06	2026-05-29 19:20:00+06	\N	2026-06-04 05:29:46.427487+06	2026-06-04 05:29:46.427487+06
+837e3727-5189-5e03-99ef-e09c50c41f56	ab80824b-3296-4aa1-b122-79f058a73875	fc8a3817-f4ff-4789-89fe-1960d74b8830	2026-04-01	OFFICE	SKUD	PRESENT	2026-04-01 09:57:00+06	2026-04-01 19:02:00+06	\N	2026-06-04 05:29:46.427487+06	2026-06-04 05:29:46.427487+06
+fb716649-f589-05b8-cac4-7a5b80565178	ab80824b-3296-4aa1-b122-79f058a73875	fc8a3817-f4ff-4789-89fe-1960d74b8830	2026-04-02	OFFICE	SKUD	PRESENT	2026-04-02 09:57:00+06	2026-04-02 19:02:00+06	\N	2026-06-04 05:29:46.427487+06	2026-06-04 05:29:46.427487+06
+8689c9a0-6142-3bf9-eb32-5ae5eb82f1b0	ab80824b-3296-4aa1-b122-79f058a73875	fc8a3817-f4ff-4789-89fe-1960d74b8830	2026-04-03	OFFICE	SKUD	PRESENT	2026-04-03 09:57:00+06	2026-04-03 19:02:00+06	\N	2026-06-04 05:29:46.427487+06	2026-06-04 05:29:46.427487+06
+c4c0e25b-8eb5-c457-f27c-3dbeb4fc667b	ab80824b-3296-4aa1-b122-79f058a73875	fc8a3817-f4ff-4789-89fe-1960d74b8830	2026-04-06	OFFICE	SKUD	PRESENT	2026-04-06 09:57:00+06	2026-04-06 19:02:00+06	\N	2026-06-04 05:29:46.427487+06	2026-06-04 05:29:46.427487+06
+f40da4c7-cd59-0db0-27bb-23c2093b1987	ab80824b-3296-4aa1-b122-79f058a73875	fc8a3817-f4ff-4789-89fe-1960d74b8830	2026-04-07	OFFICE	SKUD	PRESENT	2026-04-07 09:57:00+06	2026-04-07 19:02:00+06	\N	2026-06-04 05:29:46.427487+06	2026-06-04 05:29:46.427487+06
+d62828b9-c942-22f4-c406-a82b1fd7c36f	ab80824b-3296-4aa1-b122-79f058a73875	fc8a3817-f4ff-4789-89fe-1960d74b8830	2026-04-08	OFFICE	SKUD	PRESENT	2026-04-08 09:57:00+06	2026-04-08 19:02:00+06	\N	2026-06-04 05:29:46.427487+06	2026-06-04 05:29:46.427487+06
+6a6f18a8-9ded-81ae-bf17-d14cae006596	ab80824b-3296-4aa1-b122-79f058a73875	fc8a3817-f4ff-4789-89fe-1960d74b8830	2026-04-09	OFFICE	SKUD	PRESENT	2026-04-09 09:57:00+06	2026-04-09 19:02:00+06	\N	2026-06-04 05:29:46.427487+06	2026-06-04 05:29:46.427487+06
+0fbbbee5-6a5d-7b30-01e0-6939da74eb31	ab80824b-3296-4aa1-b122-79f058a73875	fc8a3817-f4ff-4789-89fe-1960d74b8830	2026-04-10	OFFICE	SKUD	PRESENT	2026-04-10 09:57:00+06	2026-04-10 19:02:00+06	\N	2026-06-04 05:29:46.427487+06	2026-06-04 05:29:46.427487+06
+54753b92-d331-5751-77f8-ef2d74f00e7c	ab80824b-3296-4aa1-b122-79f058a73875	fc8a3817-f4ff-4789-89fe-1960d74b8830	2026-04-13	OFFICE	SKUD	PRESENT	2026-04-13 09:57:00+06	2026-04-13 19:02:00+06	\N	2026-06-04 05:29:46.427487+06	2026-06-04 05:29:46.427487+06
+3a71f781-0f02-b94a-c705-a9069468010a	ab80824b-3296-4aa1-b122-79f058a73875	fc8a3817-f4ff-4789-89fe-1960d74b8830	2026-04-14	OFFICE	SKUD	PRESENT	2026-04-14 09:57:00+06	2026-04-14 19:02:00+06	\N	2026-06-04 05:29:46.427487+06	2026-06-04 05:29:46.427487+06
+2695a1f2-42ea-4107-89e3-79260a8e56a3	ab80824b-3296-4aa1-b122-79f058a73875	fc8a3817-f4ff-4789-89fe-1960d74b8830	2026-04-15	OFFICE	SKUD	PRESENT	2026-04-15 09:57:00+06	2026-04-15 19:02:00+06	\N	2026-06-04 05:29:46.427487+06	2026-06-04 05:29:46.427487+06
+3b12a28b-d462-8705-e3f4-11cf90348335	ab80824b-3296-4aa1-b122-79f058a73875	fc8a3817-f4ff-4789-89fe-1960d74b8830	2026-04-16	OFFICE	SKUD	PRESENT	2026-04-16 09:57:00+06	2026-04-16 19:02:00+06	\N	2026-06-04 05:29:46.427487+06	2026-06-04 05:29:46.427487+06
+5c00bf89-ef92-5d04-af41-504f64cb97d5	ab80824b-3296-4aa1-b122-79f058a73875	fc8a3817-f4ff-4789-89fe-1960d74b8830	2026-04-17	OFFICE	SKUD	PRESENT	2026-04-17 09:57:00+06	2026-04-17 19:02:00+06	\N	2026-06-04 05:29:46.427487+06	2026-06-04 05:29:46.427487+06
+dbdaefcc-fb90-2990-ee02-61ce15ddbab3	ab80824b-3296-4aa1-b122-79f058a73875	fc8a3817-f4ff-4789-89fe-1960d74b8830	2026-04-20	OFFICE	SKUD	PRESENT	2026-04-20 09:57:00+06	2026-04-20 19:02:00+06	\N	2026-06-04 05:29:46.427487+06	2026-06-04 05:29:46.427487+06
+453d0d43-a839-3d9e-ce9c-e5081d382382	ab80824b-3296-4aa1-b122-79f058a73875	fc8a3817-f4ff-4789-89fe-1960d74b8830	2026-04-21	OFFICE	SKUD	PRESENT	2026-04-21 09:57:00+06	2026-04-21 19:02:00+06	\N	2026-06-04 05:29:46.427487+06	2026-06-04 05:29:46.427487+06
+087a335e-3d4a-883d-2462-b097501f26fd	ab80824b-3296-4aa1-b122-79f058a73875	fc8a3817-f4ff-4789-89fe-1960d74b8830	2026-04-22	OFFICE	SKUD	PRESENT	2026-04-22 09:57:00+06	2026-04-22 19:02:00+06	\N	2026-06-04 05:29:46.427487+06	2026-06-04 05:29:46.427487+06
+ef8a99d9-0819-bb35-ea43-13c35c2b1fe9	ab80824b-3296-4aa1-b122-79f058a73875	fc8a3817-f4ff-4789-89fe-1960d74b8830	2026-04-23	OFFICE	SKUD	PRESENT	2026-04-23 09:57:00+06	2026-04-23 19:02:00+06	\N	2026-06-04 05:29:46.427487+06	2026-06-04 05:29:46.427487+06
+4a16c18c-1490-b394-7c89-4087ce1b3596	ab80824b-3296-4aa1-b122-79f058a73875	fc8a3817-f4ff-4789-89fe-1960d74b8830	2026-04-24	OFFICE	SKUD	PRESENT	2026-04-24 09:57:00+06	2026-04-24 19:02:00+06	\N	2026-06-04 05:29:46.427487+06	2026-06-04 05:29:46.427487+06
+004fbb9a-2edf-14f4-98eb-68277a6f0839	ab80824b-3296-4aa1-b122-79f058a73875	fc8a3817-f4ff-4789-89fe-1960d74b8830	2026-04-27	OFFICE	SKUD	PRESENT	2026-04-27 09:57:00+06	2026-04-27 19:02:00+06	\N	2026-06-04 05:29:46.427487+06	2026-06-04 05:29:46.427487+06
+8b6c11f8-1f09-c50c-3a51-b1e549995468	ab80824b-3296-4aa1-b122-79f058a73875	fc8a3817-f4ff-4789-89fe-1960d74b8830	2026-04-28	OFFICE	SKUD	PRESENT	2026-04-28 09:57:00+06	2026-04-28 19:02:00+06	\N	2026-06-04 05:29:46.427487+06	2026-06-04 05:29:46.427487+06
+2e85852a-4714-ba31-062e-4cbbb26015eb	ab80824b-3296-4aa1-b122-79f058a73875	fc8a3817-f4ff-4789-89fe-1960d74b8830	2026-04-29	OFFICE	SKUD	PRESENT	2026-04-29 09:57:00+06	2026-04-29 19:02:00+06	\N	2026-06-04 05:29:46.427487+06	2026-06-04 05:29:46.427487+06
+94d68bd2-f8b1-fab1-66ba-8012b5b95fc1	ab80824b-3296-4aa1-b122-79f058a73875	fc8a3817-f4ff-4789-89fe-1960d74b8830	2026-04-30	OFFICE	SKUD	PRESENT	2026-04-30 09:57:00+06	2026-04-30 19:02:00+06	\N	2026-06-04 05:29:46.427487+06	2026-06-04 05:29:46.427487+06
+6fa23924-490e-5ebf-ee32-4a7ab67db78d	ab80824b-3296-4aa1-b122-79f058a73875	fc8a3817-f4ff-4789-89fe-1960d74b8830	2026-05-04	OFFICE	SKUD	PRESENT	2026-05-04 09:57:00+06	2026-05-04 19:02:00+06	\N	2026-06-04 05:29:46.427487+06	2026-06-04 05:29:46.427487+06
+7954125a-4d5a-c80c-aa61-e26de0df2c45	ab80824b-3296-4aa1-b122-79f058a73875	fc8a3817-f4ff-4789-89fe-1960d74b8830	2026-05-05	OFFICE	SKUD	PRESENT	2026-05-05 09:57:00+06	2026-05-05 19:02:00+06	\N	2026-06-04 05:29:46.427487+06	2026-06-04 05:29:46.427487+06
+1b8e7905-4cbf-3f0e-4255-301f608a88fc	ab80824b-3296-4aa1-b122-79f058a73875	fc8a3817-f4ff-4789-89fe-1960d74b8830	2026-05-06	OFFICE	SKUD	PRESENT	2026-05-06 09:57:00+06	2026-05-06 19:02:00+06	\N	2026-06-04 05:29:46.427487+06	2026-06-04 05:29:46.427487+06
+3ab49f61-fa30-fe41-c84e-a6b1f64da88e	ab80824b-3296-4aa1-b122-79f058a73875	fc8a3817-f4ff-4789-89fe-1960d74b8830	2026-05-08	OFFICE	SKUD	PRESENT	2026-05-08 09:57:00+06	2026-05-08 19:02:00+06	\N	2026-06-04 05:29:46.427487+06	2026-06-04 05:29:46.427487+06
+8b4ecc57-f90e-0cc1-5c8b-adc4bb258588	ab80824b-3296-4aa1-b122-79f058a73875	fc8a3817-f4ff-4789-89fe-1960d74b8830	2026-05-11	OFFICE	SKUD	PRESENT	2026-05-11 09:57:00+06	2026-05-11 19:02:00+06	\N	2026-06-04 05:29:46.427487+06	2026-06-04 05:29:46.427487+06
+b144fe7f-8667-a480-c550-caaadef511fa	ab80824b-3296-4aa1-b122-79f058a73875	fc8a3817-f4ff-4789-89fe-1960d74b8830	2026-05-12	OFFICE	SKUD	PRESENT	2026-05-12 09:57:00+06	2026-05-12 19:02:00+06	\N	2026-06-04 05:29:46.427487+06	2026-06-04 05:29:46.427487+06
+8a537db9-e5e1-e761-7a0c-827ee43e43a1	ab80824b-3296-4aa1-b122-79f058a73875	fc8a3817-f4ff-4789-89fe-1960d74b8830	2026-05-13	OFFICE	SKUD	PRESENT	2026-05-13 09:57:00+06	2026-05-13 19:02:00+06	\N	2026-06-04 05:29:46.427487+06	2026-06-04 05:29:46.427487+06
+9f085098-06ea-d85d-2d04-f934eaa5f0b7	ab80824b-3296-4aa1-b122-79f058a73875	fc8a3817-f4ff-4789-89fe-1960d74b8830	2026-05-14	OFFICE	SKUD	PRESENT	2026-05-14 09:57:00+06	2026-05-14 19:02:00+06	\N	2026-06-04 05:29:46.427487+06	2026-06-04 05:29:46.427487+06
+fa927b3a-aa7a-b337-9cc6-5248197ca573	ab80824b-3296-4aa1-b122-79f058a73875	fc8a3817-f4ff-4789-89fe-1960d74b8830	2026-05-15	OFFICE	SKUD	PRESENT	2026-05-15 09:57:00+06	2026-05-15 19:02:00+06	\N	2026-06-04 05:29:46.427487+06	2026-06-04 05:29:46.427487+06
+294abce1-16c7-85b8-7f11-b1f3e4ea9e15	ab80824b-3296-4aa1-b122-79f058a73875	fc8a3817-f4ff-4789-89fe-1960d74b8830	2026-05-16	OFFICE	SKUD	PRESENT	2026-05-16 09:57:00+06	2026-05-16 19:02:00+06	\N	2026-06-04 05:29:46.427487+06	2026-06-04 05:29:46.427487+06
+105cabe9-e912-8d6c-4887-2d2dbb0f518e	ab80824b-3296-4aa1-b122-79f058a73875	fc8a3817-f4ff-4789-89fe-1960d74b8830	2026-05-18	OFFICE	SKUD	PRESENT	2026-05-18 09:57:00+06	2026-05-18 19:02:00+06	\N	2026-06-04 05:29:46.427487+06	2026-06-04 05:29:46.427487+06
+e0e0d890-212e-c346-f3a9-a32df6b76365	ab80824b-3296-4aa1-b122-79f058a73875	fc8a3817-f4ff-4789-89fe-1960d74b8830	2026-05-19	OFFICE	SKUD	PRESENT	2026-05-19 09:57:00+06	2026-05-19 19:02:00+06	\N	2026-06-04 05:29:46.427487+06	2026-06-04 05:29:46.427487+06
+5338f225-5a9a-d14e-7cec-8c52cd9cce7d	ab80824b-3296-4aa1-b122-79f058a73875	fc8a3817-f4ff-4789-89fe-1960d74b8830	2026-05-20	OFFICE	SKUD	PRESENT	2026-05-20 09:57:00+06	2026-05-20 19:02:00+06	\N	2026-06-04 05:29:46.427487+06	2026-06-04 05:29:46.427487+06
+5f17348e-91d1-b18d-67d1-3958bad91a33	ab80824b-3296-4aa1-b122-79f058a73875	fc8a3817-f4ff-4789-89fe-1960d74b8830	2026-05-21	OFFICE	SKUD	PRESENT	2026-05-21 09:57:00+06	2026-05-21 19:02:00+06	\N	2026-06-04 05:29:46.427487+06	2026-06-04 05:29:46.427487+06
+33192435-717b-2792-1776-c6ca9f6b5b8f	ab80824b-3296-4aa1-b122-79f058a73875	fc8a3817-f4ff-4789-89fe-1960d74b8830	2026-05-22	OFFICE	SKUD	PRESENT	2026-05-22 09:57:00+06	2026-05-22 19:02:00+06	\N	2026-06-04 05:29:46.427487+06	2026-06-04 05:29:46.427487+06
+85066147-7e44-5201-e73b-a9b29df61e26	ab80824b-3296-4aa1-b122-79f058a73875	fc8a3817-f4ff-4789-89fe-1960d74b8830	2026-05-25	OFFICE	SKUD	PRESENT	2026-05-25 09:57:00+06	2026-05-25 19:02:00+06	\N	2026-06-04 05:29:46.427487+06	2026-06-04 05:29:46.427487+06
+7651398d-7d7b-644e-837f-1e446542ec6e	ab80824b-3296-4aa1-b122-79f058a73875	fc8a3817-f4ff-4789-89fe-1960d74b8830	2026-05-26	OFFICE	SKUD	PRESENT	2026-05-26 09:57:00+06	2026-05-26 19:02:00+06	\N	2026-06-04 05:29:46.427487+06	2026-06-04 05:29:46.427487+06
+f658ec1f-8f0f-44ae-7d8f-83bf421ef27d	ab80824b-3296-4aa1-b122-79f058a73875	fc8a3817-f4ff-4789-89fe-1960d74b8830	2026-05-27	OFFICE	SKUD	PRESENT	2026-05-27 09:57:00+06	2026-05-27 19:02:00+06	\N	2026-06-04 05:29:46.427487+06	2026-06-04 05:29:46.427487+06
+0f21c2ba-20df-2caf-2a83-eead7c4e0015	ab80824b-3296-4aa1-b122-79f058a73875	fc8a3817-f4ff-4789-89fe-1960d74b8830	2026-05-28	OFFICE	SKUD	PRESENT	2026-05-28 09:57:00+06	2026-05-28 19:02:00+06	\N	2026-06-04 05:29:46.427487+06	2026-06-04 05:29:46.427487+06
+5aa7a309-427c-269f-93db-8e5d3a0843d3	ab80824b-3296-4aa1-b122-79f058a73875	fc8a3817-f4ff-4789-89fe-1960d74b8830	2026-05-29	OFFICE	SKUD	PRESENT	2026-05-29 09:57:00+06	2026-05-29 19:02:00+06	\N	2026-06-04 05:29:46.427487+06	2026-06-04 05:29:46.427487+06
+62c0179a-00cf-3e78-8086-8fab13b86366	ab80824b-3296-4aa1-b122-79f058a73875	191ce5ce-8c20-4d34-8b0e-b22f0bd3a016	2026-04-01	OFFICE	SKUD	PRESENT	2026-04-01 09:57:00+06	2026-04-01 19:02:00+06	\N	2026-06-04 05:29:46.427487+06	2026-06-04 05:29:46.427487+06
+99a31ec9-78fa-5ab4-6ed6-8669f1b90d13	ab80824b-3296-4aa1-b122-79f058a73875	191ce5ce-8c20-4d34-8b0e-b22f0bd3a016	2026-04-02	OFFICE	SKUD	PRESENT	2026-04-02 09:57:00+06	2026-04-02 19:02:00+06	\N	2026-06-04 05:29:46.427487+06	2026-06-04 05:29:46.427487+06
+49178260-44d6-b749-08d8-80201c7f5be1	ab80824b-3296-4aa1-b122-79f058a73875	191ce5ce-8c20-4d34-8b0e-b22f0bd3a016	2026-04-03	OFFICE	SKUD	PRESENT	2026-04-03 09:57:00+06	2026-04-03 19:02:00+06	\N	2026-06-04 05:29:46.427487+06	2026-06-04 05:29:46.427487+06
+c5a19ca6-a5b3-d6d9-29f2-9e365365ef2e	ab80824b-3296-4aa1-b122-79f058a73875	191ce5ce-8c20-4d34-8b0e-b22f0bd3a016	2026-04-06	OFFICE	SKUD	PRESENT	2026-04-06 09:57:00+06	2026-04-06 19:02:00+06	\N	2026-06-04 05:29:46.427487+06	2026-06-04 05:29:46.427487+06
+7effb604-4427-da52-63a0-acc7a8d82fe0	ab80824b-3296-4aa1-b122-79f058a73875	191ce5ce-8c20-4d34-8b0e-b22f0bd3a016	2026-04-07	OFFICE	SKUD	PRESENT	2026-04-07 09:57:00+06	2026-04-07 19:02:00+06	\N	2026-06-04 05:29:46.427487+06	2026-06-04 05:29:46.427487+06
+32e51491-c70a-e632-9a3f-e0a65f151e19	ab80824b-3296-4aa1-b122-79f058a73875	191ce5ce-8c20-4d34-8b0e-b22f0bd3a016	2026-04-08	OFFICE	SKUD	PRESENT	2026-04-08 09:57:00+06	2026-04-08 19:02:00+06	\N	2026-06-04 05:29:46.427487+06	2026-06-04 05:29:46.427487+06
+ea5dc4d6-8355-2c87-8cfe-24a7ada7fcf6	ab80824b-3296-4aa1-b122-79f058a73875	191ce5ce-8c20-4d34-8b0e-b22f0bd3a016	2026-04-09	OFFICE	SKUD	PRESENT	2026-04-09 09:57:00+06	2026-04-09 19:02:00+06	\N	2026-06-04 05:29:46.427487+06	2026-06-04 05:29:46.427487+06
+6ff1cf21-1ffc-12e1-1dc2-cf41931b0349	ab80824b-3296-4aa1-b122-79f058a73875	191ce5ce-8c20-4d34-8b0e-b22f0bd3a016	2026-04-10	OFFICE	SKUD	PRESENT	2026-04-10 09:57:00+06	2026-04-10 19:02:00+06	\N	2026-06-04 05:29:46.427487+06	2026-06-04 05:29:46.427487+06
+aeb0c91e-30e4-7d8e-c14e-e07eb52715e8	ab80824b-3296-4aa1-b122-79f058a73875	191ce5ce-8c20-4d34-8b0e-b22f0bd3a016	2026-04-13	OFFICE	SKUD	PRESENT	2026-04-13 09:57:00+06	2026-04-13 19:02:00+06	\N	2026-06-04 05:29:46.427487+06	2026-06-04 05:29:46.427487+06
+2a3d2737-a90d-ac06-0a22-23c11e1f1d9a	ab80824b-3296-4aa1-b122-79f058a73875	191ce5ce-8c20-4d34-8b0e-b22f0bd3a016	2026-04-14	OFFICE	SKUD	PRESENT	2026-04-14 09:57:00+06	2026-04-14 19:02:00+06	\N	2026-06-04 05:29:46.427487+06	2026-06-04 05:29:46.427487+06
+f4526975-df72-1211-828d-f130ba593af6	ab80824b-3296-4aa1-b122-79f058a73875	191ce5ce-8c20-4d34-8b0e-b22f0bd3a016	2026-04-15	OFFICE	SKUD	LATE	2026-04-15 10:29:00+06	2026-04-15 19:02:00+06	Traffic delay	2026-06-04 05:29:46.427487+06	2026-06-04 05:29:46.427487+06
+6c1c01ce-7442-7b9f-d59c-a5b9bdcf425e	ab80824b-3296-4aa1-b122-79f058a73875	191ce5ce-8c20-4d34-8b0e-b22f0bd3a016	2026-04-16	OFFICE	SKUD	PRESENT	2026-04-16 09:57:00+06	2026-04-16 19:02:00+06	\N	2026-06-04 05:29:46.427487+06	2026-06-04 05:29:46.427487+06
+4c023792-20b7-8cf6-f5c4-78f87cfcdc7f	ab80824b-3296-4aa1-b122-79f058a73875	191ce5ce-8c20-4d34-8b0e-b22f0bd3a016	2026-04-17	OFFICE	SKUD	PRESENT	2026-04-17 09:57:00+06	2026-04-17 19:02:00+06	\N	2026-06-04 05:29:46.427487+06	2026-06-04 05:29:46.427487+06
+0a327632-0906-774a-80e5-30eef4788e6c	ab80824b-3296-4aa1-b122-79f058a73875	191ce5ce-8c20-4d34-8b0e-b22f0bd3a016	2026-04-20	OFFICE	SKUD	PRESENT	2026-04-20 09:57:00+06	2026-04-20 19:02:00+06	\N	2026-06-04 05:29:46.427487+06	2026-06-04 05:29:46.427487+06
+2f057f78-ca8c-0da0-60b1-31f37dacafd7	ab80824b-3296-4aa1-b122-79f058a73875	191ce5ce-8c20-4d34-8b0e-b22f0bd3a016	2026-04-21	OFFICE	SKUD	PRESENT	2026-04-21 09:57:00+06	2026-04-21 19:02:00+06	\N	2026-06-04 05:29:46.427487+06	2026-06-04 05:29:46.427487+06
+7923ed2b-0688-a603-f010-923e9fbdcd01	ab80824b-3296-4aa1-b122-79f058a73875	191ce5ce-8c20-4d34-8b0e-b22f0bd3a016	2026-04-22	VACATION	SYSTEM	ON_LEAVE	\N	\N	Approved leave	2026-06-04 05:29:46.427487+06	2026-06-04 05:29:46.427487+06
+1882cc6c-dba4-25c2-2707-732f4846973d	ab80824b-3296-4aa1-b122-79f058a73875	191ce5ce-8c20-4d34-8b0e-b22f0bd3a016	2026-04-23	VACATION	SYSTEM	ON_LEAVE	\N	\N	Approved leave	2026-06-04 05:29:46.427487+06	2026-06-04 05:29:46.427487+06
+ee1222f9-4194-1068-9997-4d2fef806117	ab80824b-3296-4aa1-b122-79f058a73875	191ce5ce-8c20-4d34-8b0e-b22f0bd3a016	2026-04-24	VACATION	SYSTEM	ON_LEAVE	\N	\N	Approved leave	2026-06-04 05:29:46.427487+06	2026-06-04 05:29:46.427487+06
+a778cd09-6abb-e8b3-9210-1b0c3ec81d8f	ab80824b-3296-4aa1-b122-79f058a73875	191ce5ce-8c20-4d34-8b0e-b22f0bd3a016	2026-04-27	OFFICE	SKUD	PRESENT	2026-04-27 09:57:00+06	2026-04-27 19:02:00+06	\N	2026-06-04 05:29:46.427487+06	2026-06-04 05:29:46.427487+06
+adca3585-2be1-a164-1ad8-988edb75672e	ab80824b-3296-4aa1-b122-79f058a73875	191ce5ce-8c20-4d34-8b0e-b22f0bd3a016	2026-04-28	OFFICE	SKUD	PRESENT	2026-04-28 09:57:00+06	2026-04-28 19:02:00+06	\N	2026-06-04 05:29:46.427487+06	2026-06-04 05:29:46.427487+06
+729341d7-d869-b10b-a3f4-0d6dbb746579	ab80824b-3296-4aa1-b122-79f058a73875	191ce5ce-8c20-4d34-8b0e-b22f0bd3a016	2026-04-29	OFFICE	SKUD	PRESENT	2026-04-29 09:57:00+06	2026-04-29 19:02:00+06	\N	2026-06-04 05:29:46.427487+06	2026-06-04 05:29:46.427487+06
+917c2948-daca-bb71-b388-bd7fa97424c8	ab80824b-3296-4aa1-b122-79f058a73875	191ce5ce-8c20-4d34-8b0e-b22f0bd3a016	2026-04-30	OFFICE	SKUD	PRESENT	2026-04-30 09:57:00+06	2026-04-30 19:02:00+06	\N	2026-06-04 05:29:46.427487+06	2026-06-04 05:29:46.427487+06
+2899d343-aa93-eea0-c940-5d254850d932	ab80824b-3296-4aa1-b122-79f058a73875	191ce5ce-8c20-4d34-8b0e-b22f0bd3a016	2026-05-04	OFFICE	SKUD	PRESENT	2026-05-04 09:57:00+06	2026-05-04 19:02:00+06	\N	2026-06-04 05:29:46.427487+06	2026-06-04 05:29:46.427487+06
+e40c6fb1-bdd1-e0f2-2322-c414da7f51dc	ab80824b-3296-4aa1-b122-79f058a73875	191ce5ce-8c20-4d34-8b0e-b22f0bd3a016	2026-05-05	OFFICE	SKUD	LATE	2026-05-05 10:29:00+06	2026-05-05 19:02:00+06	Traffic delay	2026-06-04 05:29:46.427487+06	2026-06-04 05:29:46.427487+06
+cb6ac065-cd6a-0765-4b95-94961ed9fd7f	ab80824b-3296-4aa1-b122-79f058a73875	191ce5ce-8c20-4d34-8b0e-b22f0bd3a016	2026-05-06	OFFICE	SKUD	PRESENT	2026-05-06 09:57:00+06	2026-05-06 20:30:00+06	\N	2026-06-04 05:29:46.427487+06	2026-06-04 05:29:46.427487+06
+8d68af87-bde5-ebb8-2f39-34fee8f4cf4d	ab80824b-3296-4aa1-b122-79f058a73875	191ce5ce-8c20-4d34-8b0e-b22f0bd3a016	2026-05-08	OFFICE	SKUD	PRESENT	2026-05-08 09:57:00+06	2026-05-08 19:02:00+06	\N	2026-06-04 05:29:46.427487+06	2026-06-04 05:29:46.427487+06
+b23d4e20-0dea-dae4-311e-5bf487d7626c	ab80824b-3296-4aa1-b122-79f058a73875	191ce5ce-8c20-4d34-8b0e-b22f0bd3a016	2026-05-11	OFFICE	SKUD	PRESENT	2026-05-11 09:57:00+06	2026-05-11 19:02:00+06	\N	2026-06-04 05:29:46.427487+06	2026-06-04 05:29:46.427487+06
+cda4acac-2ea1-eae9-9986-8430e4282d01	ab80824b-3296-4aa1-b122-79f058a73875	191ce5ce-8c20-4d34-8b0e-b22f0bd3a016	2026-05-12	OFFICE	SKUD	PRESENT	2026-05-12 09:57:00+06	2026-05-12 19:02:00+06	\N	2026-06-04 05:29:46.427487+06	2026-06-04 05:29:46.427487+06
+5d96b11f-133b-cd9c-a6cf-659a3c84ef70	ab80824b-3296-4aa1-b122-79f058a73875	191ce5ce-8c20-4d34-8b0e-b22f0bd3a016	2026-05-13	OFFICE	SKUD	PRESENT	2026-05-13 09:57:00+06	2026-05-13 19:02:00+06	\N	2026-06-04 05:29:46.427487+06	2026-06-04 05:29:46.427487+06
+1d5722ec-2606-0b3b-ac99-bf667a47e154	ab80824b-3296-4aa1-b122-79f058a73875	191ce5ce-8c20-4d34-8b0e-b22f0bd3a016	2026-05-14	OFFICE	SKUD	PRESENT	2026-05-14 09:57:00+06	2026-05-14 19:02:00+06	\N	2026-06-04 05:29:46.427487+06	2026-06-04 05:29:46.427487+06
+3cb78081-2633-99e6-df54-716cd58df06b	ab80824b-3296-4aa1-b122-79f058a73875	191ce5ce-8c20-4d34-8b0e-b22f0bd3a016	2026-05-15	OFFICE	SKUD	PRESENT	2026-05-15 09:57:00+06	2026-05-15 19:02:00+06	\N	2026-06-04 05:29:46.427487+06	2026-06-04 05:29:46.427487+06
+b689f90c-e3fc-7b5d-ba10-3c1d88a77922	ab80824b-3296-4aa1-b122-79f058a73875	191ce5ce-8c20-4d34-8b0e-b22f0bd3a016	2026-05-16	OFFICE	SKUD	PRESENT	2026-05-16 09:57:00+06	2026-05-16 19:02:00+06	\N	2026-06-04 05:29:46.427487+06	2026-06-04 05:29:46.427487+06
+23a8c464-8bba-b704-3d6a-e97986deaf9b	ab80824b-3296-4aa1-b122-79f058a73875	191ce5ce-8c20-4d34-8b0e-b22f0bd3a016	2026-05-18	OFFICE	SKUD	PRESENT	2026-05-18 09:57:00+06	2026-05-18 19:02:00+06	\N	2026-06-04 05:29:46.427487+06	2026-06-04 05:29:46.427487+06
+f2aeccec-32de-2217-70a3-2991dea728b3	ab80824b-3296-4aa1-b122-79f058a73875	191ce5ce-8c20-4d34-8b0e-b22f0bd3a016	2026-05-19	OFFICE	SKUD	PRESENT	2026-05-19 09:57:00+06	2026-05-19 19:02:00+06	\N	2026-06-04 05:29:46.427487+06	2026-06-04 05:29:46.427487+06
+47878502-35e7-cafa-493c-41b0204f4379	ab80824b-3296-4aa1-b122-79f058a73875	191ce5ce-8c20-4d34-8b0e-b22f0bd3a016	2026-05-20	OFFICE	SKUD	PRESENT	2026-05-20 09:57:00+06	2026-05-20 19:02:00+06	\N	2026-06-04 05:29:46.427487+06	2026-06-04 05:29:46.427487+06
+4651d215-629d-6c07-36a8-d681da065e2c	ab80824b-3296-4aa1-b122-79f058a73875	191ce5ce-8c20-4d34-8b0e-b22f0bd3a016	2026-05-21	OFFICE	SKUD	PRESENT	2026-05-21 09:57:00+06	2026-05-21 19:02:00+06	\N	2026-06-04 05:29:46.427487+06	2026-06-04 05:29:46.427487+06
+7f471f22-c783-3a41-f089-d5dac4011863	ab80824b-3296-4aa1-b122-79f058a73875	191ce5ce-8c20-4d34-8b0e-b22f0bd3a016	2026-05-22	OFFICE	SKUD	PRESENT	2026-05-22 09:57:00+06	2026-05-22 19:02:00+06	\N	2026-06-04 05:29:46.427487+06	2026-06-04 05:29:46.427487+06
+643b9ae0-b861-4d28-affc-0dba7bec6c66	ab80824b-3296-4aa1-b122-79f058a73875	191ce5ce-8c20-4d34-8b0e-b22f0bd3a016	2026-05-25	OFFICE	SKUD	PRESENT	2026-05-25 09:57:00+06	2026-05-25 19:02:00+06	\N	2026-06-04 05:29:46.427487+06	2026-06-04 05:29:46.427487+06
+1e1a5a53-8b56-d065-cc10-122287f626ef	ab80824b-3296-4aa1-b122-79f058a73875	191ce5ce-8c20-4d34-8b0e-b22f0bd3a016	2026-05-26	OFFICE	SKUD	PRESENT	2026-05-26 09:57:00+06	2026-05-26 20:30:00+06	\N	2026-06-04 05:29:46.427487+06	2026-06-04 05:29:46.427487+06
+fb79bba5-0448-d0dd-fec7-cb86909dfdd4	ab80824b-3296-4aa1-b122-79f058a73875	191ce5ce-8c20-4d34-8b0e-b22f0bd3a016	2026-05-27	OFFICE	SKUD	PRESENT	2026-05-27 09:57:00+06	2026-05-27 19:02:00+06	\N	2026-06-04 05:29:46.427487+06	2026-06-04 05:29:46.427487+06
+c5cec565-bf79-2b51-fddc-944c76499dee	ab80824b-3296-4aa1-b122-79f058a73875	191ce5ce-8c20-4d34-8b0e-b22f0bd3a016	2026-05-28	OFFICE	SKUD	PRESENT	2026-05-28 09:57:00+06	2026-05-28 19:02:00+06	\N	2026-06-04 05:29:46.427487+06	2026-06-04 05:29:46.427487+06
+5350d080-6979-ace8-700e-c28744e6b6dd	ab80824b-3296-4aa1-b122-79f058a73875	191ce5ce-8c20-4d34-8b0e-b22f0bd3a016	2026-05-29	OFFICE	SKUD	PRESENT	2026-05-29 09:57:00+06	2026-05-29 19:02:00+06	\N	2026-06-04 05:29:46.427487+06	2026-06-04 05:29:46.427487+06
+84a2a625-1523-3017-e93e-22b37edd96eb	ab80824b-3296-4aa1-b122-79f058a73875	e312dce0-640d-9157-1a3b-6ad318e19dcf	2026-04-01	OFFICE	SKUD	PRESENT	2026-04-01 09:57:00+06	2026-04-01 19:02:00+06	\N	2026-06-04 05:29:46.427487+06	2026-06-04 05:29:46.427487+06
+469bae46-95c0-e05f-2d13-576f5e0e679c	ab80824b-3296-4aa1-b122-79f058a73875	e312dce0-640d-9157-1a3b-6ad318e19dcf	2026-04-02	OFFICE	SKUD	PRESENT	2026-04-02 09:57:00+06	2026-04-02 19:02:00+06	\N	2026-06-04 05:29:46.427487+06	2026-06-04 05:29:46.427487+06
+0323e61d-d53f-c473-2053-246266f45586	ab80824b-3296-4aa1-b122-79f058a73875	e312dce0-640d-9157-1a3b-6ad318e19dcf	2026-04-03	OFFICE	SKUD	PRESENT	2026-04-03 09:57:00+06	2026-04-03 19:02:00+06	\N	2026-06-04 05:29:46.427487+06	2026-06-04 05:29:46.427487+06
+d1f223c3-8929-a7f2-d076-f31a987dbf10	ab80824b-3296-4aa1-b122-79f058a73875	e312dce0-640d-9157-1a3b-6ad318e19dcf	2026-04-06	OFFICE	SKUD	PRESENT	2026-04-06 09:57:00+06	2026-04-06 19:02:00+06	\N	2026-06-04 05:29:46.427487+06	2026-06-04 05:29:46.427487+06
+795e7cf2-72e8-3fb7-e6fa-400ac2cea387	ab80824b-3296-4aa1-b122-79f058a73875	e312dce0-640d-9157-1a3b-6ad318e19dcf	2026-04-07	OFFICE	SKUD	PRESENT	2026-04-07 09:57:00+06	2026-04-07 19:02:00+06	\N	2026-06-04 05:29:46.427487+06	2026-06-04 05:29:46.427487+06
+affa5c10-7723-a6a1-4a4c-545cbb1a49a5	ab80824b-3296-4aa1-b122-79f058a73875	e312dce0-640d-9157-1a3b-6ad318e19dcf	2026-04-08	OFFICE	SKUD	PRESENT	2026-04-08 09:57:00+06	2026-04-08 19:02:00+06	\N	2026-06-04 05:29:46.427487+06	2026-06-04 05:29:46.427487+06
+7c9d6c37-3e15-0655-5242-4bbe6284246d	ab80824b-3296-4aa1-b122-79f058a73875	e312dce0-640d-9157-1a3b-6ad318e19dcf	2026-04-09	OFFICE	SKUD	PRESENT	2026-04-09 09:57:00+06	2026-04-09 19:02:00+06	\N	2026-06-04 05:29:46.427487+06	2026-06-04 05:29:46.427487+06
+9fddaaff-05da-0750-2c47-94f0b1a248c6	ab80824b-3296-4aa1-b122-79f058a73875	e312dce0-640d-9157-1a3b-6ad318e19dcf	2026-04-10	OFFICE	SKUD	PRESENT	2026-04-10 09:57:00+06	2026-04-10 19:02:00+06	\N	2026-06-04 05:29:46.427487+06	2026-06-04 05:29:46.427487+06
+fcc2d818-a175-d7c7-23fd-3c98c662715a	ab80824b-3296-4aa1-b122-79f058a73875	e312dce0-640d-9157-1a3b-6ad318e19dcf	2026-04-13	OFFICE	SKUD	PRESENT	2026-04-13 09:57:00+06	2026-04-13 19:02:00+06	\N	2026-06-04 05:29:46.427487+06	2026-06-04 05:29:46.427487+06
+957f24e6-c655-6319-17a8-2407fd7cd8a9	ab80824b-3296-4aa1-b122-79f058a73875	e312dce0-640d-9157-1a3b-6ad318e19dcf	2026-04-14	OFFICE	SKUD	PRESENT	2026-04-14 09:57:00+06	2026-04-14 19:02:00+06	\N	2026-06-04 05:29:46.427487+06	2026-06-04 05:29:46.427487+06
+c6c9de02-675e-711f-ed24-3c1dc2b31426	ab80824b-3296-4aa1-b122-79f058a73875	e312dce0-640d-9157-1a3b-6ad318e19dcf	2026-04-15	OFFICE	SKUD	PRESENT	2026-04-15 09:57:00+06	2026-04-15 19:02:00+06	\N	2026-06-04 05:29:46.427487+06	2026-06-04 05:29:46.427487+06
+ceed2bb3-db86-3d2a-179f-79833ae6eb76	ab80824b-3296-4aa1-b122-79f058a73875	e312dce0-640d-9157-1a3b-6ad318e19dcf	2026-04-16	OFFICE	SKUD	PRESENT	2026-04-16 09:57:00+06	2026-04-16 19:02:00+06	\N	2026-06-04 05:29:46.427487+06	2026-06-04 05:29:46.427487+06
+5b7aaca8-9556-3da6-c9be-b5128453c409	ab80824b-3296-4aa1-b122-79f058a73875	e312dce0-640d-9157-1a3b-6ad318e19dcf	2026-04-17	OFFICE	SKUD	PRESENT	2026-04-17 09:57:00+06	2026-04-17 19:02:00+06	\N	2026-06-04 05:29:46.427487+06	2026-06-04 05:29:46.427487+06
+af7057e7-1e8d-a2bd-10a9-4525c392d0b9	ab80824b-3296-4aa1-b122-79f058a73875	e312dce0-640d-9157-1a3b-6ad318e19dcf	2026-04-20	OFFICE	SKUD	PRESENT	2026-04-20 09:57:00+06	2026-04-20 19:02:00+06	\N	2026-06-04 05:29:46.427487+06	2026-06-04 05:29:46.427487+06
+24c0524e-de51-f4d0-923f-603bcbe71616	ab80824b-3296-4aa1-b122-79f058a73875	e312dce0-640d-9157-1a3b-6ad318e19dcf	2026-04-21	OFFICE	SKUD	PRESENT	2026-04-21 09:57:00+06	2026-04-21 19:02:00+06	\N	2026-06-04 05:29:46.427487+06	2026-06-04 05:29:46.427487+06
+f8bfd906-3cbf-deab-1d99-1b3962531ad7	ab80824b-3296-4aa1-b122-79f058a73875	e312dce0-640d-9157-1a3b-6ad318e19dcf	2026-04-22	OFFICE	SKUD	PRESENT	2026-04-22 09:57:00+06	2026-04-22 19:02:00+06	\N	2026-06-04 05:29:46.427487+06	2026-06-04 05:29:46.427487+06
+47222720-6f8c-8242-1b9b-fa5974a5385b	ab80824b-3296-4aa1-b122-79f058a73875	e312dce0-640d-9157-1a3b-6ad318e19dcf	2026-04-23	OFFICE	SKUD	PRESENT	2026-04-23 09:57:00+06	2026-04-23 19:02:00+06	\N	2026-06-04 05:29:46.427487+06	2026-06-04 05:29:46.427487+06
+d183eab6-e7f8-1960-b10f-f2881d1e7a25	ab80824b-3296-4aa1-b122-79f058a73875	e312dce0-640d-9157-1a3b-6ad318e19dcf	2026-04-24	OFFICE	SKUD	PRESENT	2026-04-24 09:57:00+06	2026-04-24 19:02:00+06	\N	2026-06-04 05:29:46.427487+06	2026-06-04 05:29:46.427487+06
+fb1e1d01-6b2b-c401-b34d-c51d18849266	ab80824b-3296-4aa1-b122-79f058a73875	e312dce0-640d-9157-1a3b-6ad318e19dcf	2026-04-27	OFFICE	SKUD	PRESENT	2026-04-27 09:57:00+06	2026-04-27 19:02:00+06	\N	2026-06-04 05:29:46.427487+06	2026-06-04 05:29:46.427487+06
+59a8a20b-3ea1-4907-1ea2-bacf2abc8449	ab80824b-3296-4aa1-b122-79f058a73875	e312dce0-640d-9157-1a3b-6ad318e19dcf	2026-04-28	OFFICE	SKUD	PRESENT	2026-04-28 09:57:00+06	2026-04-28 19:02:00+06	\N	2026-06-04 05:29:46.427487+06	2026-06-04 05:29:46.427487+06
+90555727-5a81-5809-0e4f-78e583204b2b	ab80824b-3296-4aa1-b122-79f058a73875	e312dce0-640d-9157-1a3b-6ad318e19dcf	2026-04-29	OFFICE	SKUD	PRESENT	2026-04-29 09:57:00+06	2026-04-29 19:02:00+06	\N	2026-06-04 05:29:46.427487+06	2026-06-04 05:29:46.427487+06
+3edcba1d-5dbf-e96a-ba43-feaa21a3e444	ab80824b-3296-4aa1-b122-79f058a73875	e312dce0-640d-9157-1a3b-6ad318e19dcf	2026-04-30	OFFICE	SKUD	PRESENT	2026-04-30 09:57:00+06	2026-04-30 19:02:00+06	\N	2026-06-04 05:29:46.427487+06	2026-06-04 05:29:46.427487+06
+c6c8b106-d939-bc80-1148-e9f24650fe95	ab80824b-3296-4aa1-b122-79f058a73875	e312dce0-640d-9157-1a3b-6ad318e19dcf	2026-05-04	OFFICE	SKUD	PRESENT	2026-05-04 09:57:00+06	2026-05-04 19:02:00+06	\N	2026-06-04 05:29:46.427487+06	2026-06-04 05:29:46.427487+06
+18ee04df-c426-d05a-ef4f-09566471157c	ab80824b-3296-4aa1-b122-79f058a73875	e312dce0-640d-9157-1a3b-6ad318e19dcf	2026-05-05	OFFICE	SKUD	PRESENT	2026-05-05 09:57:00+06	2026-05-05 19:02:00+06	\N	2026-06-04 05:29:46.427487+06	2026-06-04 05:29:46.427487+06
+1073ffc6-f7a8-420b-d81d-72ccc5c274a2	ab80824b-3296-4aa1-b122-79f058a73875	e312dce0-640d-9157-1a3b-6ad318e19dcf	2026-05-06	OFFICE	SKUD	PRESENT	2026-05-06 09:57:00+06	2026-05-06 19:02:00+06	\N	2026-06-04 05:29:46.427487+06	2026-06-04 05:29:46.427487+06
+a4a379a6-313f-5209-7ee1-558889dbd3cc	ab80824b-3296-4aa1-b122-79f058a73875	e312dce0-640d-9157-1a3b-6ad318e19dcf	2026-05-08	OFFICE	SKUD	PRESENT	2026-05-08 09:57:00+06	2026-05-08 19:02:00+06	\N	2026-06-04 05:29:46.427487+06	2026-06-04 05:29:46.427487+06
+2b6a999a-f4a5-f017-4542-a56a1c150904	ab80824b-3296-4aa1-b122-79f058a73875	e312dce0-640d-9157-1a3b-6ad318e19dcf	2026-05-11	OFFICE	SKUD	PRESENT	2026-05-11 09:57:00+06	2026-05-11 19:02:00+06	\N	2026-06-04 05:29:46.427487+06	2026-06-04 05:29:46.427487+06
+57c7f8ca-20ee-fbe1-f5a9-1d67f7d49ddd	ab80824b-3296-4aa1-b122-79f058a73875	e312dce0-640d-9157-1a3b-6ad318e19dcf	2026-05-12	OFFICE	SKUD	PRESENT	2026-05-12 09:57:00+06	2026-05-12 19:02:00+06	\N	2026-06-04 05:29:46.427487+06	2026-06-04 05:29:46.427487+06
+05b932bc-45b0-b69b-f25d-4a1278759dbf	ab80824b-3296-4aa1-b122-79f058a73875	e312dce0-640d-9157-1a3b-6ad318e19dcf	2026-05-13	OFFICE	SKUD	PRESENT	2026-05-13 09:57:00+06	2026-05-13 19:02:00+06	\N	2026-06-04 05:29:46.427487+06	2026-06-04 05:29:46.427487+06
+3f484776-e7cd-9ce9-7b53-038b0e2a86a9	ab80824b-3296-4aa1-b122-79f058a73875	e312dce0-640d-9157-1a3b-6ad318e19dcf	2026-05-14	OFFICE	SKUD	PRESENT	2026-05-14 09:57:00+06	2026-05-14 19:02:00+06	\N	2026-06-04 05:29:46.427487+06	2026-06-04 05:29:46.427487+06
+6be25fc5-e71e-7d86-a419-d0209aea6dc0	ab80824b-3296-4aa1-b122-79f058a73875	e312dce0-640d-9157-1a3b-6ad318e19dcf	2026-05-15	OFFICE	SKUD	PRESENT	2026-05-15 09:57:00+06	2026-05-15 19:02:00+06	\N	2026-06-04 05:29:46.427487+06	2026-06-04 05:29:46.427487+06
+589de03a-1edb-c31d-31e1-f238ab22a6ce	ab80824b-3296-4aa1-b122-79f058a73875	e312dce0-640d-9157-1a3b-6ad318e19dcf	2026-05-16	OFFICE	SKUD	PRESENT	2026-05-16 09:57:00+06	2026-05-16 19:02:00+06	\N	2026-06-04 05:29:46.427487+06	2026-06-04 05:29:46.427487+06
+907c7d3b-7596-98a2-07c2-4d9903275ccc	ab80824b-3296-4aa1-b122-79f058a73875	e312dce0-640d-9157-1a3b-6ad318e19dcf	2026-05-18	OFFICE	SKUD	PRESENT	2026-05-18 09:57:00+06	2026-05-18 19:02:00+06	\N	2026-06-04 05:29:46.427487+06	2026-06-04 05:29:46.427487+06
+434b67e5-2c41-ba86-d4cc-d6f8ba32d651	ab80824b-3296-4aa1-b122-79f058a73875	e312dce0-640d-9157-1a3b-6ad318e19dcf	2026-05-19	OFFICE	SKUD	PRESENT	2026-05-19 09:57:00+06	2026-05-19 19:02:00+06	\N	2026-06-04 05:29:46.427487+06	2026-06-04 05:29:46.427487+06
+a056f3e2-b8bf-2fb5-ebc3-b892791f4bd8	ab80824b-3296-4aa1-b122-79f058a73875	e312dce0-640d-9157-1a3b-6ad318e19dcf	2026-05-20	OFFICE	SKUD	PRESENT	2026-05-20 09:57:00+06	2026-05-20 19:02:00+06	\N	2026-06-04 05:29:46.427487+06	2026-06-04 05:29:46.427487+06
+d4a035eb-ba8a-43de-d01e-9e11b64285d3	ab80824b-3296-4aa1-b122-79f058a73875	e312dce0-640d-9157-1a3b-6ad318e19dcf	2026-05-21	OFFICE	SKUD	PRESENT	2026-05-21 09:57:00+06	2026-05-21 19:02:00+06	\N	2026-06-04 05:29:46.427487+06	2026-06-04 05:29:46.427487+06
+a44270a5-37d4-46c0-e3c9-0f86c2d7f1c7	ab80824b-3296-4aa1-b122-79f058a73875	e312dce0-640d-9157-1a3b-6ad318e19dcf	2026-05-22	OFFICE	SKUD	PRESENT	2026-05-22 09:57:00+06	2026-05-22 19:02:00+06	\N	2026-06-04 05:29:46.427487+06	2026-06-04 05:29:46.427487+06
+e106301a-152e-f0ef-3fe9-fd75d573396a	ab80824b-3296-4aa1-b122-79f058a73875	e312dce0-640d-9157-1a3b-6ad318e19dcf	2026-05-25	OFFICE	SKUD	PRESENT	2026-05-25 09:57:00+06	2026-05-25 19:02:00+06	\N	2026-06-04 05:29:46.427487+06	2026-06-04 05:29:46.427487+06
+b317642d-157e-7a3c-f815-2446db3dd941	ab80824b-3296-4aa1-b122-79f058a73875	e312dce0-640d-9157-1a3b-6ad318e19dcf	2026-05-26	OFFICE	SKUD	PRESENT	2026-05-26 09:57:00+06	2026-05-26 19:02:00+06	\N	2026-06-04 05:29:46.427487+06	2026-06-04 05:29:46.427487+06
+150f2e5c-3f03-443b-43ae-7d2df7f3c18d	ab80824b-3296-4aa1-b122-79f058a73875	e312dce0-640d-9157-1a3b-6ad318e19dcf	2026-05-27	OFFICE	SKUD	PRESENT	2026-05-27 09:57:00+06	2026-05-27 19:02:00+06	\N	2026-06-04 05:29:46.427487+06	2026-06-04 05:29:46.427487+06
+7cc5c18e-2e86-ad1f-5965-b65f7c339cd1	ab80824b-3296-4aa1-b122-79f058a73875	e312dce0-640d-9157-1a3b-6ad318e19dcf	2026-05-28	OFFICE	SKUD	PRESENT	2026-05-28 09:57:00+06	2026-05-28 19:02:00+06	\N	2026-06-04 05:29:46.427487+06	2026-06-04 05:29:46.427487+06
+607d6a1a-d258-5c5b-fc6c-e7396176ee9a	ab80824b-3296-4aa1-b122-79f058a73875	e312dce0-640d-9157-1a3b-6ad318e19dcf	2026-05-29	OFFICE	SKUD	PRESENT	2026-05-29 09:57:00+06	2026-05-29 19:02:00+06	\N	2026-06-04 05:29:46.427487+06	2026-06-04 05:29:46.427487+06
+77beb5b1-a2a3-5f17-0181-0b7fa2dce390	ab80824b-3296-4aa1-b122-79f058a73875	b6bc7f59-28dc-64d2-9c5b-04530e9bf5a3	2026-04-01	OFFICE	SKUD	PRESENT	2026-04-01 09:57:00+06	2026-04-01 19:02:00+06	\N	2026-06-04 05:29:46.427487+06	2026-06-04 05:29:46.427487+06
+6fb2111e-dfd2-2dab-f3b9-f663b7dca918	ab80824b-3296-4aa1-b122-79f058a73875	b6bc7f59-28dc-64d2-9c5b-04530e9bf5a3	2026-04-02	OFFICE	SKUD	PRESENT	2026-04-02 09:57:00+06	2026-04-02 19:02:00+06	\N	2026-06-04 05:29:46.427487+06	2026-06-04 05:29:46.427487+06
+c8d93022-50f0-1141-423b-82eb0fb1d9ac	ab80824b-3296-4aa1-b122-79f058a73875	b6bc7f59-28dc-64d2-9c5b-04530e9bf5a3	2026-04-03	OFFICE	SKUD	PRESENT	2026-04-03 09:57:00+06	2026-04-03 19:02:00+06	\N	2026-06-04 05:29:46.427487+06	2026-06-04 05:29:46.427487+06
+68e2eb63-82f4-becf-4f59-4c11e7acf96e	ab80824b-3296-4aa1-b122-79f058a73875	b6bc7f59-28dc-64d2-9c5b-04530e9bf5a3	2026-04-06	OFFICE	SKUD	PRESENT	2026-04-06 09:57:00+06	2026-04-06 19:02:00+06	\N	2026-06-04 05:29:46.427487+06	2026-06-04 05:29:46.427487+06
+73b5860d-5af9-e229-9240-e5da60ec69db	ab80824b-3296-4aa1-b122-79f058a73875	b6bc7f59-28dc-64d2-9c5b-04530e9bf5a3	2026-04-07	OFFICE	SKUD	PRESENT	2026-04-07 09:57:00+06	2026-04-07 19:02:00+06	\N	2026-06-04 05:29:46.427487+06	2026-06-04 05:29:46.427487+06
+5e9ddeb8-f796-52ce-3bce-16a7a1a6200f	ab80824b-3296-4aa1-b122-79f058a73875	b6bc7f59-28dc-64d2-9c5b-04530e9bf5a3	2026-04-08	OFFICE	SKUD	PRESENT	2026-04-08 09:57:00+06	2026-04-08 19:02:00+06	\N	2026-06-04 05:29:46.427487+06	2026-06-04 05:29:46.427487+06
+530e528a-de12-9465-bc10-4b93d6b91f15	ab80824b-3296-4aa1-b122-79f058a73875	b6bc7f59-28dc-64d2-9c5b-04530e9bf5a3	2026-04-09	OFFICE	SKUD	PRESENT	2026-04-09 09:57:00+06	2026-04-09 19:02:00+06	\N	2026-06-04 05:29:46.427487+06	2026-06-04 05:29:46.427487+06
+bcd0b0de-b672-4450-9066-b3869af93bc8	ab80824b-3296-4aa1-b122-79f058a73875	b6bc7f59-28dc-64d2-9c5b-04530e9bf5a3	2026-04-10	OFFICE	SKUD	PRESENT	2026-04-10 09:57:00+06	2026-04-10 19:02:00+06	\N	2026-06-04 05:29:46.427487+06	2026-06-04 05:29:46.427487+06
+20941bf0-b3c5-1643-245e-f6342eda2148	ab80824b-3296-4aa1-b122-79f058a73875	b6bc7f59-28dc-64d2-9c5b-04530e9bf5a3	2026-04-13	OFFICE	SKUD	PRESENT	2026-04-13 09:57:00+06	2026-04-13 19:02:00+06	\N	2026-06-04 05:29:46.427487+06	2026-06-04 05:29:46.427487+06
+fa904743-7b29-08d7-7205-825050a0d55c	ab80824b-3296-4aa1-b122-79f058a73875	b6bc7f59-28dc-64d2-9c5b-04530e9bf5a3	2026-04-14	OFFICE	SKUD	PRESENT	2026-04-14 09:57:00+06	2026-04-14 19:02:00+06	\N	2026-06-04 05:29:46.427487+06	2026-06-04 05:29:46.427487+06
+bc9c9b83-9a43-ceb9-afa8-a18d3e33a963	ab80824b-3296-4aa1-b122-79f058a73875	b6bc7f59-28dc-64d2-9c5b-04530e9bf5a3	2026-04-15	OFFICE	SKUD	PRESENT	2026-04-15 09:57:00+06	2026-04-15 19:02:00+06	\N	2026-06-04 05:29:46.427487+06	2026-06-04 05:29:46.427487+06
+6840d547-b0d9-afa3-161a-89c25ddfe06b	ab80824b-3296-4aa1-b122-79f058a73875	b6bc7f59-28dc-64d2-9c5b-04530e9bf5a3	2026-04-16	OFFICE	SKUD	PRESENT	2026-04-16 09:57:00+06	2026-04-16 19:02:00+06	\N	2026-06-04 05:29:46.427487+06	2026-06-04 05:29:46.427487+06
+4ee456ef-b36a-67b7-2974-57cd0328c6ec	ab80824b-3296-4aa1-b122-79f058a73875	b6bc7f59-28dc-64d2-9c5b-04530e9bf5a3	2026-04-17	OFFICE	SKUD	ABSENT	\N	\N	No SKUD events; marked absent	2026-06-04 05:29:46.427487+06	2026-06-04 05:29:46.427487+06
+c2edbba9-37c7-cd03-5f3f-ba312a055fd1	ab80824b-3296-4aa1-b122-79f058a73875	b6bc7f59-28dc-64d2-9c5b-04530e9bf5a3	2026-04-20	OFFICE	SKUD	PRESENT	2026-04-20 09:57:00+06	2026-04-20 19:02:00+06	\N	2026-06-04 05:29:46.427487+06	2026-06-04 05:29:46.427487+06
+6ca96b6d-47d4-d78d-1151-dc670675020c	ab80824b-3296-4aa1-b122-79f058a73875	b6bc7f59-28dc-64d2-9c5b-04530e9bf5a3	2026-04-21	OFFICE	SKUD	PRESENT	2026-04-21 09:57:00+06	2026-04-21 19:02:00+06	\N	2026-06-04 05:29:46.427487+06	2026-06-04 05:29:46.427487+06
+842d37c9-d382-a9df-665e-fa10306994a4	ab80824b-3296-4aa1-b122-79f058a73875	b6bc7f59-28dc-64d2-9c5b-04530e9bf5a3	2026-04-22	OFFICE	SKUD	PRESENT	2026-04-22 09:57:00+06	2026-04-22 19:02:00+06	\N	2026-06-04 05:29:46.427487+06	2026-06-04 05:29:46.427487+06
+a1f2b5bc-7377-ec46-f005-f1c0a9b33d0f	ab80824b-3296-4aa1-b122-79f058a73875	b6bc7f59-28dc-64d2-9c5b-04530e9bf5a3	2026-04-23	OFFICE	SKUD	PRESENT	2026-04-23 09:57:00+06	2026-04-23 19:02:00+06	\N	2026-06-04 05:29:46.427487+06	2026-06-04 05:29:46.427487+06
+fb719fe0-68a0-6688-747b-81cbb058d5ca	ab80824b-3296-4aa1-b122-79f058a73875	b6bc7f59-28dc-64d2-9c5b-04530e9bf5a3	2026-04-24	OFFICE	SKUD	PRESENT	2026-04-24 09:57:00+06	2026-04-24 19:02:00+06	\N	2026-06-04 05:29:46.427487+06	2026-06-04 05:29:46.427487+06
+fe7ff4ab-14ec-4c00-bc76-d35f8f6f6eb7	ab80824b-3296-4aa1-b122-79f058a73875	b6bc7f59-28dc-64d2-9c5b-04530e9bf5a3	2026-04-27	OFFICE	SKUD	PRESENT	2026-04-27 09:57:00+06	2026-04-27 19:02:00+06	\N	2026-06-04 05:29:46.427487+06	2026-06-04 05:29:46.427487+06
+9708cf35-d3d9-0487-7219-2ddc9073897d	ab80824b-3296-4aa1-b122-79f058a73875	b6bc7f59-28dc-64d2-9c5b-04530e9bf5a3	2026-04-28	OFFICE	SKUD	PRESENT	2026-04-28 09:57:00+06	2026-04-28 19:02:00+06	\N	2026-06-04 05:29:46.427487+06	2026-06-04 05:29:46.427487+06
+86c0308f-89c1-672f-06c9-1ff622c37ca5	ab80824b-3296-4aa1-b122-79f058a73875	b6bc7f59-28dc-64d2-9c5b-04530e9bf5a3	2026-04-29	OFFICE	SKUD	ABSENT	\N	\N	No SKUD events; marked absent	2026-06-04 05:29:46.427487+06	2026-06-04 05:29:46.427487+06
+da42526c-59e9-2cd3-e8d1-1d5e0f81597a	ab80824b-3296-4aa1-b122-79f058a73875	b6bc7f59-28dc-64d2-9c5b-04530e9bf5a3	2026-04-30	OFFICE	SKUD	PRESENT	2026-04-30 09:57:00+06	2026-04-30 19:02:00+06	\N	2026-06-04 05:29:46.427487+06	2026-06-04 05:29:46.427487+06
+fce7ac36-c4fe-7d49-b622-fcbb844c2666	ab80824b-3296-4aa1-b122-79f058a73875	b6bc7f59-28dc-64d2-9c5b-04530e9bf5a3	2026-05-04	OFFICE	SKUD	PRESENT	2026-05-04 09:57:00+06	2026-05-04 19:02:00+06	\N	2026-06-04 05:29:46.427487+06	2026-06-04 05:29:46.427487+06
+936d23d9-6606-6100-f8ed-02eadf01d435	ab80824b-3296-4aa1-b122-79f058a73875	b6bc7f59-28dc-64d2-9c5b-04530e9bf5a3	2026-05-05	OFFICE	SKUD	PRESENT	2026-05-05 09:57:00+06	2026-05-05 19:02:00+06	\N	2026-06-04 05:29:46.427487+06	2026-06-04 05:29:46.427487+06
+638c1d70-01de-22d2-edec-14dedd46dcb0	ab80824b-3296-4aa1-b122-79f058a73875	b6bc7f59-28dc-64d2-9c5b-04530e9bf5a3	2026-05-06	OFFICE	SKUD	PRESENT	2026-05-06 09:57:00+06	2026-05-06 19:02:00+06	\N	2026-06-04 05:29:46.427487+06	2026-06-04 05:29:46.427487+06
+3671d2af-0784-f4b9-bca5-68dfe4864ddc	ab80824b-3296-4aa1-b122-79f058a73875	b6bc7f59-28dc-64d2-9c5b-04530e9bf5a3	2026-05-08	OFFICE	SKUD	PRESENT	2026-05-08 09:57:00+06	2026-05-08 19:02:00+06	\N	2026-06-04 05:29:46.427487+06	2026-06-04 05:29:46.427487+06
+8f48dd31-f458-4219-bc00-3e2726bbd360	ab80824b-3296-4aa1-b122-79f058a73875	b6bc7f59-28dc-64d2-9c5b-04530e9bf5a3	2026-05-11	OFFICE	SKUD	PRESENT	2026-05-11 09:57:00+06	2026-05-11 19:02:00+06	\N	2026-06-04 05:29:46.427487+06	2026-06-04 05:29:46.427487+06
+83963110-6821-57ab-ab75-d395ffb42184	ab80824b-3296-4aa1-b122-79f058a73875	b6bc7f59-28dc-64d2-9c5b-04530e9bf5a3	2026-05-12	OFFICE	SKUD	PRESENT	2026-05-12 09:57:00+06	2026-05-12 19:02:00+06	\N	2026-06-04 05:29:46.427487+06	2026-06-04 05:29:46.427487+06
+fb130bd2-1a0d-3710-ce72-df5eee2aebf4	ab80824b-3296-4aa1-b122-79f058a73875	b6bc7f59-28dc-64d2-9c5b-04530e9bf5a3	2026-05-13	SICK_LEAVE	SYSTEM	ON_LEAVE	\N	\N	Approved leave	2026-06-04 05:29:46.427487+06	2026-06-04 05:29:46.427487+06
+ac24ca2b-dacc-37f0-2aa7-7b26700a4263	ab80824b-3296-4aa1-b122-79f058a73875	b6bc7f59-28dc-64d2-9c5b-04530e9bf5a3	2026-05-14	SICK_LEAVE	SYSTEM	ON_LEAVE	\N	\N	Approved leave	2026-06-04 05:29:46.427487+06	2026-06-04 05:29:46.427487+06
+88db5378-8ce9-ae1c-38a8-7920198a061a	ab80824b-3296-4aa1-b122-79f058a73875	b6bc7f59-28dc-64d2-9c5b-04530e9bf5a3	2026-05-15	OFFICE	SKUD	PRESENT	2026-05-15 09:57:00+06	2026-05-15 19:02:00+06	\N	2026-06-04 05:29:46.427487+06	2026-06-04 05:29:46.427487+06
+3608c2c6-6661-fe88-7a0b-6bc4faf398bc	ab80824b-3296-4aa1-b122-79f058a73875	b6bc7f59-28dc-64d2-9c5b-04530e9bf5a3	2026-05-16	OFFICE	SKUD	PRESENT	2026-05-16 09:57:00+06	2026-05-16 19:02:00+06	\N	2026-06-04 05:29:46.427487+06	2026-06-04 05:29:46.427487+06
+0501962a-70b9-a99d-a82c-70901176c28d	ab80824b-3296-4aa1-b122-79f058a73875	b6bc7f59-28dc-64d2-9c5b-04530e9bf5a3	2026-05-18	OFFICE	SKUD	PRESENT	2026-05-18 09:57:00+06	2026-05-18 19:02:00+06	\N	2026-06-04 05:29:46.427487+06	2026-06-04 05:29:46.427487+06
+d7d78f6c-ea76-0266-9149-2da8705e1e9e	ab80824b-3296-4aa1-b122-79f058a73875	b6bc7f59-28dc-64d2-9c5b-04530e9bf5a3	2026-05-19	OFFICE	SKUD	PRESENT	2026-05-19 09:57:00+06	2026-05-19 19:02:00+06	\N	2026-06-04 05:29:46.427487+06	2026-06-04 05:29:46.427487+06
+73dbc6b0-477d-77a9-aa8f-e0e467ebb696	ab80824b-3296-4aa1-b122-79f058a73875	b6bc7f59-28dc-64d2-9c5b-04530e9bf5a3	2026-05-20	OFFICE	SKUD	PRESENT	2026-05-20 09:57:00+06	2026-05-20 19:02:00+06	\N	2026-06-04 05:29:46.427487+06	2026-06-04 05:29:46.427487+06
+f01fdd58-13df-4088-08e4-ab2b4f63c38e	ab80824b-3296-4aa1-b122-79f058a73875	b6bc7f59-28dc-64d2-9c5b-04530e9bf5a3	2026-05-21	OFFICE	SKUD	PRESENT	2026-05-21 09:57:00+06	2026-05-21 19:02:00+06	\N	2026-06-04 05:29:46.427487+06	2026-06-04 05:29:46.427487+06
+b14ded8f-eefa-ef35-f8ef-3d98a1b21839	ab80824b-3296-4aa1-b122-79f058a73875	b6bc7f59-28dc-64d2-9c5b-04530e9bf5a3	2026-05-22	OFFICE	SKUD	PRESENT	2026-05-22 09:57:00+06	2026-05-22 19:02:00+06	\N	2026-06-04 05:29:46.427487+06	2026-06-04 05:29:46.427487+06
+1fc5204d-59e0-9ad7-ba04-7e4e21f67df2	ab80824b-3296-4aa1-b122-79f058a73875	b6bc7f59-28dc-64d2-9c5b-04530e9bf5a3	2026-05-25	OFFICE	SKUD	PRESENT	2026-05-25 09:57:00+06	2026-05-25 19:02:00+06	\N	2026-06-04 05:29:46.427487+06	2026-06-04 05:29:46.427487+06
+7dd42600-7bca-4894-7b28-d4ac86189e09	ab80824b-3296-4aa1-b122-79f058a73875	b6bc7f59-28dc-64d2-9c5b-04530e9bf5a3	2026-05-26	OFFICE	SKUD	PRESENT	2026-05-26 09:57:00+06	2026-05-26 19:02:00+06	\N	2026-06-04 05:29:46.427487+06	2026-06-04 05:29:46.427487+06
+9ea8ddba-a71e-4ba4-ab75-a6a4ccbe74db	ab80824b-3296-4aa1-b122-79f058a73875	b6bc7f59-28dc-64d2-9c5b-04530e9bf5a3	2026-05-27	OFFICE	SKUD	PRESENT	2026-05-27 09:57:00+06	2026-05-27 19:02:00+06	\N	2026-06-04 05:29:46.427487+06	2026-06-04 05:29:46.427487+06
+d7209712-57ec-e5d5-2cad-1a5aa3d4679a	ab80824b-3296-4aa1-b122-79f058a73875	b6bc7f59-28dc-64d2-9c5b-04530e9bf5a3	2026-05-28	OFFICE	SKUD	PRESENT	2026-05-28 09:57:00+06	2026-05-28 19:02:00+06	\N	2026-06-04 05:29:46.427487+06	2026-06-04 05:29:46.427487+06
+390ce838-1b1c-ddb4-3ce9-1b96e4bfdfc9	ab80824b-3296-4aa1-b122-79f058a73875	b6bc7f59-28dc-64d2-9c5b-04530e9bf5a3	2026-05-29	OFFICE	SKUD	PRESENT	2026-05-29 09:57:00+06	2026-05-29 19:02:00+06	\N	2026-06-04 05:29:46.427487+06	2026-06-04 05:29:46.427487+06
+b158196d-3c03-6ac3-14c9-f6c27054b810	ab80824b-3296-4aa1-b122-79f058a73875	62f042fb-d0b7-7687-942e-acf7fe237432	2026-04-01	OFFICE	SKUD	PRESENT	2026-04-01 09:57:00+06	2026-04-01 19:02:00+06	\N	2026-06-04 05:29:46.427487+06	2026-06-04 05:29:46.427487+06
+ea33cd13-0a02-f670-a18b-070be7dab7ee	ab80824b-3296-4aa1-b122-79f058a73875	62f042fb-d0b7-7687-942e-acf7fe237432	2026-04-02	OFFICE	SKUD	PRESENT	2026-04-02 09:57:00+06	2026-04-02 19:02:00+06	\N	2026-06-04 05:29:46.427487+06	2026-06-04 05:29:46.427487+06
+ac868f22-2d8f-e1fc-5767-4ecdd92c466a	ab80824b-3296-4aa1-b122-79f058a73875	62f042fb-d0b7-7687-942e-acf7fe237432	2026-04-03	OFFICE	SKUD	PRESENT	2026-04-03 09:57:00+06	2026-04-03 19:02:00+06	\N	2026-06-04 05:29:46.427487+06	2026-06-04 05:29:46.427487+06
+6ed83bea-fb74-ad75-514a-2ca0918b2035	ab80824b-3296-4aa1-b122-79f058a73875	62f042fb-d0b7-7687-942e-acf7fe237432	2026-04-06	OFFICE	SKUD	PRESENT	2026-04-06 09:57:00+06	2026-04-06 19:02:00+06	\N	2026-06-04 05:29:46.427487+06	2026-06-04 05:29:46.427487+06
+6fce8be3-03ba-b40c-c05e-2a91b3500002	ab80824b-3296-4aa1-b122-79f058a73875	62f042fb-d0b7-7687-942e-acf7fe237432	2026-04-07	OFFICE	SKUD	PRESENT	2026-04-07 09:57:00+06	2026-04-07 19:02:00+06	\N	2026-06-04 05:29:46.427487+06	2026-06-04 05:29:46.427487+06
+a7db1a28-5ec5-2220-b3f4-e47875e860e5	ab80824b-3296-4aa1-b122-79f058a73875	62f042fb-d0b7-7687-942e-acf7fe237432	2026-04-08	OFFICE	SKUD	PRESENT	2026-04-08 09:57:00+06	2026-04-08 19:02:00+06	\N	2026-06-04 05:29:46.427487+06	2026-06-04 05:29:46.427487+06
+d14e741e-d0b3-d2a3-734c-ddda75d5744c	ab80824b-3296-4aa1-b122-79f058a73875	62f042fb-d0b7-7687-942e-acf7fe237432	2026-04-09	OFFICE	SKUD	PRESENT	2026-04-09 09:57:00+06	2026-04-09 19:02:00+06	\N	2026-06-04 05:29:46.427487+06	2026-06-04 05:29:46.427487+06
+e90f6359-e792-72ba-0563-e89158302fbe	ab80824b-3296-4aa1-b122-79f058a73875	62f042fb-d0b7-7687-942e-acf7fe237432	2026-04-10	OFFICE	SKUD	PRESENT	2026-04-10 09:57:00+06	2026-04-10 19:02:00+06	\N	2026-06-04 05:29:46.427487+06	2026-06-04 05:29:46.427487+06
+7fe6f65b-5fd0-7645-d3e1-36f8028c6077	ab80824b-3296-4aa1-b122-79f058a73875	62f042fb-d0b7-7687-942e-acf7fe237432	2026-04-13	OFFICE	SKUD	PRESENT	2026-04-13 09:57:00+06	2026-04-13 19:02:00+06	\N	2026-06-04 05:29:46.427487+06	2026-06-04 05:29:46.427487+06
+73320f0d-9f00-ade0-7c65-b4be23b71a7d	ab80824b-3296-4aa1-b122-79f058a73875	62f042fb-d0b7-7687-942e-acf7fe237432	2026-04-14	OFFICE	SKUD	PRESENT	2026-04-14 09:57:00+06	2026-04-14 19:02:00+06	\N	2026-06-04 05:29:46.427487+06	2026-06-04 05:29:46.427487+06
+fe41daed-4fa5-535e-be77-60136122ae63	ab80824b-3296-4aa1-b122-79f058a73875	62f042fb-d0b7-7687-942e-acf7fe237432	2026-04-15	OFFICE	SKUD	LATE	2026-04-15 10:29:00+06	2026-04-15 19:02:00+06	Traffic delay	2026-06-04 05:29:46.427487+06	2026-06-04 05:29:46.427487+06
+5ebbf14e-b85e-3c86-b160-755855219fc9	ab80824b-3296-4aa1-b122-79f058a73875	62f042fb-d0b7-7687-942e-acf7fe237432	2026-04-16	OFFICE	SKUD	PRESENT	2026-04-16 09:57:00+06	2026-04-16 19:02:00+06	\N	2026-06-04 05:29:46.427487+06	2026-06-04 05:29:46.427487+06
+6728c4d2-27a0-1d45-3951-f7184493cb37	ab80824b-3296-4aa1-b122-79f058a73875	62f042fb-d0b7-7687-942e-acf7fe237432	2026-04-17	OFFICE	SKUD	PRESENT	2026-04-17 09:57:00+06	2026-04-17 19:02:00+06	\N	2026-06-04 05:29:46.427487+06	2026-06-04 05:29:46.427487+06
+fba70819-bc26-6278-5fde-5a68b14fce25	ab80824b-3296-4aa1-b122-79f058a73875	62f042fb-d0b7-7687-942e-acf7fe237432	2026-04-20	OFFICE	SKUD	PRESENT	2026-04-20 09:57:00+06	2026-04-20 19:02:00+06	\N	2026-06-04 05:29:46.427487+06	2026-06-04 05:29:46.427487+06
+ff9c51b8-d174-d480-51ff-d9b15688cf42	ab80824b-3296-4aa1-b122-79f058a73875	62f042fb-d0b7-7687-942e-acf7fe237432	2026-04-21	OFFICE	SKUD	PRESENT	2026-04-21 09:57:00+06	2026-04-21 19:02:00+06	\N	2026-06-04 05:29:46.427487+06	2026-06-04 05:29:46.427487+06
+434ca616-90dc-5774-c21e-9275e7f3072e	ab80824b-3296-4aa1-b122-79f058a73875	62f042fb-d0b7-7687-942e-acf7fe237432	2026-04-22	OFFICE	SKUD	PRESENT	2026-04-22 09:57:00+06	2026-04-22 19:02:00+06	\N	2026-06-04 05:29:46.427487+06	2026-06-04 05:29:46.427487+06
+2d06aeb6-615c-1dee-a87d-ab6964cd6674	ab80824b-3296-4aa1-b122-79f058a73875	62f042fb-d0b7-7687-942e-acf7fe237432	2026-04-23	OFFICE	SKUD	PRESENT	2026-04-23 09:57:00+06	2026-04-23 19:02:00+06	\N	2026-06-04 05:29:46.427487+06	2026-06-04 05:29:46.427487+06
+a0bf1322-eac8-73a4-5f55-e49b64e38df5	ab80824b-3296-4aa1-b122-79f058a73875	62f042fb-d0b7-7687-942e-acf7fe237432	2026-04-24	OFFICE	SKUD	PRESENT	2026-04-24 09:57:00+06	2026-04-24 19:02:00+06	\N	2026-06-04 05:29:46.427487+06	2026-06-04 05:29:46.427487+06
+83b689c4-b2be-ef80-15f6-04441a9f974c	ab80824b-3296-4aa1-b122-79f058a73875	62f042fb-d0b7-7687-942e-acf7fe237432	2026-04-27	OFFICE	SKUD	PRESENT	2026-04-27 09:57:00+06	2026-04-27 19:02:00+06	\N	2026-06-04 05:29:46.427487+06	2026-06-04 05:29:46.427487+06
+bb00a93c-43de-61be-edc5-cc2a6980c3e9	ab80824b-3296-4aa1-b122-79f058a73875	62f042fb-d0b7-7687-942e-acf7fe237432	2026-04-28	OFFICE	SKUD	PRESENT	2026-04-28 09:57:00+06	2026-04-28 19:02:00+06	\N	2026-06-04 05:29:46.427487+06	2026-06-04 05:29:46.427487+06
+360e93e4-139b-17ea-3b8b-6e4c35b4e5cd	ab80824b-3296-4aa1-b122-79f058a73875	62f042fb-d0b7-7687-942e-acf7fe237432	2026-04-29	OFFICE	SKUD	PRESENT	2026-04-29 09:57:00+06	2026-04-29 19:02:00+06	\N	2026-06-04 05:29:46.427487+06	2026-06-04 05:29:46.427487+06
+d04b356b-fd10-b655-3287-5a4fd7eb3e45	ab80824b-3296-4aa1-b122-79f058a73875	62f042fb-d0b7-7687-942e-acf7fe237432	2026-04-30	OFFICE	SKUD	PRESENT	2026-04-30 09:57:00+06	2026-04-30 19:02:00+06	\N	2026-06-04 05:29:46.427487+06	2026-06-04 05:29:46.427487+06
+210bdc29-e92e-4c82-220b-27b2de231a56	ab80824b-3296-4aa1-b122-79f058a73875	62f042fb-d0b7-7687-942e-acf7fe237432	2026-05-04	OFFICE	SKUD	PRESENT	2026-05-04 09:57:00+06	2026-05-04 19:02:00+06	\N	2026-06-04 05:29:46.427487+06	2026-06-04 05:29:46.427487+06
+2e8cb825-505c-de67-f885-0995c3618745	ab80824b-3296-4aa1-b122-79f058a73875	62f042fb-d0b7-7687-942e-acf7fe237432	2026-05-05	OFFICE	SKUD	LATE	2026-05-05 10:29:00+06	2026-05-05 19:02:00+06	Traffic delay	2026-06-04 05:29:46.427487+06	2026-06-04 05:29:46.427487+06
+154c6dda-034a-afd4-59b8-e0cb81d9c284	ab80824b-3296-4aa1-b122-79f058a73875	62f042fb-d0b7-7687-942e-acf7fe237432	2026-05-06	OFFICE	SKUD	PRESENT	2026-05-06 09:57:00+06	2026-05-06 19:02:00+06	\N	2026-06-04 05:29:46.427487+06	2026-06-04 05:29:46.427487+06
+ce73f8fc-fb92-edf2-18a0-b74abdfa5dcd	ab80824b-3296-4aa1-b122-79f058a73875	62f042fb-d0b7-7687-942e-acf7fe237432	2026-05-08	OFFICE	SKUD	PRESENT	2026-05-08 09:57:00+06	2026-05-08 19:02:00+06	\N	2026-06-04 05:29:46.427487+06	2026-06-04 05:29:46.427487+06
+49d7b312-c2a4-a4da-d5ed-902e5647dd02	ab80824b-3296-4aa1-b122-79f058a73875	62f042fb-d0b7-7687-942e-acf7fe237432	2026-05-11	OFFICE	SKUD	PRESENT	2026-05-11 09:57:00+06	2026-05-11 19:02:00+06	\N	2026-06-04 05:29:46.427487+06	2026-06-04 05:29:46.427487+06
+528c3cd4-deff-0d7b-6cac-d0b5145584d8	ab80824b-3296-4aa1-b122-79f058a73875	62f042fb-d0b7-7687-942e-acf7fe237432	2026-05-12	OFFICE	SKUD	PRESENT	2026-05-12 09:57:00+06	2026-05-12 19:02:00+06	\N	2026-06-04 05:29:46.427487+06	2026-06-04 05:29:46.427487+06
+d1f20a0e-8b63-e52a-38b2-eb4edef46f4d	ab80824b-3296-4aa1-b122-79f058a73875	62f042fb-d0b7-7687-942e-acf7fe237432	2026-05-13	OFFICE	SKUD	PRESENT	2026-05-13 09:57:00+06	2026-05-13 19:02:00+06	\N	2026-06-04 05:29:46.427487+06	2026-06-04 05:29:46.427487+06
+6c57e2f3-8a3a-5641-6158-ce75e3e25115	ab80824b-3296-4aa1-b122-79f058a73875	62f042fb-d0b7-7687-942e-acf7fe237432	2026-05-14	OFFICE	SKUD	PRESENT	2026-05-14 09:57:00+06	2026-05-14 19:02:00+06	\N	2026-06-04 05:29:46.427487+06	2026-06-04 05:29:46.427487+06
+860a0dd9-f0d9-147e-a98b-ba12b6f11ccf	ab80824b-3296-4aa1-b122-79f058a73875	62f042fb-d0b7-7687-942e-acf7fe237432	2026-05-15	OFFICE	SKUD	PRESENT	2026-05-15 09:57:00+06	2026-05-15 19:02:00+06	\N	2026-06-04 05:29:46.427487+06	2026-06-04 05:29:46.427487+06
+87d25e88-4fb6-dd0c-a98b-38051b73621e	ab80824b-3296-4aa1-b122-79f058a73875	62f042fb-d0b7-7687-942e-acf7fe237432	2026-05-16	OFFICE	SKUD	PRESENT	2026-05-16 09:57:00+06	2026-05-16 19:02:00+06	\N	2026-06-04 05:29:46.427487+06	2026-06-04 05:29:46.427487+06
+5d995e21-ea83-98fd-57ef-d1f619bd5d5b	ab80824b-3296-4aa1-b122-79f058a73875	62f042fb-d0b7-7687-942e-acf7fe237432	2026-05-18	OFFICE	SKUD	PRESENT	2026-05-18 09:57:00+06	2026-05-18 19:02:00+06	\N	2026-06-04 05:29:46.427487+06	2026-06-04 05:29:46.427487+06
+42503ee5-7e95-8435-a1e6-9f56d0ac1b6d	ab80824b-3296-4aa1-b122-79f058a73875	62f042fb-d0b7-7687-942e-acf7fe237432	2026-05-19	OFFICE	SKUD	PRESENT	2026-05-19 09:57:00+06	2026-05-19 19:02:00+06	\N	2026-06-04 05:29:46.427487+06	2026-06-04 05:29:46.427487+06
+28dc59a0-f9f7-1cba-3c0b-c1b57d1bf5c0	ab80824b-3296-4aa1-b122-79f058a73875	62f042fb-d0b7-7687-942e-acf7fe237432	2026-05-20	OFFICE	SKUD	PRESENT	2026-05-20 09:57:00+06	2026-05-20 19:02:00+06	\N	2026-06-04 05:29:46.427487+06	2026-06-04 05:29:46.427487+06
+515911f1-fad6-8553-17ac-d28ebc32d75e	ab80824b-3296-4aa1-b122-79f058a73875	62f042fb-d0b7-7687-942e-acf7fe237432	2026-05-21	OFFICE	SKUD	PRESENT	2026-05-21 09:57:00+06	2026-05-21 19:02:00+06	\N	2026-06-04 05:29:46.427487+06	2026-06-04 05:29:46.427487+06
+17d9d261-cff5-85cf-5a07-2d44945d1918	ab80824b-3296-4aa1-b122-79f058a73875	62f042fb-d0b7-7687-942e-acf7fe237432	2026-05-22	OFFICE	SKUD	PRESENT	2026-05-22 09:57:00+06	2026-05-22 19:02:00+06	\N	2026-06-04 05:29:46.427487+06	2026-06-04 05:29:46.427487+06
+6bdf27fd-5d18-cce6-04fb-a53afcea18e2	ab80824b-3296-4aa1-b122-79f058a73875	62f042fb-d0b7-7687-942e-acf7fe237432	2026-05-25	OFFICE	SKUD	PRESENT	2026-05-25 09:57:00+06	2026-05-25 19:02:00+06	\N	2026-06-04 05:29:46.427487+06	2026-06-04 05:29:46.427487+06
+95c4be00-8289-cd6d-08a4-c6e2c27a933e	ab80824b-3296-4aa1-b122-79f058a73875	62f042fb-d0b7-7687-942e-acf7fe237432	2026-05-26	OFFICE	SKUD	PRESENT	2026-05-26 09:57:00+06	2026-05-26 19:02:00+06	\N	2026-06-04 05:29:46.427487+06	2026-06-04 05:29:46.427487+06
+42a6e809-ff40-4923-fa31-f4f4b30b7992	ab80824b-3296-4aa1-b122-79f058a73875	62f042fb-d0b7-7687-942e-acf7fe237432	2026-05-27	OFFICE	SKUD	PRESENT	2026-05-27 09:57:00+06	2026-05-27 19:02:00+06	\N	2026-06-04 05:29:46.427487+06	2026-06-04 05:29:46.427487+06
+30a8ca6a-01e9-94d8-7f1d-47d34a57c547	ab80824b-3296-4aa1-b122-79f058a73875	62f042fb-d0b7-7687-942e-acf7fe237432	2026-05-28	OFFICE	SKUD	PRESENT	2026-05-28 09:57:00+06	2026-05-28 19:02:00+06	\N	2026-06-04 05:29:46.427487+06	2026-06-04 05:29:46.427487+06
+eb6ff4ad-e9f5-3bad-08b5-c2a64fb7321c	ab80824b-3296-4aa1-b122-79f058a73875	62f042fb-d0b7-7687-942e-acf7fe237432	2026-05-29	OFFICE	SKUD	PRESENT	2026-05-29 09:57:00+06	2026-05-29 19:02:00+06	\N	2026-06-04 05:29:46.427487+06	2026-06-04 05:29:46.427487+06
+30ffec3c-8269-2670-e9a9-e2d6d5936dac	ab80824b-3296-4aa1-b122-79f058a73875	1846012f-cc30-ec19-8a7f-21078a087c75	2026-04-01	OFFICE	SKUD	PRESENT	2026-04-01 11:04:00+06	2026-04-01 20:06:00+06	\N	2026-06-04 05:29:46.427487+06	2026-06-04 05:29:46.427487+06
+d7669b10-530b-e428-c947-d841fbc5df4c	ab80824b-3296-4aa1-b122-79f058a73875	1846012f-cc30-ec19-8a7f-21078a087c75	2026-04-02	OFFICE	SKUD	PRESENT	2026-04-02 11:04:00+06	2026-04-02 20:06:00+06	\N	2026-06-04 05:29:46.427487+06	2026-06-04 05:29:46.427487+06
+ffc9dba9-035f-1ab4-4216-69a9c1bf66fc	ab80824b-3296-4aa1-b122-79f058a73875	1846012f-cc30-ec19-8a7f-21078a087c75	2026-04-03	OFFICE	SKUD	PRESENT	2026-04-03 11:04:00+06	2026-04-03 20:06:00+06	\N	2026-06-04 05:29:46.427487+06	2026-06-04 05:29:46.427487+06
+7132c244-b208-9b87-8bec-cf4ad4b11230	ab80824b-3296-4aa1-b122-79f058a73875	1846012f-cc30-ec19-8a7f-21078a087c75	2026-04-06	OFFICE	SKUD	PRESENT	2026-04-06 11:04:00+06	2026-04-06 20:06:00+06	\N	2026-06-04 05:29:46.427487+06	2026-06-04 05:29:46.427487+06
+9e0d3cfc-5b1e-6c60-f59a-f7c9de899e73	ab80824b-3296-4aa1-b122-79f058a73875	1846012f-cc30-ec19-8a7f-21078a087c75	2026-04-07	OFFICE	SKUD	PRESENT	2026-04-07 11:04:00+06	2026-04-07 20:06:00+06	\N	2026-06-04 05:29:46.427487+06	2026-06-04 05:29:46.427487+06
+ffd1126d-b179-de91-5c29-a690dc8452ea	ab80824b-3296-4aa1-b122-79f058a73875	1846012f-cc30-ec19-8a7f-21078a087c75	2026-04-08	OFFICE	SKUD	PRESENT	2026-04-08 11:04:00+06	2026-04-08 20:06:00+06	\N	2026-06-04 05:29:46.427487+06	2026-06-04 05:29:46.427487+06
+edd13854-ddaa-9991-8fd3-7ec967dec0ad	ab80824b-3296-4aa1-b122-79f058a73875	1846012f-cc30-ec19-8a7f-21078a087c75	2026-04-09	OFFICE	SKUD	PRESENT	2026-04-09 11:04:00+06	2026-04-09 20:06:00+06	\N	2026-06-04 05:29:46.427487+06	2026-06-04 05:29:46.427487+06
+09e9adec-a242-1c88-db75-082552dd5059	ab80824b-3296-4aa1-b122-79f058a73875	1846012f-cc30-ec19-8a7f-21078a087c75	2026-04-10	OFFICE	SKUD	PRESENT	2026-04-10 11:04:00+06	2026-04-10 20:06:00+06	\N	2026-06-04 05:29:46.427487+06	2026-06-04 05:29:46.427487+06
+aeb08c4d-129f-a856-9064-a97570c4ab62	ab80824b-3296-4aa1-b122-79f058a73875	1846012f-cc30-ec19-8a7f-21078a087c75	2026-04-13	OFFICE	SKUD	PRESENT	2026-04-13 11:04:00+06	2026-04-13 20:06:00+06	\N	2026-06-04 05:29:46.427487+06	2026-06-04 05:29:46.427487+06
+ad56ff3e-5068-c01d-96b4-b03114005476	ab80824b-3296-4aa1-b122-79f058a73875	1846012f-cc30-ec19-8a7f-21078a087c75	2026-04-14	OFFICE	SKUD	PRESENT	2026-04-14 11:04:00+06	2026-04-14 20:06:00+06	\N	2026-06-04 05:29:46.427487+06	2026-06-04 05:29:46.427487+06
+977d2fa3-77e0-9a22-f31e-7b32994f5a14	ab80824b-3296-4aa1-b122-79f058a73875	1846012f-cc30-ec19-8a7f-21078a087c75	2026-04-15	OFFICE	SKUD	PRESENT	2026-04-15 11:04:00+06	2026-04-15 20:06:00+06	\N	2026-06-04 05:29:46.427487+06	2026-06-04 05:29:46.427487+06
+e5155267-d320-7da3-6b2e-cff1122c4842	ab80824b-3296-4aa1-b122-79f058a73875	1846012f-cc30-ec19-8a7f-21078a087c75	2026-04-16	OFFICE	SKUD	PRESENT	2026-04-16 11:04:00+06	2026-04-16 20:06:00+06	\N	2026-06-04 05:29:46.427487+06	2026-06-04 05:29:46.427487+06
+9244de98-c1db-f8c4-35fa-1cca40ab8a50	ab80824b-3296-4aa1-b122-79f058a73875	1846012f-cc30-ec19-8a7f-21078a087c75	2026-04-17	OFFICE	SKUD	PRESENT	2026-04-17 11:04:00+06	2026-04-17 20:06:00+06	\N	2026-06-04 05:29:46.427487+06	2026-06-04 05:29:46.427487+06
+fcd3ce08-9c88-656f-0e35-7b93756de922	ab80824b-3296-4aa1-b122-79f058a73875	1846012f-cc30-ec19-8a7f-21078a087c75	2026-04-20	OFFICE	SKUD	PRESENT	2026-04-20 11:04:00+06	2026-04-20 20:06:00+06	\N	2026-06-04 05:29:46.427487+06	2026-06-04 05:29:46.427487+06
+2f860136-dcb8-4f65-81a0-6af017532984	ab80824b-3296-4aa1-b122-79f058a73875	1846012f-cc30-ec19-8a7f-21078a087c75	2026-04-21	OFFICE	SKUD	PRESENT	2026-04-21 11:04:00+06	2026-04-21 20:06:00+06	\N	2026-06-04 05:29:46.427487+06	2026-06-04 05:29:46.427487+06
+9b11385e-6cfe-f4a8-ca89-4f7ec73d3950	ab80824b-3296-4aa1-b122-79f058a73875	1846012f-cc30-ec19-8a7f-21078a087c75	2026-04-22	OFFICE	SKUD	PRESENT	2026-04-22 11:04:00+06	2026-04-22 20:06:00+06	\N	2026-06-04 05:29:46.427487+06	2026-06-04 05:29:46.427487+06
+d6d7ab76-31f2-65ae-d314-d32f59a91284	ab80824b-3296-4aa1-b122-79f058a73875	1846012f-cc30-ec19-8a7f-21078a087c75	2026-04-23	OFFICE	SKUD	PRESENT	2026-04-23 11:04:00+06	2026-04-23 20:06:00+06	\N	2026-06-04 05:29:46.427487+06	2026-06-04 05:29:46.427487+06
+8ce6d621-08d3-d9ff-cbeb-5818b1e233a8	ab80824b-3296-4aa1-b122-79f058a73875	1846012f-cc30-ec19-8a7f-21078a087c75	2026-04-24	OFFICE	SKUD	PRESENT	2026-04-24 11:04:00+06	2026-04-24 20:06:00+06	\N	2026-06-04 05:29:46.427487+06	2026-06-04 05:29:46.427487+06
+a444d75a-63f8-1f47-da61-ecf802ac8864	ab80824b-3296-4aa1-b122-79f058a73875	1846012f-cc30-ec19-8a7f-21078a087c75	2026-04-27	OFFICE	SKUD	PRESENT	2026-04-27 11:04:00+06	2026-04-27 20:06:00+06	\N	2026-06-04 05:29:46.427487+06	2026-06-04 05:29:46.427487+06
+f65b024a-78ae-ee4b-2d15-0ac4bd7fbef9	ab80824b-3296-4aa1-b122-79f058a73875	1846012f-cc30-ec19-8a7f-21078a087c75	2026-04-28	OFFICE	SKUD	PRESENT	2026-04-28 11:04:00+06	2026-04-28 20:06:00+06	\N	2026-06-04 05:29:46.427487+06	2026-06-04 05:29:46.427487+06
+32ca337b-0c94-9e30-ad61-fd66635f7658	ab80824b-3296-4aa1-b122-79f058a73875	1846012f-cc30-ec19-8a7f-21078a087c75	2026-04-29	OFFICE	SKUD	PRESENT	2026-04-29 11:04:00+06	2026-04-29 20:06:00+06	\N	2026-06-04 05:29:46.427487+06	2026-06-04 05:29:46.427487+06
+c67eae6a-7a93-07cc-2f9a-d6ec28dd769e	ab80824b-3296-4aa1-b122-79f058a73875	1846012f-cc30-ec19-8a7f-21078a087c75	2026-04-30	OFFICE	SKUD	PRESENT	2026-04-30 11:04:00+06	2026-04-30 20:06:00+06	\N	2026-06-04 05:29:46.427487+06	2026-06-04 05:29:46.427487+06
+eb2dba01-0fad-3981-6f8f-b9082621d18b	ab80824b-3296-4aa1-b122-79f058a73875	1846012f-cc30-ec19-8a7f-21078a087c75	2026-05-04	OFFICE	SKUD	PRESENT	2026-05-04 11:04:00+06	2026-05-04 20:06:00+06	\N	2026-06-04 05:29:46.427487+06	2026-06-04 05:29:46.427487+06
+777114cd-f15f-3008-b6b9-7cc045f3e6ec	ab80824b-3296-4aa1-b122-79f058a73875	1846012f-cc30-ec19-8a7f-21078a087c75	2026-05-05	OFFICE	SKUD	PRESENT	2026-05-05 11:04:00+06	2026-05-05 20:06:00+06	\N	2026-06-04 05:29:46.427487+06	2026-06-04 05:29:46.427487+06
+ee1ffcaa-6455-7d0d-f7e6-d41ee9525544	ab80824b-3296-4aa1-b122-79f058a73875	1846012f-cc30-ec19-8a7f-21078a087c75	2026-05-06	OFFICE	SKUD	PRESENT	2026-05-06 11:04:00+06	2026-05-06 20:06:00+06	\N	2026-06-04 05:29:46.427487+06	2026-06-04 05:29:46.427487+06
+90fb0ff9-114a-4095-fe57-905c96ee109c	ab80824b-3296-4aa1-b122-79f058a73875	1846012f-cc30-ec19-8a7f-21078a087c75	2026-05-08	OFFICE	SKUD	PRESENT	2026-05-08 11:04:00+06	2026-05-08 20:06:00+06	\N	2026-06-04 05:29:46.427487+06	2026-06-04 05:29:46.427487+06
+19e4f773-d391-d05b-d120-2878ff1da930	ab80824b-3296-4aa1-b122-79f058a73875	1846012f-cc30-ec19-8a7f-21078a087c75	2026-05-11	OFFICE	SKUD	PRESENT	2026-05-11 11:04:00+06	2026-05-11 20:06:00+06	\N	2026-06-04 05:29:46.427487+06	2026-06-04 05:29:46.427487+06
+dacfdf8b-2f90-bb5f-054d-e51f0949d89c	ab80824b-3296-4aa1-b122-79f058a73875	1846012f-cc30-ec19-8a7f-21078a087c75	2026-05-12	OFFICE	SKUD	PRESENT	2026-05-12 11:04:00+06	2026-05-12 20:06:00+06	\N	2026-06-04 05:29:46.427487+06	2026-06-04 05:29:46.427487+06
+be021bda-afab-5865-a887-f66949f2eb00	ab80824b-3296-4aa1-b122-79f058a73875	1846012f-cc30-ec19-8a7f-21078a087c75	2026-05-13	OFFICE	SKUD	PRESENT	2026-05-13 11:04:00+06	2026-05-13 20:06:00+06	\N	2026-06-04 05:29:46.427487+06	2026-06-04 05:29:46.427487+06
+20929713-ac81-f4bb-55cb-84b8605ca5c5	ab80824b-3296-4aa1-b122-79f058a73875	1846012f-cc30-ec19-8a7f-21078a087c75	2026-05-14	OFFICE	SKUD	PRESENT	2026-05-14 11:04:00+06	2026-05-14 20:06:00+06	\N	2026-06-04 05:29:46.427487+06	2026-06-04 05:29:46.427487+06
+435354bb-431a-5c0f-a3fc-3dc34f54dd26	ab80824b-3296-4aa1-b122-79f058a73875	1846012f-cc30-ec19-8a7f-21078a087c75	2026-05-15	OFFICE	SKUD	PRESENT	2026-05-15 11:04:00+06	2026-05-15 20:06:00+06	\N	2026-06-04 05:29:46.427487+06	2026-06-04 05:29:46.427487+06
+07296340-493e-8e4c-f58c-4c06589f1ebc	ab80824b-3296-4aa1-b122-79f058a73875	1846012f-cc30-ec19-8a7f-21078a087c75	2026-05-16	OFFICE	SKUD	PRESENT	2026-05-16 11:04:00+06	2026-05-16 20:06:00+06	\N	2026-06-04 05:29:46.427487+06	2026-06-04 05:29:46.427487+06
+13c13d04-e9be-70b9-a20d-7a219b585f0d	ab80824b-3296-4aa1-b122-79f058a73875	1846012f-cc30-ec19-8a7f-21078a087c75	2026-05-18	OFFICE	SKUD	PRESENT	2026-05-18 11:04:00+06	2026-05-18 20:06:00+06	\N	2026-06-04 05:29:46.427487+06	2026-06-04 05:29:46.427487+06
+deb78d70-fc2a-00ce-2569-0bead811b71d	ab80824b-3296-4aa1-b122-79f058a73875	1846012f-cc30-ec19-8a7f-21078a087c75	2026-05-19	OFFICE	SKUD	PRESENT	2026-05-19 11:04:00+06	2026-05-19 20:06:00+06	\N	2026-06-04 05:29:46.427487+06	2026-06-04 05:29:46.427487+06
+e8f65dbe-75c0-5749-78ff-08b7fb3af592	ab80824b-3296-4aa1-b122-79f058a73875	1846012f-cc30-ec19-8a7f-21078a087c75	2026-05-20	REMOTE	MANUAL	PRESENT	2026-05-20 11:04:00+06	2026-05-20 20:06:00+06	\N	2026-06-04 05:29:46.427487+06	2026-06-04 05:29:46.427487+06
+a1823ebc-5918-f345-e6a2-162c07c7cb96	ab80824b-3296-4aa1-b122-79f058a73875	1846012f-cc30-ec19-8a7f-21078a087c75	2026-05-21	REMOTE	MANUAL	PRESENT	2026-05-21 11:04:00+06	2026-05-21 20:06:00+06	\N	2026-06-04 05:29:46.427487+06	2026-06-04 05:29:46.427487+06
+710ad973-aafe-4804-161f-9c88c278e8bb	ab80824b-3296-4aa1-b122-79f058a73875	1846012f-cc30-ec19-8a7f-21078a087c75	2026-05-22	REMOTE	MANUAL	PRESENT	2026-05-22 11:04:00+06	2026-05-22 20:06:00+06	\N	2026-06-04 05:29:46.427487+06	2026-06-04 05:29:46.427487+06
+52fc04f7-043a-0f5e-6080-2fcced4ee94c	ab80824b-3296-4aa1-b122-79f058a73875	1846012f-cc30-ec19-8a7f-21078a087c75	2026-05-25	OFFICE	SKUD	PRESENT	2026-05-25 11:04:00+06	2026-05-25 20:06:00+06	\N	2026-06-04 05:29:46.427487+06	2026-06-04 05:29:46.427487+06
+bf1b3cca-bb8e-e1bd-645f-abb38a00153a	ab80824b-3296-4aa1-b122-79f058a73875	1846012f-cc30-ec19-8a7f-21078a087c75	2026-05-26	OFFICE	SKUD	PRESENT	2026-05-26 11:04:00+06	2026-05-26 20:06:00+06	\N	2026-06-04 05:29:46.427487+06	2026-06-04 05:29:46.427487+06
+3bb8baba-2588-f068-5930-18c1e45ce2f3	ab80824b-3296-4aa1-b122-79f058a73875	1846012f-cc30-ec19-8a7f-21078a087c75	2026-05-27	OFFICE	SKUD	PRESENT	2026-05-27 11:04:00+06	2026-05-27 20:06:00+06	\N	2026-06-04 05:29:46.427487+06	2026-06-04 05:29:46.427487+06
+e450476c-7fd2-3d54-12a3-3f5375e2d3b6	ab80824b-3296-4aa1-b122-79f058a73875	1846012f-cc30-ec19-8a7f-21078a087c75	2026-05-28	OFFICE	SKUD	PRESENT	2026-05-28 11:04:00+06	2026-05-28 20:06:00+06	\N	2026-06-04 05:29:46.427487+06	2026-06-04 05:29:46.427487+06
+6feb1cab-89b1-2aaf-b88a-bdc3eb5bb9e1	ab80824b-3296-4aa1-b122-79f058a73875	1846012f-cc30-ec19-8a7f-21078a087c75	2026-05-29	OFFICE	SKUD	PRESENT	2026-05-29 11:04:00+06	2026-05-29 20:06:00+06	\N	2026-06-04 05:29:46.427487+06	2026-06-04 05:29:46.427487+06
+\.
+
+
+--
+-- Data for Name: cities; Type: TABLE DATA; Schema: public; Owner: postgres
+--
+
+COPY public.cities (id, name) FROM stdin;
+1	Almaty
+2	Astana
+3	Shymkent
+4	Karaganda
+5	Aktobe
+6	Taraz
+7	Pavlodar
+8	Oskemen
+9	Semey
+10	Atyrau
+11	Kostanay
+12	Kyzylorda
+13	Petropavl
+14	Oral
+15	Aktau
+16	Temirtau
+17	Turkestan
+18	Ekibastuz
+19	Rudny
+20	Zhezkazgan
+21	Balqash
+22	Taldykorgan
+23	Kentau
+24	Zhanaozen
+25	Stepnogorsk
+\.
+
+
+--
+-- Data for Name: consents; Type: TABLE DATA; Schema: public; Owner: postgres
+--
+
+COPY public.consents (id, user_id, org_id, document_type, version, created_at) FROM stdin;
+d470778d-ef8d-4dee-93df-7083b9e2153e	6458a4b8-7031-70fe-b6c0-921f1903783f	ab80824b-3296-4aa1-b122-79f058a73875	PRIVACY_POLICY	0.9	2026-06-04 05:19:00.308129+06
+c8605f95-9c10-478d-8989-c0b6deea2ebb	6458a4b8-7031-70fe-b6c0-921f1903783f	ab80824b-3296-4aa1-b122-79f058a73875	TERMS_AND_CONDITIONS	0.9	2026-06-04 05:19:00.309592+06
+adcb9c2d-1968-4680-ae73-1fdab3b3cdf5	6458a4b8-7031-70fe-b6c0-921f1903783f	ab80824b-3296-4aa1-b122-79f058a73875	PRIVACY_POLICY	1.0	2026-06-04 05:19:00.309845+06
+db4e6346-ff22-43e2-a8cd-180ddceb5a23	6458a4b8-7031-70fe-b6c0-921f1903783f	ab80824b-3296-4aa1-b122-79f058a73875	TERMS_AND_CONDITIONS	1.0	2026-06-04 05:19:00.310057+06
+e85c8488-cb52-662d-e749-1005a98c00d6	6458a4b8-7031-70fe-b6c0-921f1903783f	ab80824b-3296-4aa1-b122-79f058a73875	PRIVACY_POLICY	0.9	2026-04-01 10:20:00+06
+72e32a33-340d-5d4f-4343-88a3df9174c2	6458a4b8-7031-70fe-b6c0-921f1903783f	ab80824b-3296-4aa1-b122-79f058a73875	TERMS_AND_CONDITIONS	0.9	2026-04-01 10:20:00+06
+16e68a69-f1d8-2fd5-3050-6615ca9b2700	6458a4b8-7031-70fe-b6c0-921f1903783f	ab80824b-3296-4aa1-b122-79f058a73875	PRIVACY_POLICY	1.0	2026-04-01 10:20:00+06
+0215bbad-bbe6-623c-023d-e6ac39e5034b	6458a4b8-7031-70fe-b6c0-921f1903783f	ab80824b-3296-4aa1-b122-79f058a73875	TERMS_AND_CONDITIONS	1.0	2026-04-01 10:20:00+06
+b2668d45-d12f-df34-bea8-3c053d1a14bd	34e8a4a8-1001-7045-2027-0ce681ca4789	ab80824b-3296-4aa1-b122-79f058a73875	PRIVACY_POLICY	0.9	2026-04-01 10:20:00+06
+9c411049-ba1d-18ec-176f-19a7981f2477	34e8a4a8-1001-7045-2027-0ce681ca4789	ab80824b-3296-4aa1-b122-79f058a73875	TERMS_AND_CONDITIONS	0.9	2026-04-01 10:20:00+06
+834d497e-eccb-2514-1b2d-61ca284a6cea	34e8a4a8-1001-7045-2027-0ce681ca4789	ab80824b-3296-4aa1-b122-79f058a73875	PRIVACY_POLICY	1.0	2026-04-01 10:20:00+06
+c73b47f7-83bb-b548-db23-a25b8ad5c1c6	34e8a4a8-1001-7045-2027-0ce681ca4789	ab80824b-3296-4aa1-b122-79f058a73875	TERMS_AND_CONDITIONS	1.0	2026-04-01 10:20:00+06
+a108fb59-b59b-c9a3-0fac-b5174b857caa	34383408-0001-7097-7ccb-cec085c50bda	ab80824b-3296-4aa1-b122-79f058a73875	PRIVACY_POLICY	0.9	2026-04-01 10:20:00+06
+fe5de4d9-9a8d-70a0-7b9d-d61042c98cbe	34383408-0001-7097-7ccb-cec085c50bda	ab80824b-3296-4aa1-b122-79f058a73875	TERMS_AND_CONDITIONS	0.9	2026-04-01 10:20:00+06
+a59a69b8-445d-c581-3cab-535d0ed5c7c2	34383408-0001-7097-7ccb-cec085c50bda	ab80824b-3296-4aa1-b122-79f058a73875	PRIVACY_POLICY	1.0	2026-04-01 10:20:00+06
+3990e83b-1ac1-1d1b-13ac-89b31ce95f3b	34383408-0001-7097-7ccb-cec085c50bda	ab80824b-3296-4aa1-b122-79f058a73875	TERMS_AND_CONDITIONS	1.0	2026-04-01 10:20:00+06
+c281eda6-ebf4-7c8b-21eb-9f4ba129fb1b	5b8be9b4-e404-95c1-39af-93eee9566b35	ab80824b-3296-4aa1-b122-79f058a73875	PRIVACY_POLICY	0.9	2026-04-01 10:20:00+06
+09982437-2191-5e71-e7d8-084668ea1d09	5b8be9b4-e404-95c1-39af-93eee9566b35	ab80824b-3296-4aa1-b122-79f058a73875	TERMS_AND_CONDITIONS	0.9	2026-04-01 10:20:00+06
+2c6c8cef-7fb0-4e08-48a7-256d5a800795	5b8be9b4-e404-95c1-39af-93eee9566b35	ab80824b-3296-4aa1-b122-79f058a73875	PRIVACY_POLICY	1.0	2026-04-01 10:20:00+06
+d88cebd2-8747-32fb-14fa-e2a2d18c034c	5b8be9b4-e404-95c1-39af-93eee9566b35	ab80824b-3296-4aa1-b122-79f058a73875	TERMS_AND_CONDITIONS	1.0	2026-04-01 10:20:00+06
+6fd99876-6cc6-e48e-3ede-533cd3773e52	784c1a9a-e98d-4627-941f-18abe63de2c1	ab80824b-3296-4aa1-b122-79f058a73875	PRIVACY_POLICY	0.9	2026-04-01 10:20:00+06
+36880bfa-6af0-b209-fe85-51756b0580a4	784c1a9a-e98d-4627-941f-18abe63de2c1	ab80824b-3296-4aa1-b122-79f058a73875	TERMS_AND_CONDITIONS	0.9	2026-04-01 10:20:00+06
+ca1d173c-2174-e277-0ae5-252b71194d9b	784c1a9a-e98d-4627-941f-18abe63de2c1	ab80824b-3296-4aa1-b122-79f058a73875	PRIVACY_POLICY	1.0	2026-04-01 10:20:00+06
+4b6f7ab0-9e0b-2aba-05f9-ad7b6f0b6cd9	784c1a9a-e98d-4627-941f-18abe63de2c1	ab80824b-3296-4aa1-b122-79f058a73875	TERMS_AND_CONDITIONS	1.0	2026-04-01 10:20:00+06
+b5bc4070-2d34-8aa8-0f04-6156bbc6b2be	b6ef0eaa-04b8-dc28-8a83-d3ffbfd00922	ab80824b-3296-4aa1-b122-79f058a73875	PRIVACY_POLICY	0.9	2026-04-01 10:20:00+06
+2b17fcda-64e7-3b2e-df5e-9f09b635363d	b6ef0eaa-04b8-dc28-8a83-d3ffbfd00922	ab80824b-3296-4aa1-b122-79f058a73875	TERMS_AND_CONDITIONS	0.9	2026-04-01 10:20:00+06
+13866127-7507-3240-5a44-f49a73b51c9f	b6ef0eaa-04b8-dc28-8a83-d3ffbfd00922	ab80824b-3296-4aa1-b122-79f058a73875	PRIVACY_POLICY	1.0	2026-04-01 10:20:00+06
+ff302ff9-771a-e4aa-8416-2c52be5ebfed	b6ef0eaa-04b8-dc28-8a83-d3ffbfd00922	ab80824b-3296-4aa1-b122-79f058a73875	TERMS_AND_CONDITIONS	1.0	2026-04-01 10:20:00+06
+af5d817f-eb4f-be0c-b416-1d01ed3e4778	5ca169e8-e12e-dbd0-4f26-2ff4e786d976	ab80824b-3296-4aa1-b122-79f058a73875	PRIVACY_POLICY	0.9	2026-04-01 10:20:00+06
+c0ab57a6-1b1e-8854-7190-1399a52dac41	5ca169e8-e12e-dbd0-4f26-2ff4e786d976	ab80824b-3296-4aa1-b122-79f058a73875	TERMS_AND_CONDITIONS	0.9	2026-04-01 10:20:00+06
+c23c03d3-51fb-037d-dbb3-f521e800fa98	5ca169e8-e12e-dbd0-4f26-2ff4e786d976	ab80824b-3296-4aa1-b122-79f058a73875	PRIVACY_POLICY	1.0	2026-04-01 10:20:00+06
+0bde55a8-0d31-492c-fe2c-057d4265bbd0	5ca169e8-e12e-dbd0-4f26-2ff4e786d976	ab80824b-3296-4aa1-b122-79f058a73875	TERMS_AND_CONDITIONS	1.0	2026-04-01 10:20:00+06
+cae5c225-46ce-a2df-5ee0-d0dbefcc9c70	35aaebe5-98db-015b-addf-bc1385556e98	ab80824b-3296-4aa1-b122-79f058a73875	PRIVACY_POLICY	0.9	2026-04-01 10:20:00+06
+9b4db02a-8935-de78-f375-51e03ec354c3	35aaebe5-98db-015b-addf-bc1385556e98	ab80824b-3296-4aa1-b122-79f058a73875	TERMS_AND_CONDITIONS	0.9	2026-04-01 10:20:00+06
+cb864b37-b41c-c478-65bc-3f139ec93561	35aaebe5-98db-015b-addf-bc1385556e98	ab80824b-3296-4aa1-b122-79f058a73875	PRIVACY_POLICY	1.0	2026-04-01 10:20:00+06
+0add9f64-7b5d-44cb-0710-6a36bf014cd7	35aaebe5-98db-015b-addf-bc1385556e98	ab80824b-3296-4aa1-b122-79f058a73875	TERMS_AND_CONDITIONS	1.0	2026-04-01 10:20:00+06
+\.
+
+
+--
+-- Data for Name: departments; Type: TABLE DATA; Schema: public; Owner: postgres
+--
+
+COPY public.departments (id, org_id, name) FROM stdin;
+3c73a024-af7e-213f-e4af-14d3d42a7bbd	ab80824b-3296-4aa1-b122-79f058a73875	Executive Office
+10464782-4d96-45c7-ad3f-d71de3948929	ab80824b-3296-4aa1-b122-79f058a73875	Software Engineering
+a3143328-1a03-2d71-aa04-525e04abde11	ab80824b-3296-4aa1-b122-79f058a73875	People Operations
+3ad139ed-eb94-1a59-4411-75ad89c442e6	ab80824b-3296-4aa1-b122-79f058a73875	Finance and Administration
+2794c99a-d173-8a91-25e2-a120684e4ded	ab80824b-3296-4aa1-b122-79f058a73875	Growth and Marketing
+82305c3e-e7ed-3676-3b30-5d0ae9e94566	ab80824b-3296-4aa1-b122-79f058a73875	Sales
+ac4821bf-a0ef-543a-c065-70f567a3653f	ab80824b-3296-4aa1-b122-79f058a73875	Operations
+\.
+
+
+--
+-- Data for Name: documents; Type: TABLE DATA; Schema: public; Owner: postgres
+--
+
+COPY public.documents (id, type, version, url, is_active, created_at) FROM stdin;
+a90c3977-704a-4b24-9274-35dbfc1049c9	PRIVACY_POLICY	0.9	https://s3.amazonaws.com/formedic/privacy_policy_v1.0.pdf	t	2026-03-28 12:36:27.035316+06
+1c1d5fd5-3cef-43b1-98cc-58fb02d37204	TERMS_AND_CONDITIONS	0.9	https://s3.amazonaws.com/formedic/terms_v1.0.pdf	t	2026-03-28 12:36:27.035316+06
+55555555-0000-0000-0000-000000000001	PRIVACY_POLICY	1.0	https://example.com/legal/privacy-policy-v1.pdf	t	2026-04-01 10:00:00+06
+55555555-0000-0000-0000-000000000002	TERMS_AND_CONDITIONS	1.0	https://example.com/legal/terms-v1.pdf	t	2026-04-01 10:00:00+06
+\.
+
+
+--
+-- Data for Name: employees; Type: TABLE DATA; Schema: public; Owner: postgres
+--
+
+COPY public.employees (id, org_id, user_id, department_id, position_id, role, salary_rate, status, hire_date, termination_date) FROM stdin;
+33f9e677-d27f-3997-aab5-ff7013710e53	ab80824b-3296-4aa1-b122-79f058a73875	6458a4b8-7031-70fe-b6c0-921f1903783f	3c73a024-af7e-213f-e4af-14d3d42a7bbd	f726b086-dc47-11c8-3610-dd99552cce50	SysAdmin	1500000.00	Active	2026-04-01	\N
+fc8a3817-f4ff-4789-89fe-1960d74b8830	ab80824b-3296-4aa1-b122-79f058a73875	34e8a4a8-1001-7045-2027-0ce681ca4789	3ad139ed-eb94-1a59-4411-75ad89c442e6	45fa9411-069c-d671-d5eb-7ac4025c2b9e	Admin	900000.00	Active	2026-04-03	\N
+191ce5ce-8c20-4d34-8b0e-b22f0bd3a016	ab80824b-3296-4aa1-b122-79f058a73875	34383408-0001-7097-7ccb-cec085c50bda	10464782-4d96-45c7-ad3f-d71de3948929	bae25622-d9bb-4673-8bba-b94abfce928b	Frontend Developer	650000.00	Active	2026-04-08	\N
+e312dce0-640d-9157-1a3b-6ad318e19dcf	ab80824b-3296-4aa1-b122-79f058a73875	5b8be9b4-e404-95c1-39af-93eee9566b35	a3143328-1a03-2d71-aa04-525e04abde11	618cc2ae-a767-3773-2386-7962e6bce78f	HR Manager	780000.00	Active	2026-04-05	\N
+b6bc7f59-28dc-64d2-9c5b-04530e9bf5a3	ab80824b-3296-4aa1-b122-79f058a73875	784c1a9a-e98d-4627-941f-18abe63de2c1	10464782-4d96-45c7-ad3f-d71de3948929	42ff24c6-969e-41db-a6cf-d563e54cec7d	Backend Developer	820000.00	Active	2026-04-10	\N
+62f042fb-d0b7-7687-942e-acf7fe237432	ab80824b-3296-4aa1-b122-79f058a73875	b6ef0eaa-04b8-dc28-8a83-d3ffbfd00922	2794c99a-d173-8a91-25e2-a120684e4ded	470bfbda-2482-1527-bbde-aabf1ae541bc	Marketing Specialist	620000.00	Active	2026-04-12	\N
+1846012f-cc30-ec19-8a7f-21078a087c75	ab80824b-3296-4aa1-b122-79f058a73875	5ca169e8-e12e-dbd0-4f26-2ff4e786d976	82305c3e-e7ed-3676-3b30-5d0ae9e94566	5f26615c-453f-b016-2af9-b8be832acbb6	Sales Executive	600000.00	Active	2026-04-15	\N
+10f32409-6c83-a51b-f478-9b311f9e3cf2	ab80824b-3296-4aa1-b122-79f058a73875	35aaebe5-98db-015b-addf-bc1385556e98	ac4821bf-a0ef-543a-c065-70f567a3653f	94f296a4-632c-4f70-8034-7f41c0895c08	Operations Coordinator	580000.00	Inactive	2026-04-02	2026-05-20
+\.
+
+
+--
+-- Data for Name: events; Type: TABLE DATA; Schema: public; Owner: postgres
+--
+
+COPY public.events (id, title, description, starts_at, ends_at, scope, department_id, created_by, created_by_role, organization_id, created_at, updated_at) FROM stdin;
+39042079-9594-6375-0275-0dd3dd6b9e6f	April all-hands	Company-wide review of April delivery, hiring, and payroll readiness.	2026-04-25 17:00:00+06	2026-04-25 18:00:00+06	global	\N	6458a4b8-7031-70fe-b6c0-921f1903783f	SysAdmin	ab80824b-3296-4aa1-b122-79f058a73875	2026-04-10 10:00:00+06	2026-06-04 05:29:46.427487+06
+422e2ebf-d6c2-01cc-f04e-c89d00c38711	Engineering release planning	Sprint planning for payroll and payslip improvements.	2026-05-06 12:00:00+06	2026-05-06 13:30:00+06	department	10464782-4d96-45c7-ad3f-d71de3948929	34e8a4a8-1001-7045-2027-0ce681ca4789	Admin	ab80824b-3296-4aa1-b122-79f058a73875	2026-04-30 15:00:00+06	2026-06-04 05:29:46.427487+06
+\.
+
+
+--
+-- Data for Name: goose_db_version; Type: TABLE DATA; Schema: public; Owner: postgres
+--
+
+COPY public.goose_db_version (id, version_id, is_applied, tstamp) FROM stdin;
+1	0	t	2026-03-28 11:31:28.357057
+2	20260310215213	t	2026-03-28 11:31:28.412635
+3	20260310222825	t	2026-03-28 11:31:28.440587
+4	20260310224059	t	2026-03-28 11:31:28.447641
+5	20260311213555	t	2026-03-28 11:31:28.452583
+6	20260316092000	t	2026-03-28 11:31:28.456923
+7	20260317003722	t	2026-03-28 11:31:28.463001
+8	20260317120000	t	2026-05-16 11:58:28.108155
+9	20260319090000	t	2026-05-16 11:58:28.281202
+10	20260424000000	t	2026-05-16 11:58:28.291776
+11	20260512000000	t	2026-05-16 11:58:28.300428
+12	20260512100000	t	2026-05-16 11:58:28.319169
+13	20260514000000	t	2026-05-16 11:58:28.324435
+14	20260514010000	t	2026-05-16 11:58:28.353509
+15	20260514020000	t	2026-05-16 11:58:28.369387
+16	20260515000000	t	2026-05-16 11:58:28.405438
+17	20260515010000	t	2026-05-16 11:58:28.417467
+18	20260515020000	t	2026-05-16 11:58:28.425779
+19	20260515030000	t	2026-05-16 11:58:28.42814
+20	20260515040000	t	2026-05-16 11:58:28.43363
+21	20260515050000	t	2026-05-16 11:58:28.436707
+22	20260603010000	t	2026-06-03 03:22:51.42382
+\.
+
+
+--
+-- Data for Name: invites; Type: TABLE DATA; Schema: public; Owner: postgres
+--
+
+COPY public.invites (id, org_id, first_name, last_name, email, code, role, "position", expires_at, is_used, used_at, created_at, department_id, position_id, salary_rate, employee_status) FROM stdin;
+31fb2fa2-8ad4-404f-a1eb-36a6f7eea482	ab80824b-3296-4aa1-b122-79f058a73875	Adel	Kenesova	231266@astanait.edu.kz	GHLN-8163	ADMIN	Backend Developer	2026-06-05 05:20:43.914217+06	t	2026-06-04 05:21:07.80256+06	2026-06-04 05:20:43.915418+06	10464782-4d96-45c7-ad3f-d71de3948929	42ff24c6-969e-41db-a6cf-d563e54cec7d	700000.00	Active
+984c395a-f861-4ceb-987c-aab681540bb2	ab80824b-3296-4aa1-b122-79f058a73875	Shyngys	Terekbayev	shynterek@gmail.com	RXBC-8760	EMPLOYEE	Frontend Developer	2026-06-05 05:22:05.216904+06	t	2026-06-04 05:22:30.209108+06	2026-06-04 05:22:05.217557+06	10464782-4d96-45c7-ad3f-d71de3948929	bae25622-d9bb-4673-8bba-b94abfce928b	650000.00	Active
+fac0317d-ad3d-c861-de78-19dc6cfaf6d9	ab80824b-3296-4aa1-b122-79f058a73875	Arman	Kim	arman.designer@smartemp.test	SEM260401	Employee	Product Designer	2026-06-16 00:59:00+06	f	\N	2026-05-30 11:00:00+06	\N	\N	\N	\N
+75178f7a-d1bc-9771-6fbe-42eee0c8d984	ab80824b-3296-4aa1-b122-79f058a73875	Dana	Lee	dana.analyst@smartemp.test	SEM260402	Employee	Data Analyst	2026-05-11 00:59:00+06	t	2026-05-03 16:00:00+06	2026-04-28 11:00:00+06	\N	\N	\N	\N
+\.
+
+
+--
+-- Data for Name: leave_requests; Type: TABLE DATA; Schema: public; Owner: postgres
+--
+
+COPY public.leave_requests (id, org_id, employee_id, type, start_date, end_date, reason, document_url, status, reviewed_by, reviewed_at, created_at, updated_at) FROM stdin;
+02c29c6f-1f2f-147e-c1c7-682f5ad5f88d	ab80824b-3296-4aa1-b122-79f058a73875	191ce5ce-8c20-4d34-8b0e-b22f0bd3a016	VACATION	2026-04-22	2026-04-24	Planned family vacation	\N	APPROVED	34e8a4a8-1001-7045-2027-0ce681ca4789	2026-04-15 12:00:00+06	2026-04-10 10:00:00+06	2026-06-04 05:29:46.427487+06
+31a88523-7768-dd0d-f395-f9073ab2f489	ab80824b-3296-4aa1-b122-79f058a73875	b6bc7f59-28dc-64d2-9c5b-04530e9bf5a3	SICK_LEAVE	2026-05-13	2026-05-14	Doctor appointment and recovery	https://example.com/sick-note.pdf	APPROVED	34e8a4a8-1001-7045-2027-0ce681ca4789	2026-05-12 17:00:00+06	2026-04-10 10:00:00+06	2026-06-04 05:29:46.427487+06
+37ec0958-788b-3a3c-d66b-1cf68ff1f97b	ab80824b-3296-4aa1-b122-79f058a73875	1846012f-cc30-ec19-8a7f-21078a087c75	REMOTE	2026-05-20	2026-05-22	Regional customer calls from home office	\N	PENDING	\N	\N	2026-04-10 10:00:00+06	2026-06-04 05:29:46.427487+06
+\.
+
+
+--
+-- Data for Name: notifications; Type: TABLE DATA; Schema: public; Owner: postgres
+--
+
+COPY public.notifications (id, user_id, org_id, type, title, message, metadata, is_read, read_at, created_at) FROM stdin;
+af03e766-6ee7-4d8e-b4bc-ff6fc04efa02	6458a4b8-7031-70fe-b6c0-921f1903783f	ab80824b-3296-4aa1-b122-79f058a73875	system	Organization created	Organization Smart Emp Company has been created successfully. You can continue setup in the portal.	{}	f	\N	2026-06-04 05:19:02.947153+06
+2b9dd910-f200-4def-9444-db4f8320e37d	34e8a4a8-1001-7045-2027-0ce681ca4789	ab80824b-3296-4aa1-b122-79f058a73875	system	Registration completed	Your account for Smart Emp Company is active. You can now sign in and use the portal.	{}	f	\N	2026-06-04 05:21:07.803872+06
+2052b5be-fb06-42db-8340-6a629d274307	34383408-0001-7097-7ccb-cec085c50bda	ab80824b-3296-4aa1-b122-79f058a73875	system	Registration completed	Your account for Smart Emp Company is active. You can now sign in and use the portal.	{}	f	\N	2026-06-04 05:22:30.211583+06
+abec17eb-562a-85b3-d712-0de3154ff117	6458a4b8-7031-70fe-b6c0-921f1903783f	ab80824b-3296-4aa1-b122-79f058a73875	system	Welcome to Smart Emp Company	Your account is ready for HRMS testing.	{"demo": true}	t	2026-04-01 11:30:00+06	2026-04-01 11:25:00+06
+e122317b-1b97-a686-6213-1a5dc342ca61	34e8a4a8-1001-7045-2027-0ce681ca4789	ab80824b-3296-4aa1-b122-79f058a73875	system	Welcome to Smart Emp Company	Your account is ready for HRMS testing.	{"demo": true}	t	2026-04-01 11:30:00+06	2026-04-01 11:25:00+06
+7de2f1f4-8f76-2fe3-415d-3c4e391aa162	34383408-0001-7097-7ccb-cec085c50bda	ab80824b-3296-4aa1-b122-79f058a73875	system	Welcome to Smart Emp Company	Your account is ready for HRMS testing.	{"demo": true}	f	\N	2026-04-01 11:25:00+06
+b3c71ad2-c31f-a677-7445-f0632be13f04	5b8be9b4-e404-95c1-39af-93eee9566b35	ab80824b-3296-4aa1-b122-79f058a73875	system	Welcome to Smart Emp Company	Your account is ready for HRMS testing.	{"demo": true}	t	2026-04-01 11:30:00+06	2026-04-01 11:25:00+06
+8113ad4b-cb1a-a63b-c370-441efa51fee9	784c1a9a-e98d-4627-941f-18abe63de2c1	ab80824b-3296-4aa1-b122-79f058a73875	system	Welcome to Smart Emp Company	Your account is ready for HRMS testing.	{"demo": true}	f	\N	2026-04-01 11:25:00+06
+ccdef51b-a955-3af3-8ba5-2b457ea0d503	b6ef0eaa-04b8-dc28-8a83-d3ffbfd00922	ab80824b-3296-4aa1-b122-79f058a73875	system	Welcome to Smart Emp Company	Your account is ready for HRMS testing.	{"demo": true}	f	\N	2026-04-01 11:25:00+06
+e2603d96-f0c4-b308-0f3b-62e7e9a508ab	5ca169e8-e12e-dbd0-4f26-2ff4e786d976	ab80824b-3296-4aa1-b122-79f058a73875	system	Welcome to Smart Emp Company	Your account is ready for HRMS testing.	{"demo": true}	f	\N	2026-04-01 11:25:00+06
+d96e80f6-2411-538f-20e4-e2fdbebb1644	35aaebe5-98db-015b-addf-bc1385556e98	ab80824b-3296-4aa1-b122-79f058a73875	system	Welcome to Smart Emp Company	Your account is ready for HRMS testing.	{"demo": true}	f	\N	2026-04-01 11:25:00+06
+\.
+
+
+--
+-- Data for Name: organizations; Type: TABLE DATA; Schema: public; Owner: postgres
+--
+
+COPY public.organizations (id, admin_id, name, vat_id, description, address, city_id, created_at) FROM stdin;
+ab80824b-3296-4aa1-b122-79f058a73875	6458a4b8-7031-70fe-b6c0-921f1903783f	Smart Emp Company	123456789099	svsvsvsvsfvsf fvsvsvbsb	Kaldayakova 34	2	2026-06-04 05:19:00.30178+06
+\.
+
+
+--
+-- Data for Name: payroll_adjustments; Type: TABLE DATA; Schema: public; Owner: postgres
+--
+
+COPY public.payroll_adjustments (id, org_id, employee_id, cycle_id, type, category, amount, is_taxable, reason, created_by, created_at, currency) FROM stdin;
+ed168e32-8556-2524-73bc-1d2385769e55	ab80824b-3296-4aa1-b122-79f058a73875	191ce5ce-8c20-4d34-8b0e-b22f0bd3a016	c8cdaea2-06d4-ff90-7024-e8848427480e	BONUS	RELEASE_SUPPORT	70000.00	t	Frontend release support	34e8a4a8-1001-7045-2027-0ce681ca4789	2026-04-28 16:00:00+06	KZT
+946e2bc8-51f9-a3a2-b2e9-ae339b2f7127	ab80824b-3296-4aa1-b122-79f058a73875	b6bc7f59-28dc-64d2-9c5b-04530e9bf5a3	c8cdaea2-06d4-ff90-7024-e8848427480e	DEDUCTION	UNEXCUSED_ABSENCE	60000.00	f	Two unexcused absences in April	34e8a4a8-1001-7045-2027-0ce681ca4789	2026-04-29 11:00:00+06	KZT
+45bd1cb8-f65d-806e-3c21-b67d04a51ec7	ab80824b-3296-4aa1-b122-79f058a73875	62f042fb-d0b7-7687-942e-acf7fe237432	b7b33cff-6556-56ad-815e-34750cfab079	BONUS	CAMPAIGN_DELIVERY	50000.00	t	Hiring campaign delivered early	34e8a4a8-1001-7045-2027-0ce681ca4789	2026-05-27 15:00:00+06	KZT
+\.
+
+
+--
+-- Data for Name: payroll_attendance_overrides; Type: TABLE DATA; Schema: public; Owner: postgres
+--
+
+COPY public.payroll_attendance_overrides (id, org_id, employee_id, date, paid_day, attendance_type, attendance_status, overtime_minutes, note, created_by, created_at) FROM stdin;
+\.
+
+
+--
+-- Data for Name: payroll_audit_logs; Type: TABLE DATA; Schema: public; Owner: postgres
+--
+
+COPY public.payroll_audit_logs (id, org_id, cycle_id, payroll_item_id, actor_user_id, action, before_state, after_state, created_at) FROM stdin;
+\.
+
+
+--
+-- Data for Name: payroll_corrections; Type: TABLE DATA; Schema: public; Owner: postgres
+--
+
+COPY public.payroll_corrections (id, org_id, employee_id, source_item_id, target_cycle_id, adjustment_id, amount, type, reason, created_by, created_at, currency) FROM stdin;
+\.
+
+
+--
+-- Data for Name: payroll_cycles; Type: TABLE DATA; Schema: public; Owner: postgres
+--
+
+COPY public.payroll_cycles (id, org_id, period_start, period_end, status, created_by, approved_by, approved_at, paid_at, created_at, updated_at, currency) FROM stdin;
+c8cdaea2-06d4-ff90-7024-e8848427480e	ab80824b-3296-4aa1-b122-79f058a73875	2026-04-01	2026-04-30	PAID	34e8a4a8-1001-7045-2027-0ce681ca4789	6458a4b8-7031-70fe-b6c0-921f1903783f	2026-05-03 13:00:00+06	2026-05-05 17:30:00+06	2026-05-01 10:00:00+06	2026-06-04 05:29:46.427487+06	KZT
+b7b33cff-6556-56ad-815e-34750cfab079	ab80824b-3296-4aa1-b122-79f058a73875	2026-05-01	2026-05-31	CALCULATED	34e8a4a8-1001-7045-2027-0ce681ca4789	\N	\N	\N	2026-05-31 11:00:00+06	2026-06-04 05:29:46.427487+06	KZT
+\.
+
+
+--
+-- Data for Name: payroll_items; Type: TABLE DATA; Schema: public; Owner: postgres
+--
+
+COPY public.payroll_items (id, cycle_id, org_id, employee_id, base_salary, attendance_adjustment, overtime_amount, bonuses_total, deductions_total, taxes_total, gross_salary, net_salary, working_days, paid_days, unpaid_days, late_days, absent_days, overtime_minutes, status, calculation_snapshot, created_at, updated_at, missing_days, review_required, review_reasons, employer_taxes_total, total_employer_cost, currency, reviewed_by, reviewed_at, review_comment) FROM stdin;
+37c92838-de42-7b4f-9b66-d8ebbe76d4ea	c8cdaea2-06d4-ff90-7024-e8848427480e	ab80824b-3296-4aa1-b122-79f058a73875	33f9e677-d27f-3997-aab5-ff7013710e53	1500000.00	0.00	0.00	0.00	0.00	150000.00	1500000.00	1350000.00	22	22.00	0.00	0	0	0	CALCULATED	{"source": "smart emp demo seed", "period_end": "2026-04-30", "period_start": "2026-04-01", "employee_email": "zhandkurmanbekyzy@gmail.com"}	2026-06-04 05:29:46.427487+06	2026-06-04 05:29:46.427487+06	0	f	[]	97500.00	1597500.00	KZT	\N	\N	\N
+8ec7fead-25e6-71f3-7055-5a4e9c76bf6f	b7b33cff-6556-56ad-815e-34750cfab079	ab80824b-3296-4aa1-b122-79f058a73875	33f9e677-d27f-3997-aab5-ff7013710e53	1425000.00	0.00	0.00	0.00	0.00	142500.00	1425000.00	1282500.00	19	19.00	0.00	0	0	0	CALCULATED	{"source": "smart emp demo seed", "period_end": "2026-05-31", "period_start": "2026-05-01", "employee_email": "zhandkurmanbekyzy@gmail.com"}	2026-06-04 05:29:46.427487+06	2026-06-04 05:29:46.427487+06	0	f	[]	92625.00	1517625.00	KZT	34e8a4a8-1001-7045-2027-0ce681ca4789	2026-05-31 13:00:00+06	Reviewed in demo seed
+63f62178-4e60-0ac7-b765-0f69211c6b0c	c8cdaea2-06d4-ff90-7024-e8848427480e	ab80824b-3296-4aa1-b122-79f058a73875	fc8a3817-f4ff-4789-89fe-1960d74b8830	900000.00	0.00	0.00	0.00	0.00	90000.00	900000.00	810000.00	22	22.00	0.00	0	0	0	CALCULATED	{"source": "smart emp demo seed", "period_end": "2026-04-30", "period_start": "2026-04-01", "employee_email": "231266@astanait.edu.kz"}	2026-06-04 05:29:46.427487+06	2026-06-04 05:29:46.427487+06	0	f	[]	58500.00	958500.00	KZT	\N	\N	\N
+e1342573-6992-c15b-4dd1-770b7372d31d	b7b33cff-6556-56ad-815e-34750cfab079	ab80824b-3296-4aa1-b122-79f058a73875	fc8a3817-f4ff-4789-89fe-1960d74b8830	855000.00	0.00	0.00	0.00	0.00	85500.00	855000.00	769500.00	19	19.00	0.00	0	0	0	CALCULATED	{"source": "smart emp demo seed", "period_end": "2026-05-31", "period_start": "2026-05-01", "employee_email": "231266@astanait.edu.kz"}	2026-06-04 05:29:46.427487+06	2026-06-04 05:29:46.427487+06	0	f	[]	55575.00	910575.00	KZT	34e8a4a8-1001-7045-2027-0ce681ca4789	2026-05-31 13:00:00+06	Reviewed in demo seed
+13589420-f084-77d3-e76a-6b6d4d09c716	c8cdaea2-06d4-ff90-7024-e8848427480e	ab80824b-3296-4aa1-b122-79f058a73875	191ce5ce-8c20-4d34-8b0e-b22f0bd3a016	650000.00	0.00	0.00	70000.00	5000.00	72000.00	720000.00	643000.00	22	22.00	0.00	1	0	0	CALCULATED	{"source": "smart emp demo seed", "period_end": "2026-04-30", "period_start": "2026-04-01", "employee_email": "shynterek@gmail.com"}	2026-06-04 05:29:46.427487+06	2026-06-04 05:29:46.427487+06	0	f	[]	46800.00	766800.00	KZT	\N	\N	\N
+6eb2e496-1427-cdb7-c56d-5af043e888ed	b7b33cff-6556-56ad-815e-34750cfab079	ab80824b-3296-4aa1-b122-79f058a73875	191ce5ce-8c20-4d34-8b0e-b22f0bd3a016	617500.00	0.00	36000.00	0.00	5000.00	61750.00	653500.00	586750.00	19	19.00	0.00	1	0	90	CALCULATED	{"source": "smart emp demo seed", "period_end": "2026-05-31", "period_start": "2026-05-01", "employee_email": "shynterek@gmail.com"}	2026-06-04 05:29:46.427487+06	2026-06-04 05:29:46.427487+06	0	f	[]	40137.50	657637.50	KZT	34e8a4a8-1001-7045-2027-0ce681ca4789	2026-05-31 13:00:00+06	Reviewed in demo seed
+760ee0b0-673a-7f68-1eb2-4665cb61c7a3	c8cdaea2-06d4-ff90-7024-e8848427480e	ab80824b-3296-4aa1-b122-79f058a73875	e312dce0-640d-9157-1a3b-6ad318e19dcf	780000.00	0.00	0.00	0.00	0.00	78000.00	780000.00	702000.00	22	22.00	0.00	0	0	0	CALCULATED	{"source": "smart emp demo seed", "period_end": "2026-04-30", "period_start": "2026-04-01", "employee_email": "aliya.hr@smartemp.test"}	2026-06-04 05:29:46.427487+06	2026-06-04 05:29:46.427487+06	0	f	[]	50700.00	830700.00	KZT	\N	\N	\N
+103057f1-35e6-f249-afab-c5921ff91f56	b7b33cff-6556-56ad-815e-34750cfab079	ab80824b-3296-4aa1-b122-79f058a73875	e312dce0-640d-9157-1a3b-6ad318e19dcf	741000.00	0.00	0.00	0.00	0.00	74100.00	741000.00	666900.00	19	19.00	0.00	0	0	0	CALCULATED	{"source": "smart emp demo seed", "period_end": "2026-05-31", "period_start": "2026-05-01", "employee_email": "aliya.hr@smartemp.test"}	2026-06-04 05:29:46.427487+06	2026-06-04 05:29:46.427487+06	0	f	[]	48165.00	789165.00	KZT	34e8a4a8-1001-7045-2027-0ce681ca4789	2026-05-31 13:00:00+06	Reviewed in demo seed
+9ead2f1e-3005-949a-6954-4c9a849bc585	c8cdaea2-06d4-ff90-7024-e8848427480e	ab80824b-3296-4aa1-b122-79f058a73875	b6bc7f59-28dc-64d2-9c5b-04530e9bf5a3	820000.00	-74545.45	0.00	0.00	60000.00	82000.00	820000.00	678000.00	22	20.00	2.00	0	2	0	CALCULATED	{"source": "smart emp demo seed", "period_end": "2026-04-30", "period_start": "2026-04-01", "employee_email": "timur.backend@smartemp.test"}	2026-06-04 05:29:46.427487+06	2026-06-04 05:29:46.427487+06	0	f	[]	53300.00	873300.00	KZT	\N	\N	\N
+6024e5d5-8fc9-27c5-8f93-4885a579ea76	b7b33cff-6556-56ad-815e-34750cfab079	ab80824b-3296-4aa1-b122-79f058a73875	b6bc7f59-28dc-64d2-9c5b-04530e9bf5a3	779000.00	0.00	0.00	0.00	0.00	77900.00	779000.00	701100.00	19	19.00	0.00	0	0	0	CALCULATED	{"source": "smart emp demo seed", "period_end": "2026-05-31", "period_start": "2026-05-01", "employee_email": "timur.backend@smartemp.test"}	2026-06-04 05:29:46.427487+06	2026-06-04 05:29:46.427487+06	0	f	[]	50635.00	829635.00	KZT	34e8a4a8-1001-7045-2027-0ce681ca4789	2026-05-31 13:00:00+06	Reviewed in demo seed
+d382df09-00c4-ff9c-8d11-6b9822e13613	c8cdaea2-06d4-ff90-7024-e8848427480e	ab80824b-3296-4aa1-b122-79f058a73875	62f042fb-d0b7-7687-942e-acf7fe237432	620000.00	0.00	0.00	0.00	5000.00	62000.00	620000.00	553000.00	22	22.00	0.00	1	0	0	CALCULATED	{"source": "smart emp demo seed", "period_end": "2026-04-30", "period_start": "2026-04-01", "employee_email": "madina.marketing@smartemp.test"}	2026-06-04 05:29:46.427487+06	2026-06-04 05:29:46.427487+06	0	f	[]	40300.00	660300.00	KZT	\N	\N	\N
+2b11af68-abc7-00e5-95c0-deefb381dc15	b7b33cff-6556-56ad-815e-34750cfab079	ab80824b-3296-4aa1-b122-79f058a73875	62f042fb-d0b7-7687-942e-acf7fe237432	589000.00	0.00	0.00	50000.00	5000.00	63900.00	639000.00	570100.00	19	19.00	0.00	1	0	0	CALCULATED	{"source": "smart emp demo seed", "period_end": "2026-05-31", "period_start": "2026-05-01", "employee_email": "madina.marketing@smartemp.test"}	2026-06-04 05:29:46.427487+06	2026-06-04 05:29:46.427487+06	0	f	[]	41535.00	680535.00	KZT	34e8a4a8-1001-7045-2027-0ce681ca4789	2026-05-31 13:00:00+06	Reviewed in demo seed
+844474a0-3b2f-93e6-943b-330382352956	c8cdaea2-06d4-ff90-7024-e8848427480e	ab80824b-3296-4aa1-b122-79f058a73875	1846012f-cc30-ec19-8a7f-21078a087c75	600000.00	0.00	0.00	0.00	0.00	60000.00	600000.00	540000.00	22	22.00	0.00	0	0	0	CALCULATED	{"source": "smart emp demo seed", "period_end": "2026-04-30", "period_start": "2026-04-01", "employee_email": "nurlan.sales@smartemp.test"}	2026-06-04 05:29:46.427487+06	2026-06-04 05:29:46.427487+06	0	f	[]	39000.00	639000.00	KZT	\N	\N	\N
+c877ebe6-afa4-f9e7-460f-5eca34c00317	b7b33cff-6556-56ad-815e-34750cfab079	ab80824b-3296-4aa1-b122-79f058a73875	1846012f-cc30-ec19-8a7f-21078a087c75	570000.00	0.00	0.00	0.00	0.00	57000.00	570000.00	513000.00	19	19.00	0.00	0	0	0	CALCULATED	{"source": "smart emp demo seed", "period_end": "2026-05-31", "period_start": "2026-05-01", "employee_email": "nurlan.sales@smartemp.test"}	2026-06-04 05:29:46.427487+06	2026-06-04 05:29:46.427487+06	0	f	[]	37050.00	607050.00	KZT	34e8a4a8-1001-7045-2027-0ce681ca4789	2026-05-31 13:00:00+06	Reviewed in demo seed
+\.
+
+
+--
+-- Data for Name: payroll_policies; Type: TABLE DATA; Schema: public; Owner: postgres
+--
+
+COPY public.payroll_policies (id, org_id, missing_attendance_policy, regular_overtime_multiplier, holiday_overtime_multiplier, late_penalty_mode, late_penalty_amount, rounding_mode, vacation_pay_rate, sick_leave_pay_rate, remote_pay_rate, business_trip_pay_rate, unpaid_leave_pay_rate, created_at, updated_at) FROM stdin;
+d01e3a79-6f95-7774-ef02-760b0b743dbd	ab80824b-3296-4aa1-b122-79f058a73875	ABSENT_UNPAID	1.500000	2.000000	FIXED_PER_LATE_DAY	5000.00	CENT	1.000000	1.000000	1.000000	1.000000	0.000000	2026-04-01 11:10:00+06	2026-06-04 05:29:46.427487+06
+\.
+
+
+--
+-- Data for Name: payroll_tax_rules; Type: TABLE DATA; Schema: public; Owner: postgres
+--
+
+COPY public.payroll_tax_rules (id, org_id, country, name, rate, applies_to, threshold_min, threshold_max, is_active, effective_from, effective_to, created_at, updated_at, payer) FROM stdin;
+ea5fdcaf-738e-c998-bdfe-e7f4b834ec27	ab80824b-3296-4aa1-b122-79f058a73875	KZ	SmartEmp Individual Income Tax	0.100000	TAXABLE_INCOME	\N	\N	t	2026-01-01	\N	2026-04-01 11:15:00+06	2026-06-04 05:29:46.427487+06	EMPLOYEE
+a029e6f6-a1f1-4383-e049-fae24f59be39	ab80824b-3296-4aa1-b122-79f058a73875	KZ	SmartEmp Employer Social Contribution	0.035000	GROSS	\N	\N	t	2026-01-01	\N	2026-04-01 11:15:00+06	2026-06-04 05:29:46.427487+06	EMPLOYER
+a2e3fbe8-d764-927c-728e-9ff24a7d8fb2	ab80824b-3296-4aa1-b122-79f058a73875	KZ	SmartEmp Employer Medical Insurance	0.030000	GROSS	\N	\N	t	2026-01-01	\N	2026-04-01 11:15:00+06	2026-06-04 05:29:46.427487+06	EMPLOYER
+\.
+
+
+--
+-- Data for Name: payslips; Type: TABLE DATA; Schema: public; Owner: postgres
+--
+
+COPY public.payslips (id, org_id, employee_id, payroll_cycle_id, payroll_item_id, period_start, period_end, status, currency, base_salary, overtime_amount, bonuses_total, deductions_total, taxes_total, gross_salary, net_salary, employer_taxes_total, total_employer_cost, payload_snapshot, sent_to_email, sent_at, generated_by, generated_at, voided_by, voided_at, void_reason, created_at, updated_at, pdf_content, pdf_filename, pdf_generated_at, pdf_sha256) FROM stdin;
+27b6b1d0-4432-6a76-0d71-bec22cb7d62b	ab80824b-3296-4aa1-b122-79f058a73875	33f9e677-d27f-3997-aab5-ff7013710e53	c8cdaea2-06d4-ff90-7024-e8848427480e	37c92838-de42-7b4f-9b66-d8ebbe76d4ea	2026-04-01	2026-04-30	SENT	KZT	1500000.00	0.00	0.00	0.00	150000.00	1500000.00	1350000.00	97500.00	1597500.00	{"source": "smart emp demo seed", "employee_email": "zhandkurmanbekyzy@gmail.com"}	zhandkurmanbekyzy@gmail.com	2026-05-06 10:00:00+06	34e8a4a8-1001-7045-2027-0ce681ca4789	2026-05-05 18:00:00+06	\N	\N	\N	2026-06-04 05:29:46.427487+06	2026-06-04 05:29:46.427487+06	\N	\N	\N	\N
+b3327dbe-b6c9-cddb-74ef-b117bd89bfb6	ab80824b-3296-4aa1-b122-79f058a73875	fc8a3817-f4ff-4789-89fe-1960d74b8830	c8cdaea2-06d4-ff90-7024-e8848427480e	63f62178-4e60-0ac7-b765-0f69211c6b0c	2026-04-01	2026-04-30	SENT	KZT	900000.00	0.00	0.00	0.00	90000.00	900000.00	810000.00	58500.00	958500.00	{"source": "smart emp demo seed", "employee_email": "231266@astanait.edu.kz"}	231266@astanait.edu.kz	2026-05-06 10:00:00+06	34e8a4a8-1001-7045-2027-0ce681ca4789	2026-05-05 18:00:00+06	\N	\N	\N	2026-06-04 05:29:46.427487+06	2026-06-04 05:29:46.427487+06	\N	\N	\N	\N
+c4cc2864-4cee-bac5-4330-38a95bd7943a	ab80824b-3296-4aa1-b122-79f058a73875	191ce5ce-8c20-4d34-8b0e-b22f0bd3a016	c8cdaea2-06d4-ff90-7024-e8848427480e	13589420-f084-77d3-e76a-6b6d4d09c716	2026-04-01	2026-04-30	SENT	KZT	650000.00	0.00	70000.00	5000.00	72000.00	720000.00	643000.00	46800.00	766800.00	{"source": "smart emp demo seed", "employee_email": "shynterek@gmail.com"}	shynterek@gmail.com	2026-05-06 10:00:00+06	34e8a4a8-1001-7045-2027-0ce681ca4789	2026-05-05 18:00:00+06	\N	\N	\N	2026-06-04 05:29:46.427487+06	2026-06-04 05:29:46.427487+06	\N	\N	\N	\N
+57f577c3-c4ea-5394-dae5-22ffcbf31e0a	ab80824b-3296-4aa1-b122-79f058a73875	e312dce0-640d-9157-1a3b-6ad318e19dcf	c8cdaea2-06d4-ff90-7024-e8848427480e	760ee0b0-673a-7f68-1eb2-4665cb61c7a3	2026-04-01	2026-04-30	SENT	KZT	780000.00	0.00	0.00	0.00	78000.00	780000.00	702000.00	50700.00	830700.00	{"source": "smart emp demo seed", "employee_email": "aliya.hr@smartemp.test"}	aliya.hr@smartemp.test	2026-05-06 10:00:00+06	34e8a4a8-1001-7045-2027-0ce681ca4789	2026-05-05 18:00:00+06	\N	\N	\N	2026-06-04 05:29:46.427487+06	2026-06-04 05:29:46.427487+06	\N	\N	\N	\N
+77eb4d86-3f84-1d2b-36d5-6f3ad0382934	ab80824b-3296-4aa1-b122-79f058a73875	b6bc7f59-28dc-64d2-9c5b-04530e9bf5a3	c8cdaea2-06d4-ff90-7024-e8848427480e	9ead2f1e-3005-949a-6954-4c9a849bc585	2026-04-01	2026-04-30	GENERATED	KZT	820000.00	0.00	0.00	60000.00	82000.00	820000.00	678000.00	53300.00	873300.00	{"source": "smart emp demo seed", "employee_email": "timur.backend@smartemp.test"}	\N	\N	34e8a4a8-1001-7045-2027-0ce681ca4789	2026-05-05 18:00:00+06	\N	\N	\N	2026-06-04 05:29:46.427487+06	2026-06-04 05:29:46.427487+06	\N	\N	\N	\N
+1dad22cd-dc98-100d-3fbf-08e8df09a960	ab80824b-3296-4aa1-b122-79f058a73875	62f042fb-d0b7-7687-942e-acf7fe237432	c8cdaea2-06d4-ff90-7024-e8848427480e	d382df09-00c4-ff9c-8d11-6b9822e13613	2026-04-01	2026-04-30	SENT	KZT	620000.00	0.00	0.00	5000.00	62000.00	620000.00	553000.00	40300.00	660300.00	{"source": "smart emp demo seed", "employee_email": "madina.marketing@smartemp.test"}	madina.marketing@smartemp.test	2026-05-06 10:00:00+06	34e8a4a8-1001-7045-2027-0ce681ca4789	2026-05-05 18:00:00+06	\N	\N	\N	2026-06-04 05:29:46.427487+06	2026-06-04 05:29:46.427487+06	\N	\N	\N	\N
+63f9fdf2-6926-fc95-6a0b-6cdcbd875e58	ab80824b-3296-4aa1-b122-79f058a73875	1846012f-cc30-ec19-8a7f-21078a087c75	c8cdaea2-06d4-ff90-7024-e8848427480e	844474a0-3b2f-93e6-943b-330382352956	2026-04-01	2026-04-30	SENT	KZT	600000.00	0.00	0.00	0.00	60000.00	600000.00	540000.00	39000.00	639000.00	{"source": "smart emp demo seed", "employee_email": "nurlan.sales@smartemp.test"}	nurlan.sales@smartemp.test	2026-05-06 10:00:00+06	34e8a4a8-1001-7045-2027-0ce681ca4789	2026-05-05 18:00:00+06	\N	\N	\N	2026-06-04 05:29:46.427487+06	2026-06-04 05:29:46.427487+06	\N	\N	\N	\N
+\.
+
+
+--
+-- Data for Name: positions; Type: TABLE DATA; Schema: public; Owner: postgres
+--
+
+COPY public.positions (id, org_id, name) FROM stdin;
+f726b086-dc47-11c8-3610-dd99552cce50	ab80824b-3296-4aa1-b122-79f058a73875	Chief Executive Officer
+42ff24c6-969e-41db-a6cf-d563e54cec7d	ab80824b-3296-4aa1-b122-79f058a73875	Backend Developer
+bae25622-d9bb-4673-8bba-b94abfce928b	ab80824b-3296-4aa1-b122-79f058a73875	Frontend Developer
+618cc2ae-a767-3773-2386-7962e6bce78f	ab80824b-3296-4aa1-b122-79f058a73875	HR Manager
+45fa9411-069c-d671-d5eb-7ac4025c2b9e	ab80824b-3296-4aa1-b122-79f058a73875	Finance Administrator
+470bfbda-2482-1527-bbde-aabf1ae541bc	ab80824b-3296-4aa1-b122-79f058a73875	Marketing Specialist
+5f26615c-453f-b016-2af9-b8be832acbb6	ab80824b-3296-4aa1-b122-79f058a73875	Sales Executive
+94f296a4-632c-4f70-8034-7f41c0895c08	ab80824b-3296-4aa1-b122-79f058a73875	Operations Coordinator
+\.
+
+
+--
+-- Data for Name: salary_history; Type: TABLE DATA; Schema: public; Owner: postgres
+--
+
+COPY public.salary_history (id, org_id, employee_id, salary_rate, effective_from, effective_to, created_by, created_at) FROM stdin;
+e030877f-fa88-a301-c815-a8d48fc0accc	ab80824b-3296-4aa1-b122-79f058a73875	33f9e677-d27f-3997-aab5-ff7013710e53	1500000.00	2026-04-01	\N	34e8a4a8-1001-7045-2027-0ce681ca4789	2026-04-01 11:20:00+06
+a1aa5ae5-ea6a-ca1e-9176-f970cad6d005	ab80824b-3296-4aa1-b122-79f058a73875	fc8a3817-f4ff-4789-89fe-1960d74b8830	900000.00	2026-04-03	\N	34e8a4a8-1001-7045-2027-0ce681ca4789	2026-04-01 11:20:00+06
+ee16c9ce-18dd-1c90-d2b0-79de28e33dd3	ab80824b-3296-4aa1-b122-79f058a73875	191ce5ce-8c20-4d34-8b0e-b22f0bd3a016	650000.00	2026-04-08	\N	34e8a4a8-1001-7045-2027-0ce681ca4789	2026-04-01 11:20:00+06
+0cf9ee0f-23be-bbf9-1a79-7a23c7514678	ab80824b-3296-4aa1-b122-79f058a73875	e312dce0-640d-9157-1a3b-6ad318e19dcf	780000.00	2026-04-05	\N	34e8a4a8-1001-7045-2027-0ce681ca4789	2026-04-01 11:20:00+06
+fbda7084-30a1-1b3e-2d21-096fc96d045f	ab80824b-3296-4aa1-b122-79f058a73875	b6bc7f59-28dc-64d2-9c5b-04530e9bf5a3	820000.00	2026-04-10	\N	34e8a4a8-1001-7045-2027-0ce681ca4789	2026-04-01 11:20:00+06
+56247d0b-8b67-d3c0-372c-79bab71095d0	ab80824b-3296-4aa1-b122-79f058a73875	62f042fb-d0b7-7687-942e-acf7fe237432	620000.00	2026-04-12	\N	34e8a4a8-1001-7045-2027-0ce681ca4789	2026-04-01 11:20:00+06
+316756c4-71cc-5677-eff1-95b1de4f7f3f	ab80824b-3296-4aa1-b122-79f058a73875	1846012f-cc30-ec19-8a7f-21078a087c75	600000.00	2026-04-15	\N	34e8a4a8-1001-7045-2027-0ce681ca4789	2026-04-01 11:20:00+06
+60daf75c-8742-708e-5e42-ea288c49fa5b	ab80824b-3296-4aa1-b122-79f058a73875	10f32409-6c83-a51b-f478-9b311f9e3cf2	580000.00	2026-04-02	\N	34e8a4a8-1001-7045-2027-0ce681ca4789	2026-04-01 11:20:00+06
+\.
+
+
+--
+-- Data for Name: skud_events; Type: TABLE DATA; Schema: public; Owner: postgres
+--
+
+COPY public.skud_events (id, org_id, employee_id, event_type, device_id, occurred_at, processed, created_at) FROM stdin;
+bc22475e-c595-b075-d0df-d6f0d25e7186	ab80824b-3296-4aa1-b122-79f058a73875	33f9e677-d27f-3997-aab5-ff7013710e53	ENTER	SMART-HQ-01	2026-04-01 09:57:00+06	t	2026-06-04 05:29:46.427487+06
+ab832b84-061a-ef64-22c2-8b17b92d1e7d	ab80824b-3296-4aa1-b122-79f058a73875	33f9e677-d27f-3997-aab5-ff7013710e53	ENTER	SMART-HQ-01	2026-04-02 09:57:00+06	t	2026-06-04 05:29:46.427487+06
+996ca6f0-209a-05f1-0416-178d7f1fe0c1	ab80824b-3296-4aa1-b122-79f058a73875	33f9e677-d27f-3997-aab5-ff7013710e53	ENTER	SMART-HQ-01	2026-04-03 09:57:00+06	t	2026-06-04 05:29:46.427487+06
+d4fec84f-b0dd-a548-024c-2b8405453589	ab80824b-3296-4aa1-b122-79f058a73875	33f9e677-d27f-3997-aab5-ff7013710e53	ENTER	SMART-HQ-01	2026-04-06 09:57:00+06	t	2026-06-04 05:29:46.427487+06
+564577f3-1eb6-feaf-0d1c-acc9e01f5142	ab80824b-3296-4aa1-b122-79f058a73875	33f9e677-d27f-3997-aab5-ff7013710e53	ENTER	SMART-HQ-01	2026-04-07 09:57:00+06	t	2026-06-04 05:29:46.427487+06
+bc48a41e-4a13-f134-5878-efe080474686	ab80824b-3296-4aa1-b122-79f058a73875	33f9e677-d27f-3997-aab5-ff7013710e53	ENTER	SMART-HQ-01	2026-04-08 09:57:00+06	t	2026-06-04 05:29:46.427487+06
+712ab67a-c21b-e780-10b7-5121fabf1bde	ab80824b-3296-4aa1-b122-79f058a73875	33f9e677-d27f-3997-aab5-ff7013710e53	ENTER	SMART-HQ-01	2026-04-09 09:57:00+06	t	2026-06-04 05:29:46.427487+06
+8f5093eb-3978-5e52-6ef0-02edee772d0e	ab80824b-3296-4aa1-b122-79f058a73875	33f9e677-d27f-3997-aab5-ff7013710e53	ENTER	SMART-HQ-01	2026-04-10 09:57:00+06	t	2026-06-04 05:29:46.427487+06
+9fa4e1d7-e87d-997f-fb31-94762a72ccf1	ab80824b-3296-4aa1-b122-79f058a73875	33f9e677-d27f-3997-aab5-ff7013710e53	ENTER	SMART-HQ-01	2026-04-13 09:57:00+06	t	2026-06-04 05:29:46.427487+06
+a5e4281f-cddd-bdac-a0cd-0cb9cf00a0bc	ab80824b-3296-4aa1-b122-79f058a73875	33f9e677-d27f-3997-aab5-ff7013710e53	ENTER	SMART-HQ-01	2026-04-14 09:57:00+06	t	2026-06-04 05:29:46.427487+06
+737f1028-a3de-34a1-d6d6-69be8e5f8c94	ab80824b-3296-4aa1-b122-79f058a73875	33f9e677-d27f-3997-aab5-ff7013710e53	ENTER	SMART-HQ-01	2026-04-15 09:57:00+06	t	2026-06-04 05:29:46.427487+06
+66561104-bc17-6e8c-f1e0-e4905c219e25	ab80824b-3296-4aa1-b122-79f058a73875	33f9e677-d27f-3997-aab5-ff7013710e53	ENTER	SMART-HQ-01	2026-04-16 09:57:00+06	t	2026-06-04 05:29:46.427487+06
+dc039bd5-1dd5-f450-8998-17a2d84ea382	ab80824b-3296-4aa1-b122-79f058a73875	33f9e677-d27f-3997-aab5-ff7013710e53	ENTER	SMART-HQ-01	2026-04-17 09:57:00+06	t	2026-06-04 05:29:46.427487+06
+45525528-78d7-c358-337c-36e58ea0f87c	ab80824b-3296-4aa1-b122-79f058a73875	33f9e677-d27f-3997-aab5-ff7013710e53	ENTER	SMART-HQ-01	2026-04-20 09:57:00+06	t	2026-06-04 05:29:46.427487+06
+641ce4b2-f1b1-8c3d-3e20-f7e6a590866e	ab80824b-3296-4aa1-b122-79f058a73875	33f9e677-d27f-3997-aab5-ff7013710e53	ENTER	SMART-HQ-01	2026-04-21 09:57:00+06	t	2026-06-04 05:29:46.427487+06
+77b7f5ee-5608-6dd9-fd27-29d1b455d290	ab80824b-3296-4aa1-b122-79f058a73875	33f9e677-d27f-3997-aab5-ff7013710e53	ENTER	SMART-HQ-01	2026-04-22 09:57:00+06	t	2026-06-04 05:29:46.427487+06
+f6a76e96-c45c-bd6e-54ee-42248d6cdddc	ab80824b-3296-4aa1-b122-79f058a73875	33f9e677-d27f-3997-aab5-ff7013710e53	ENTER	SMART-HQ-01	2026-04-23 09:57:00+06	t	2026-06-04 05:29:46.427487+06
+ef1b3e8f-9efc-422b-9525-af0cbec2f6d1	ab80824b-3296-4aa1-b122-79f058a73875	33f9e677-d27f-3997-aab5-ff7013710e53	ENTER	SMART-HQ-01	2026-04-24 09:57:00+06	t	2026-06-04 05:29:46.427487+06
+cce72218-b701-e74b-7d7b-5223f870bfe7	ab80824b-3296-4aa1-b122-79f058a73875	33f9e677-d27f-3997-aab5-ff7013710e53	ENTER	SMART-HQ-01	2026-04-27 09:57:00+06	t	2026-06-04 05:29:46.427487+06
+333d3d9d-1512-f287-572d-3b511c7bb3d8	ab80824b-3296-4aa1-b122-79f058a73875	33f9e677-d27f-3997-aab5-ff7013710e53	ENTER	SMART-HQ-01	2026-04-28 09:57:00+06	t	2026-06-04 05:29:46.427487+06
+ffae05a1-f277-25bc-6e0c-46d8550d9a98	ab80824b-3296-4aa1-b122-79f058a73875	33f9e677-d27f-3997-aab5-ff7013710e53	ENTER	SMART-HQ-01	2026-04-29 09:57:00+06	t	2026-06-04 05:29:46.427487+06
+15267473-6052-d25a-31d4-992784a9889d	ab80824b-3296-4aa1-b122-79f058a73875	33f9e677-d27f-3997-aab5-ff7013710e53	ENTER	SMART-HQ-01	2026-04-30 09:57:00+06	t	2026-06-04 05:29:46.427487+06
+fc32b4af-0ce2-971b-24f9-ae6e7b4daa27	ab80824b-3296-4aa1-b122-79f058a73875	33f9e677-d27f-3997-aab5-ff7013710e53	ENTER	SMART-HQ-01	2026-05-04 09:57:00+06	t	2026-06-04 05:29:46.427487+06
+e86210df-69b7-93fc-648c-6a3a3c54983e	ab80824b-3296-4aa1-b122-79f058a73875	33f9e677-d27f-3997-aab5-ff7013710e53	ENTER	SMART-HQ-01	2026-05-05 09:57:00+06	t	2026-06-04 05:29:46.427487+06
+4ed8d585-4e5a-2b26-1fca-13b5f3b78f43	ab80824b-3296-4aa1-b122-79f058a73875	33f9e677-d27f-3997-aab5-ff7013710e53	ENTER	SMART-HQ-01	2026-05-06 09:57:00+06	t	2026-06-04 05:29:46.427487+06
+9ea5c2cb-db4a-9224-41ee-2c304bda80ad	ab80824b-3296-4aa1-b122-79f058a73875	33f9e677-d27f-3997-aab5-ff7013710e53	ENTER	SMART-HQ-01	2026-05-08 09:57:00+06	t	2026-06-04 05:29:46.427487+06
+f7bd4167-69bc-16da-d92c-015b3731406f	ab80824b-3296-4aa1-b122-79f058a73875	33f9e677-d27f-3997-aab5-ff7013710e53	ENTER	SMART-HQ-01	2026-05-11 09:57:00+06	t	2026-06-04 05:29:46.427487+06
+45bfb878-5bc4-f62f-3472-c8d46625d7cd	ab80824b-3296-4aa1-b122-79f058a73875	33f9e677-d27f-3997-aab5-ff7013710e53	ENTER	SMART-HQ-01	2026-05-12 09:57:00+06	t	2026-06-04 05:29:46.427487+06
+4f4494f8-10f5-1780-a37f-ba10d4958a84	ab80824b-3296-4aa1-b122-79f058a73875	33f9e677-d27f-3997-aab5-ff7013710e53	ENTER	SMART-HQ-01	2026-05-13 09:57:00+06	t	2026-06-04 05:29:46.427487+06
+ea221507-9988-3807-2833-3524b8356369	ab80824b-3296-4aa1-b122-79f058a73875	33f9e677-d27f-3997-aab5-ff7013710e53	ENTER	SMART-HQ-01	2026-05-14 09:57:00+06	t	2026-06-04 05:29:46.427487+06
+4314e857-af92-d001-8b5a-fe1d2de39ea4	ab80824b-3296-4aa1-b122-79f058a73875	33f9e677-d27f-3997-aab5-ff7013710e53	ENTER	SMART-HQ-01	2026-05-15 09:57:00+06	t	2026-06-04 05:29:46.427487+06
+6f7d260c-e405-64e9-e26a-f4b13630cf28	ab80824b-3296-4aa1-b122-79f058a73875	33f9e677-d27f-3997-aab5-ff7013710e53	ENTER	SMART-HQ-01	2026-05-16 09:57:00+06	t	2026-06-04 05:29:46.427487+06
+7abeec6f-5bdb-db44-d3eb-af69cfb8fc4c	ab80824b-3296-4aa1-b122-79f058a73875	33f9e677-d27f-3997-aab5-ff7013710e53	ENTER	SMART-HQ-01	2026-05-18 09:57:00+06	t	2026-06-04 05:29:46.427487+06
+d835af64-c42a-6a37-320f-8659a1b80292	ab80824b-3296-4aa1-b122-79f058a73875	33f9e677-d27f-3997-aab5-ff7013710e53	ENTER	SMART-HQ-01	2026-05-19 09:57:00+06	t	2026-06-04 05:29:46.427487+06
+0ef87c15-d439-38c1-e865-d977fcc1439d	ab80824b-3296-4aa1-b122-79f058a73875	33f9e677-d27f-3997-aab5-ff7013710e53	ENTER	SMART-HQ-01	2026-05-20 09:57:00+06	t	2026-06-04 05:29:46.427487+06
+91870de6-b31a-9e2c-2938-260dfae541c7	ab80824b-3296-4aa1-b122-79f058a73875	33f9e677-d27f-3997-aab5-ff7013710e53	ENTER	SMART-HQ-01	2026-05-21 09:57:00+06	t	2026-06-04 05:29:46.427487+06
+96f7bb54-9aa7-a7b8-5b58-2c458cebc838	ab80824b-3296-4aa1-b122-79f058a73875	33f9e677-d27f-3997-aab5-ff7013710e53	ENTER	SMART-HQ-01	2026-05-22 09:57:00+06	t	2026-06-04 05:29:46.427487+06
+79a1fc0e-5218-679f-fb84-69a52bf7a805	ab80824b-3296-4aa1-b122-79f058a73875	33f9e677-d27f-3997-aab5-ff7013710e53	ENTER	SMART-HQ-01	2026-05-25 09:57:00+06	t	2026-06-04 05:29:46.427487+06
+b79a7fe8-9c26-848a-edaa-9908079ba13d	ab80824b-3296-4aa1-b122-79f058a73875	33f9e677-d27f-3997-aab5-ff7013710e53	ENTER	SMART-HQ-01	2026-05-26 09:57:00+06	t	2026-06-04 05:29:46.427487+06
+2684d893-d932-4b1a-4041-bd53055bb2ee	ab80824b-3296-4aa1-b122-79f058a73875	33f9e677-d27f-3997-aab5-ff7013710e53	ENTER	SMART-HQ-01	2026-05-27 09:57:00+06	t	2026-06-04 05:29:46.427487+06
+72b6bcc8-970d-dea5-0abc-6b781b8dbdf7	ab80824b-3296-4aa1-b122-79f058a73875	33f9e677-d27f-3997-aab5-ff7013710e53	ENTER	SMART-HQ-01	2026-05-28 09:57:00+06	t	2026-06-04 05:29:46.427487+06
+0eab0cea-ee9f-a2ba-28cd-754a40497efa	ab80824b-3296-4aa1-b122-79f058a73875	33f9e677-d27f-3997-aab5-ff7013710e53	ENTER	SMART-HQ-01	2026-05-29 09:57:00+06	t	2026-06-04 05:29:46.427487+06
+d4fb36f0-f158-b0c2-bf30-223d9847931b	ab80824b-3296-4aa1-b122-79f058a73875	fc8a3817-f4ff-4789-89fe-1960d74b8830	ENTER	SMART-HQ-01	2026-04-01 09:57:00+06	t	2026-06-04 05:29:46.427487+06
+031bd11a-0cba-4a44-a299-ee5892f6aa4e	ab80824b-3296-4aa1-b122-79f058a73875	fc8a3817-f4ff-4789-89fe-1960d74b8830	ENTER	SMART-HQ-01	2026-04-02 09:57:00+06	t	2026-06-04 05:29:46.427487+06
+fe19187a-1eba-3be8-9e46-53371bc249b3	ab80824b-3296-4aa1-b122-79f058a73875	fc8a3817-f4ff-4789-89fe-1960d74b8830	ENTER	SMART-HQ-01	2026-04-03 09:57:00+06	t	2026-06-04 05:29:46.427487+06
+508fb220-98ec-dc80-63ac-578522c5e8c2	ab80824b-3296-4aa1-b122-79f058a73875	fc8a3817-f4ff-4789-89fe-1960d74b8830	ENTER	SMART-HQ-01	2026-04-06 09:57:00+06	t	2026-06-04 05:29:46.427487+06
+13c4946c-5a41-6682-5e36-8dbea3110399	ab80824b-3296-4aa1-b122-79f058a73875	fc8a3817-f4ff-4789-89fe-1960d74b8830	ENTER	SMART-HQ-01	2026-04-07 09:57:00+06	t	2026-06-04 05:29:46.427487+06
+9c0694c4-f918-d547-d1b3-aefbd7f8c828	ab80824b-3296-4aa1-b122-79f058a73875	fc8a3817-f4ff-4789-89fe-1960d74b8830	ENTER	SMART-HQ-01	2026-04-08 09:57:00+06	t	2026-06-04 05:29:46.427487+06
+9db4fed7-bc3d-9858-924d-04e38da4a2c6	ab80824b-3296-4aa1-b122-79f058a73875	fc8a3817-f4ff-4789-89fe-1960d74b8830	ENTER	SMART-HQ-01	2026-04-09 09:57:00+06	t	2026-06-04 05:29:46.427487+06
+a5feaa05-26a7-f5f8-6fca-d65ea12abe8d	ab80824b-3296-4aa1-b122-79f058a73875	fc8a3817-f4ff-4789-89fe-1960d74b8830	ENTER	SMART-HQ-01	2026-04-10 09:57:00+06	t	2026-06-04 05:29:46.427487+06
+7bb7330a-385a-d7f0-cbf6-7d9898029bf1	ab80824b-3296-4aa1-b122-79f058a73875	fc8a3817-f4ff-4789-89fe-1960d74b8830	ENTER	SMART-HQ-01	2026-04-13 09:57:00+06	t	2026-06-04 05:29:46.427487+06
+03d7937d-4146-9724-fa5e-0f0bb664194f	ab80824b-3296-4aa1-b122-79f058a73875	fc8a3817-f4ff-4789-89fe-1960d74b8830	ENTER	SMART-HQ-01	2026-04-14 09:57:00+06	t	2026-06-04 05:29:46.427487+06
+2d5d3d77-8049-5217-4ed0-86330a0f37de	ab80824b-3296-4aa1-b122-79f058a73875	fc8a3817-f4ff-4789-89fe-1960d74b8830	ENTER	SMART-HQ-01	2026-04-15 09:57:00+06	t	2026-06-04 05:29:46.427487+06
+e2e0aaa0-7611-1fb7-cd7c-41a33a8911cd	ab80824b-3296-4aa1-b122-79f058a73875	fc8a3817-f4ff-4789-89fe-1960d74b8830	ENTER	SMART-HQ-01	2026-04-16 09:57:00+06	t	2026-06-04 05:29:46.427487+06
+0c85d765-5766-5847-cc94-11e6542a3ede	ab80824b-3296-4aa1-b122-79f058a73875	fc8a3817-f4ff-4789-89fe-1960d74b8830	ENTER	SMART-HQ-01	2026-04-17 09:57:00+06	t	2026-06-04 05:29:46.427487+06
+9d2a61ee-f0a1-1f9b-1518-ea66f9c1d8da	ab80824b-3296-4aa1-b122-79f058a73875	fc8a3817-f4ff-4789-89fe-1960d74b8830	ENTER	SMART-HQ-01	2026-04-20 09:57:00+06	t	2026-06-04 05:29:46.427487+06
+ddf80641-6363-596e-55c4-3a5916349eb2	ab80824b-3296-4aa1-b122-79f058a73875	fc8a3817-f4ff-4789-89fe-1960d74b8830	ENTER	SMART-HQ-01	2026-04-21 09:57:00+06	t	2026-06-04 05:29:46.427487+06
+37006f22-f126-fbed-1f15-026fa967cc96	ab80824b-3296-4aa1-b122-79f058a73875	fc8a3817-f4ff-4789-89fe-1960d74b8830	ENTER	SMART-HQ-01	2026-04-22 09:57:00+06	t	2026-06-04 05:29:46.427487+06
+e59c1f1e-e21f-01d9-1710-46a0f08bdfe5	ab80824b-3296-4aa1-b122-79f058a73875	fc8a3817-f4ff-4789-89fe-1960d74b8830	ENTER	SMART-HQ-01	2026-04-23 09:57:00+06	t	2026-06-04 05:29:46.427487+06
+39db0a5c-f3c6-7694-21d7-75295725eddc	ab80824b-3296-4aa1-b122-79f058a73875	fc8a3817-f4ff-4789-89fe-1960d74b8830	ENTER	SMART-HQ-01	2026-04-24 09:57:00+06	t	2026-06-04 05:29:46.427487+06
+29664074-cad1-24d3-d421-22e5c5663f7e	ab80824b-3296-4aa1-b122-79f058a73875	fc8a3817-f4ff-4789-89fe-1960d74b8830	ENTER	SMART-HQ-01	2026-04-27 09:57:00+06	t	2026-06-04 05:29:46.427487+06
+d1d90fed-21f1-6033-979b-6cffb64a3b11	ab80824b-3296-4aa1-b122-79f058a73875	fc8a3817-f4ff-4789-89fe-1960d74b8830	ENTER	SMART-HQ-01	2026-04-28 09:57:00+06	t	2026-06-04 05:29:46.427487+06
+36dcaab9-ddb0-6552-f9a1-ef52ff74ac4c	ab80824b-3296-4aa1-b122-79f058a73875	fc8a3817-f4ff-4789-89fe-1960d74b8830	ENTER	SMART-HQ-01	2026-04-29 09:57:00+06	t	2026-06-04 05:29:46.427487+06
+601c9f68-78d9-d8a6-af78-10b948189d3e	ab80824b-3296-4aa1-b122-79f058a73875	fc8a3817-f4ff-4789-89fe-1960d74b8830	ENTER	SMART-HQ-01	2026-04-30 09:57:00+06	t	2026-06-04 05:29:46.427487+06
+74408d54-931a-d3b0-180f-ce1ce0aff5d5	ab80824b-3296-4aa1-b122-79f058a73875	fc8a3817-f4ff-4789-89fe-1960d74b8830	ENTER	SMART-HQ-01	2026-05-04 09:57:00+06	t	2026-06-04 05:29:46.427487+06
+ed5abb54-e5da-e92f-82f5-6c4e3aac5d2c	ab80824b-3296-4aa1-b122-79f058a73875	fc8a3817-f4ff-4789-89fe-1960d74b8830	ENTER	SMART-HQ-01	2026-05-05 09:57:00+06	t	2026-06-04 05:29:46.427487+06
+89a586fb-dac9-5bfc-d24e-d90c84157d26	ab80824b-3296-4aa1-b122-79f058a73875	fc8a3817-f4ff-4789-89fe-1960d74b8830	ENTER	SMART-HQ-01	2026-05-06 09:57:00+06	t	2026-06-04 05:29:46.427487+06
+f45a2b79-69c4-7a4b-9845-e51d428f0dc9	ab80824b-3296-4aa1-b122-79f058a73875	fc8a3817-f4ff-4789-89fe-1960d74b8830	ENTER	SMART-HQ-01	2026-05-08 09:57:00+06	t	2026-06-04 05:29:46.427487+06
+4c886a84-7aa6-a676-a606-be0197abce9c	ab80824b-3296-4aa1-b122-79f058a73875	fc8a3817-f4ff-4789-89fe-1960d74b8830	ENTER	SMART-HQ-01	2026-05-11 09:57:00+06	t	2026-06-04 05:29:46.427487+06
+f90aff68-62c6-2dcb-d54d-976dc3ff14f9	ab80824b-3296-4aa1-b122-79f058a73875	fc8a3817-f4ff-4789-89fe-1960d74b8830	ENTER	SMART-HQ-01	2026-05-12 09:57:00+06	t	2026-06-04 05:29:46.427487+06
+332ba74a-e115-a0e3-114c-97002719c30e	ab80824b-3296-4aa1-b122-79f058a73875	fc8a3817-f4ff-4789-89fe-1960d74b8830	ENTER	SMART-HQ-01	2026-05-13 09:57:00+06	t	2026-06-04 05:29:46.427487+06
+2e393b6b-7d53-55e4-bd3c-38505683d7b1	ab80824b-3296-4aa1-b122-79f058a73875	fc8a3817-f4ff-4789-89fe-1960d74b8830	ENTER	SMART-HQ-01	2026-05-14 09:57:00+06	t	2026-06-04 05:29:46.427487+06
+7c8389c2-5822-7937-c99d-8070e42380d5	ab80824b-3296-4aa1-b122-79f058a73875	fc8a3817-f4ff-4789-89fe-1960d74b8830	ENTER	SMART-HQ-01	2026-05-15 09:57:00+06	t	2026-06-04 05:29:46.427487+06
+27eef79f-650d-150c-3e4c-a240460765d4	ab80824b-3296-4aa1-b122-79f058a73875	fc8a3817-f4ff-4789-89fe-1960d74b8830	ENTER	SMART-HQ-01	2026-05-16 09:57:00+06	t	2026-06-04 05:29:46.427487+06
+1269abcf-2c80-77b3-5b63-463022c5e90c	ab80824b-3296-4aa1-b122-79f058a73875	fc8a3817-f4ff-4789-89fe-1960d74b8830	ENTER	SMART-HQ-01	2026-05-18 09:57:00+06	t	2026-06-04 05:29:46.427487+06
+6fe23217-dec4-5fd5-f07c-695b743d2e38	ab80824b-3296-4aa1-b122-79f058a73875	fc8a3817-f4ff-4789-89fe-1960d74b8830	ENTER	SMART-HQ-01	2026-05-19 09:57:00+06	t	2026-06-04 05:29:46.427487+06
+dfddd667-d7b2-3162-eab4-99748fcc77a4	ab80824b-3296-4aa1-b122-79f058a73875	fc8a3817-f4ff-4789-89fe-1960d74b8830	ENTER	SMART-HQ-01	2026-05-20 09:57:00+06	t	2026-06-04 05:29:46.427487+06
+8730450f-3f01-23d1-9673-6c9f903ce388	ab80824b-3296-4aa1-b122-79f058a73875	fc8a3817-f4ff-4789-89fe-1960d74b8830	ENTER	SMART-HQ-01	2026-05-21 09:57:00+06	t	2026-06-04 05:29:46.427487+06
+08d08776-60d2-fd28-bd89-f4c8988064df	ab80824b-3296-4aa1-b122-79f058a73875	fc8a3817-f4ff-4789-89fe-1960d74b8830	ENTER	SMART-HQ-01	2026-05-22 09:57:00+06	t	2026-06-04 05:29:46.427487+06
+17c0800c-c3cb-6fed-5988-ae0f7c4684d7	ab80824b-3296-4aa1-b122-79f058a73875	fc8a3817-f4ff-4789-89fe-1960d74b8830	ENTER	SMART-HQ-01	2026-05-25 09:57:00+06	t	2026-06-04 05:29:46.427487+06
+770be033-f17a-6a39-cb82-c3e3735077fc	ab80824b-3296-4aa1-b122-79f058a73875	fc8a3817-f4ff-4789-89fe-1960d74b8830	ENTER	SMART-HQ-01	2026-05-26 09:57:00+06	t	2026-06-04 05:29:46.427487+06
+e2b756eb-9b06-862c-705b-4132f6c961ef	ab80824b-3296-4aa1-b122-79f058a73875	fc8a3817-f4ff-4789-89fe-1960d74b8830	ENTER	SMART-HQ-01	2026-05-27 09:57:00+06	t	2026-06-04 05:29:46.427487+06
+077481fc-ebc1-a062-65b5-1350209db2e6	ab80824b-3296-4aa1-b122-79f058a73875	fc8a3817-f4ff-4789-89fe-1960d74b8830	ENTER	SMART-HQ-01	2026-05-28 09:57:00+06	t	2026-06-04 05:29:46.427487+06
+350bdb3a-88b5-dcb5-a8fe-bb114a695ea1	ab80824b-3296-4aa1-b122-79f058a73875	fc8a3817-f4ff-4789-89fe-1960d74b8830	ENTER	SMART-HQ-01	2026-05-29 09:57:00+06	t	2026-06-04 05:29:46.427487+06
+04bdc836-d725-b87e-5319-bb21894690a0	ab80824b-3296-4aa1-b122-79f058a73875	191ce5ce-8c20-4d34-8b0e-b22f0bd3a016	ENTER	SMART-HQ-01	2026-04-01 09:57:00+06	t	2026-06-04 05:29:46.427487+06
+e0560fae-c2ce-8369-7ee3-9bc82ff65b39	ab80824b-3296-4aa1-b122-79f058a73875	191ce5ce-8c20-4d34-8b0e-b22f0bd3a016	ENTER	SMART-HQ-01	2026-04-02 09:57:00+06	t	2026-06-04 05:29:46.427487+06
+44f6ce8b-af3d-84fd-506e-6e12bc3f8ec9	ab80824b-3296-4aa1-b122-79f058a73875	191ce5ce-8c20-4d34-8b0e-b22f0bd3a016	ENTER	SMART-HQ-01	2026-04-03 09:57:00+06	t	2026-06-04 05:29:46.427487+06
+989dd9a2-a4fb-615d-ed2d-1ba081c80c7e	ab80824b-3296-4aa1-b122-79f058a73875	191ce5ce-8c20-4d34-8b0e-b22f0bd3a016	ENTER	SMART-HQ-01	2026-04-06 09:57:00+06	t	2026-06-04 05:29:46.427487+06
+bc39fb4c-8515-d7bd-6b86-24491b0d2db7	ab80824b-3296-4aa1-b122-79f058a73875	191ce5ce-8c20-4d34-8b0e-b22f0bd3a016	ENTER	SMART-HQ-01	2026-04-07 09:57:00+06	t	2026-06-04 05:29:46.427487+06
+51832879-5dc1-427b-a251-3ea6d275d276	ab80824b-3296-4aa1-b122-79f058a73875	191ce5ce-8c20-4d34-8b0e-b22f0bd3a016	ENTER	SMART-HQ-01	2026-04-08 09:57:00+06	t	2026-06-04 05:29:46.427487+06
+ae09082c-33d0-7a76-4b20-1ba245112889	ab80824b-3296-4aa1-b122-79f058a73875	191ce5ce-8c20-4d34-8b0e-b22f0bd3a016	ENTER	SMART-HQ-01	2026-04-09 09:57:00+06	t	2026-06-04 05:29:46.427487+06
+b08444e5-97c3-3ba1-b974-4ecc16c16abd	ab80824b-3296-4aa1-b122-79f058a73875	191ce5ce-8c20-4d34-8b0e-b22f0bd3a016	ENTER	SMART-HQ-01	2026-04-10 09:57:00+06	t	2026-06-04 05:29:46.427487+06
+6be97875-dcbd-fb05-daab-21ea89b3ccb3	ab80824b-3296-4aa1-b122-79f058a73875	191ce5ce-8c20-4d34-8b0e-b22f0bd3a016	ENTER	SMART-HQ-01	2026-04-13 09:57:00+06	t	2026-06-04 05:29:46.427487+06
+35b7310c-d617-99a2-80ea-65830d98eef3	ab80824b-3296-4aa1-b122-79f058a73875	191ce5ce-8c20-4d34-8b0e-b22f0bd3a016	ENTER	SMART-HQ-01	2026-04-14 09:57:00+06	t	2026-06-04 05:29:46.427487+06
+c9966112-0cb1-2592-3384-d1576f0ee7ff	ab80824b-3296-4aa1-b122-79f058a73875	191ce5ce-8c20-4d34-8b0e-b22f0bd3a016	ENTER	SMART-HQ-01	2026-04-15 10:29:00+06	t	2026-06-04 05:29:46.427487+06
+d35f99e4-213e-6e7c-eff6-899f89449647	ab80824b-3296-4aa1-b122-79f058a73875	191ce5ce-8c20-4d34-8b0e-b22f0bd3a016	ENTER	SMART-HQ-01	2026-04-16 09:57:00+06	t	2026-06-04 05:29:46.427487+06
+f8a7bc8a-1a66-6be1-bb71-49a03360ffc3	ab80824b-3296-4aa1-b122-79f058a73875	191ce5ce-8c20-4d34-8b0e-b22f0bd3a016	ENTER	SMART-HQ-01	2026-04-17 09:57:00+06	t	2026-06-04 05:29:46.427487+06
+49ba9cc7-c4d9-50ef-8e5e-4f3ff67e86c7	ab80824b-3296-4aa1-b122-79f058a73875	191ce5ce-8c20-4d34-8b0e-b22f0bd3a016	ENTER	SMART-HQ-01	2026-04-20 09:57:00+06	t	2026-06-04 05:29:46.427487+06
+4f1fbb37-6752-a838-eb80-12d954ff1220	ab80824b-3296-4aa1-b122-79f058a73875	191ce5ce-8c20-4d34-8b0e-b22f0bd3a016	ENTER	SMART-HQ-01	2026-04-21 09:57:00+06	t	2026-06-04 05:29:46.427487+06
+1ed43129-a89d-1d6b-0287-3f39864c325b	ab80824b-3296-4aa1-b122-79f058a73875	191ce5ce-8c20-4d34-8b0e-b22f0bd3a016	ENTER	SMART-HQ-01	2026-04-27 09:57:00+06	t	2026-06-04 05:29:46.427487+06
+0c9dc4b1-4446-16e2-5129-2818ac0ff33a	ab80824b-3296-4aa1-b122-79f058a73875	191ce5ce-8c20-4d34-8b0e-b22f0bd3a016	ENTER	SMART-HQ-01	2026-04-28 09:57:00+06	t	2026-06-04 05:29:46.427487+06
+cdae7dc2-1f90-f90c-bae0-caf62b21d988	ab80824b-3296-4aa1-b122-79f058a73875	191ce5ce-8c20-4d34-8b0e-b22f0bd3a016	ENTER	SMART-HQ-01	2026-04-29 09:57:00+06	t	2026-06-04 05:29:46.427487+06
+8b14ffd4-855a-6676-8052-02a1b00f6c08	ab80824b-3296-4aa1-b122-79f058a73875	191ce5ce-8c20-4d34-8b0e-b22f0bd3a016	ENTER	SMART-HQ-01	2026-04-30 09:57:00+06	t	2026-06-04 05:29:46.427487+06
+3fc4decd-1157-7ee2-8800-2019e98b919c	ab80824b-3296-4aa1-b122-79f058a73875	191ce5ce-8c20-4d34-8b0e-b22f0bd3a016	ENTER	SMART-HQ-01	2026-05-04 09:57:00+06	t	2026-06-04 05:29:46.427487+06
+758cfb24-543f-c0f7-63bb-4e7003260812	ab80824b-3296-4aa1-b122-79f058a73875	191ce5ce-8c20-4d34-8b0e-b22f0bd3a016	ENTER	SMART-HQ-01	2026-05-05 10:29:00+06	t	2026-06-04 05:29:46.427487+06
+f4beb846-b206-eaee-dd8f-706dae08aea7	ab80824b-3296-4aa1-b122-79f058a73875	191ce5ce-8c20-4d34-8b0e-b22f0bd3a016	ENTER	SMART-HQ-01	2026-05-06 09:57:00+06	t	2026-06-04 05:29:46.427487+06
+5365e7cd-af0a-c356-98d7-f276cca4768a	ab80824b-3296-4aa1-b122-79f058a73875	191ce5ce-8c20-4d34-8b0e-b22f0bd3a016	ENTER	SMART-HQ-01	2026-05-08 09:57:00+06	t	2026-06-04 05:29:46.427487+06
+67f752ce-9da7-d337-7d20-bd8926c61c30	ab80824b-3296-4aa1-b122-79f058a73875	191ce5ce-8c20-4d34-8b0e-b22f0bd3a016	ENTER	SMART-HQ-01	2026-05-11 09:57:00+06	t	2026-06-04 05:29:46.427487+06
+632c3e6a-39a4-6405-565d-d4c1db55d360	ab80824b-3296-4aa1-b122-79f058a73875	191ce5ce-8c20-4d34-8b0e-b22f0bd3a016	ENTER	SMART-HQ-01	2026-05-12 09:57:00+06	t	2026-06-04 05:29:46.427487+06
+dfc5e311-05a4-5cda-c802-b6cd5e6b90a3	ab80824b-3296-4aa1-b122-79f058a73875	191ce5ce-8c20-4d34-8b0e-b22f0bd3a016	ENTER	SMART-HQ-01	2026-05-13 09:57:00+06	t	2026-06-04 05:29:46.427487+06
+0c0c04a3-6aff-0cd1-8569-914e9daa1f1b	ab80824b-3296-4aa1-b122-79f058a73875	191ce5ce-8c20-4d34-8b0e-b22f0bd3a016	ENTER	SMART-HQ-01	2026-05-14 09:57:00+06	t	2026-06-04 05:29:46.427487+06
+895c20ce-3746-943e-749b-24ed0715c2be	ab80824b-3296-4aa1-b122-79f058a73875	191ce5ce-8c20-4d34-8b0e-b22f0bd3a016	ENTER	SMART-HQ-01	2026-05-15 09:57:00+06	t	2026-06-04 05:29:46.427487+06
+300b605a-d586-6458-539d-239b6679c706	ab80824b-3296-4aa1-b122-79f058a73875	191ce5ce-8c20-4d34-8b0e-b22f0bd3a016	ENTER	SMART-HQ-01	2026-05-16 09:57:00+06	t	2026-06-04 05:29:46.427487+06
+1efd9f95-9b5d-8984-01cf-6aa6b54af0a3	ab80824b-3296-4aa1-b122-79f058a73875	191ce5ce-8c20-4d34-8b0e-b22f0bd3a016	ENTER	SMART-HQ-01	2026-05-18 09:57:00+06	t	2026-06-04 05:29:46.427487+06
+37347a92-b358-52b0-5495-04d60f71789c	ab80824b-3296-4aa1-b122-79f058a73875	191ce5ce-8c20-4d34-8b0e-b22f0bd3a016	ENTER	SMART-HQ-01	2026-05-19 09:57:00+06	t	2026-06-04 05:29:46.427487+06
+63b82c16-4aed-2e55-f4e6-efcedd090d47	ab80824b-3296-4aa1-b122-79f058a73875	191ce5ce-8c20-4d34-8b0e-b22f0bd3a016	ENTER	SMART-HQ-01	2026-05-20 09:57:00+06	t	2026-06-04 05:29:46.427487+06
+de336233-c2fb-c5e8-757e-e3cc8294d4c9	ab80824b-3296-4aa1-b122-79f058a73875	191ce5ce-8c20-4d34-8b0e-b22f0bd3a016	ENTER	SMART-HQ-01	2026-05-21 09:57:00+06	t	2026-06-04 05:29:46.427487+06
+a7493d8e-e14b-b8bf-c503-ce4cef9eeb8b	ab80824b-3296-4aa1-b122-79f058a73875	191ce5ce-8c20-4d34-8b0e-b22f0bd3a016	ENTER	SMART-HQ-01	2026-05-22 09:57:00+06	t	2026-06-04 05:29:46.427487+06
+2cf63324-b4a4-a5a2-644f-e5661f9aca03	ab80824b-3296-4aa1-b122-79f058a73875	191ce5ce-8c20-4d34-8b0e-b22f0bd3a016	ENTER	SMART-HQ-01	2026-05-25 09:57:00+06	t	2026-06-04 05:29:46.427487+06
+458f88c2-8f0a-8a8c-3031-8ad5426f4758	ab80824b-3296-4aa1-b122-79f058a73875	191ce5ce-8c20-4d34-8b0e-b22f0bd3a016	ENTER	SMART-HQ-01	2026-05-26 09:57:00+06	t	2026-06-04 05:29:46.427487+06
+35eb231c-1ba5-4700-35af-10319f04138b	ab80824b-3296-4aa1-b122-79f058a73875	191ce5ce-8c20-4d34-8b0e-b22f0bd3a016	ENTER	SMART-HQ-01	2026-05-27 09:57:00+06	t	2026-06-04 05:29:46.427487+06
+38246627-5aa8-b8f5-66cb-bd11e99c6633	ab80824b-3296-4aa1-b122-79f058a73875	191ce5ce-8c20-4d34-8b0e-b22f0bd3a016	ENTER	SMART-HQ-01	2026-05-28 09:57:00+06	t	2026-06-04 05:29:46.427487+06
+db0dc56e-2180-5b34-e92f-82cfe4b33b5b	ab80824b-3296-4aa1-b122-79f058a73875	191ce5ce-8c20-4d34-8b0e-b22f0bd3a016	ENTER	SMART-HQ-01	2026-05-29 09:57:00+06	t	2026-06-04 05:29:46.427487+06
+35ef8ccc-21c8-ad50-65d4-9420cc63fc00	ab80824b-3296-4aa1-b122-79f058a73875	e312dce0-640d-9157-1a3b-6ad318e19dcf	ENTER	SMART-HQ-01	2026-04-01 09:57:00+06	t	2026-06-04 05:29:46.427487+06
+b61ce8b8-4ce9-5d2c-0632-eb5eae455a70	ab80824b-3296-4aa1-b122-79f058a73875	e312dce0-640d-9157-1a3b-6ad318e19dcf	ENTER	SMART-HQ-01	2026-04-02 09:57:00+06	t	2026-06-04 05:29:46.427487+06
+5c67ca63-85dc-ac2a-233b-71e2e1fc8472	ab80824b-3296-4aa1-b122-79f058a73875	e312dce0-640d-9157-1a3b-6ad318e19dcf	ENTER	SMART-HQ-01	2026-04-03 09:57:00+06	t	2026-06-04 05:29:46.427487+06
+eb4a732f-994b-2a92-e551-acecfd16de25	ab80824b-3296-4aa1-b122-79f058a73875	e312dce0-640d-9157-1a3b-6ad318e19dcf	ENTER	SMART-HQ-01	2026-04-06 09:57:00+06	t	2026-06-04 05:29:46.427487+06
+0c7da48c-5f45-2ca3-f30d-675e1582fcf5	ab80824b-3296-4aa1-b122-79f058a73875	e312dce0-640d-9157-1a3b-6ad318e19dcf	ENTER	SMART-HQ-01	2026-04-07 09:57:00+06	t	2026-06-04 05:29:46.427487+06
+04a4be12-1bf6-30fc-c4d5-d98807441f38	ab80824b-3296-4aa1-b122-79f058a73875	e312dce0-640d-9157-1a3b-6ad318e19dcf	ENTER	SMART-HQ-01	2026-04-08 09:57:00+06	t	2026-06-04 05:29:46.427487+06
+3489b0e0-b774-a046-41e2-c8c338ebef34	ab80824b-3296-4aa1-b122-79f058a73875	e312dce0-640d-9157-1a3b-6ad318e19dcf	ENTER	SMART-HQ-01	2026-04-09 09:57:00+06	t	2026-06-04 05:29:46.427487+06
+222cfeb3-5b42-d624-2c86-b2815538b4a4	ab80824b-3296-4aa1-b122-79f058a73875	e312dce0-640d-9157-1a3b-6ad318e19dcf	ENTER	SMART-HQ-01	2026-04-10 09:57:00+06	t	2026-06-04 05:29:46.427487+06
+2d4a8096-0f4b-d820-d23b-3c419bdcf1e1	ab80824b-3296-4aa1-b122-79f058a73875	e312dce0-640d-9157-1a3b-6ad318e19dcf	ENTER	SMART-HQ-01	2026-04-13 09:57:00+06	t	2026-06-04 05:29:46.427487+06
+ccf3d38d-7621-b31e-810a-a157397c7bf4	ab80824b-3296-4aa1-b122-79f058a73875	e312dce0-640d-9157-1a3b-6ad318e19dcf	ENTER	SMART-HQ-01	2026-04-14 09:57:00+06	t	2026-06-04 05:29:46.427487+06
+d8d51350-1e2b-9e4a-4736-f4078a684482	ab80824b-3296-4aa1-b122-79f058a73875	e312dce0-640d-9157-1a3b-6ad318e19dcf	ENTER	SMART-HQ-01	2026-04-15 09:57:00+06	t	2026-06-04 05:29:46.427487+06
+a82bba83-de49-adf8-e95f-7e3e745a1f3e	ab80824b-3296-4aa1-b122-79f058a73875	e312dce0-640d-9157-1a3b-6ad318e19dcf	ENTER	SMART-HQ-01	2026-04-16 09:57:00+06	t	2026-06-04 05:29:46.427487+06
+33f59bc1-6ab0-ce19-6aa3-7811c3ed0def	ab80824b-3296-4aa1-b122-79f058a73875	e312dce0-640d-9157-1a3b-6ad318e19dcf	ENTER	SMART-HQ-01	2026-04-17 09:57:00+06	t	2026-06-04 05:29:46.427487+06
+a5b283a6-0fa0-5ca8-e947-79235e52e3e8	ab80824b-3296-4aa1-b122-79f058a73875	e312dce0-640d-9157-1a3b-6ad318e19dcf	ENTER	SMART-HQ-01	2026-04-20 09:57:00+06	t	2026-06-04 05:29:46.427487+06
+8164b0fd-cf5c-1669-c2b1-557422aeb92c	ab80824b-3296-4aa1-b122-79f058a73875	e312dce0-640d-9157-1a3b-6ad318e19dcf	ENTER	SMART-HQ-01	2026-04-21 09:57:00+06	t	2026-06-04 05:29:46.427487+06
+9c7983b4-cc4e-d57a-f7b4-0ed13b2fc8fe	ab80824b-3296-4aa1-b122-79f058a73875	e312dce0-640d-9157-1a3b-6ad318e19dcf	ENTER	SMART-HQ-01	2026-04-22 09:57:00+06	t	2026-06-04 05:29:46.427487+06
+3ef97b10-ef30-17f6-802c-c467d611b9fb	ab80824b-3296-4aa1-b122-79f058a73875	e312dce0-640d-9157-1a3b-6ad318e19dcf	ENTER	SMART-HQ-01	2026-04-23 09:57:00+06	t	2026-06-04 05:29:46.427487+06
+66eaa3f9-b936-ec55-05d0-2343c6c11ad4	ab80824b-3296-4aa1-b122-79f058a73875	e312dce0-640d-9157-1a3b-6ad318e19dcf	ENTER	SMART-HQ-01	2026-04-24 09:57:00+06	t	2026-06-04 05:29:46.427487+06
+4490714f-f874-801f-f3a4-1d0946d7eba8	ab80824b-3296-4aa1-b122-79f058a73875	e312dce0-640d-9157-1a3b-6ad318e19dcf	ENTER	SMART-HQ-01	2026-04-27 09:57:00+06	t	2026-06-04 05:29:46.427487+06
+1f53393f-6fc6-4beb-4829-1351a15ae067	ab80824b-3296-4aa1-b122-79f058a73875	e312dce0-640d-9157-1a3b-6ad318e19dcf	ENTER	SMART-HQ-01	2026-04-28 09:57:00+06	t	2026-06-04 05:29:46.427487+06
+a985b0cb-cf70-41b5-29df-1b41bfff33ed	ab80824b-3296-4aa1-b122-79f058a73875	e312dce0-640d-9157-1a3b-6ad318e19dcf	ENTER	SMART-HQ-01	2026-04-29 09:57:00+06	t	2026-06-04 05:29:46.427487+06
+087c3bad-3936-f381-841e-2a846c5c98d3	ab80824b-3296-4aa1-b122-79f058a73875	e312dce0-640d-9157-1a3b-6ad318e19dcf	ENTER	SMART-HQ-01	2026-04-30 09:57:00+06	t	2026-06-04 05:29:46.427487+06
+30d5d4ed-4b82-37f7-96df-ac3208631eab	ab80824b-3296-4aa1-b122-79f058a73875	e312dce0-640d-9157-1a3b-6ad318e19dcf	ENTER	SMART-HQ-01	2026-05-04 09:57:00+06	t	2026-06-04 05:29:46.427487+06
+10cd8fb6-c6e5-b26a-77a2-8bf5de040232	ab80824b-3296-4aa1-b122-79f058a73875	e312dce0-640d-9157-1a3b-6ad318e19dcf	ENTER	SMART-HQ-01	2026-05-05 09:57:00+06	t	2026-06-04 05:29:46.427487+06
+45419a85-9029-f3f8-9c9e-9d74115bd019	ab80824b-3296-4aa1-b122-79f058a73875	e312dce0-640d-9157-1a3b-6ad318e19dcf	ENTER	SMART-HQ-01	2026-05-06 09:57:00+06	t	2026-06-04 05:29:46.427487+06
+f6c827c0-d545-6407-a555-884a4571fe75	ab80824b-3296-4aa1-b122-79f058a73875	e312dce0-640d-9157-1a3b-6ad318e19dcf	ENTER	SMART-HQ-01	2026-05-08 09:57:00+06	t	2026-06-04 05:29:46.427487+06
+6908cd01-ec90-5e01-388a-d096cacf8606	ab80824b-3296-4aa1-b122-79f058a73875	e312dce0-640d-9157-1a3b-6ad318e19dcf	ENTER	SMART-HQ-01	2026-05-11 09:57:00+06	t	2026-06-04 05:29:46.427487+06
+3c80b5e9-cf12-1e5f-984b-13e1adcda194	ab80824b-3296-4aa1-b122-79f058a73875	e312dce0-640d-9157-1a3b-6ad318e19dcf	ENTER	SMART-HQ-01	2026-05-12 09:57:00+06	t	2026-06-04 05:29:46.427487+06
+5fffa018-6a02-d770-9d59-82e831e91486	ab80824b-3296-4aa1-b122-79f058a73875	e312dce0-640d-9157-1a3b-6ad318e19dcf	ENTER	SMART-HQ-01	2026-05-13 09:57:00+06	t	2026-06-04 05:29:46.427487+06
+e7f22f8b-f91e-490a-1438-957fa67c12dc	ab80824b-3296-4aa1-b122-79f058a73875	e312dce0-640d-9157-1a3b-6ad318e19dcf	ENTER	SMART-HQ-01	2026-05-14 09:57:00+06	t	2026-06-04 05:29:46.427487+06
+e5808f2b-b4ed-2efc-9dfc-1a072aec38c8	ab80824b-3296-4aa1-b122-79f058a73875	e312dce0-640d-9157-1a3b-6ad318e19dcf	ENTER	SMART-HQ-01	2026-05-15 09:57:00+06	t	2026-06-04 05:29:46.427487+06
+182247a5-be7c-e8ee-277c-c7f997f1c970	ab80824b-3296-4aa1-b122-79f058a73875	e312dce0-640d-9157-1a3b-6ad318e19dcf	ENTER	SMART-HQ-01	2026-05-16 09:57:00+06	t	2026-06-04 05:29:46.427487+06
+5ba14084-6a95-e7ad-55d6-4006414015f8	ab80824b-3296-4aa1-b122-79f058a73875	e312dce0-640d-9157-1a3b-6ad318e19dcf	ENTER	SMART-HQ-01	2026-05-18 09:57:00+06	t	2026-06-04 05:29:46.427487+06
+37300db6-b3d2-5d4b-c6b3-95eca02243fc	ab80824b-3296-4aa1-b122-79f058a73875	e312dce0-640d-9157-1a3b-6ad318e19dcf	ENTER	SMART-HQ-01	2026-05-19 09:57:00+06	t	2026-06-04 05:29:46.427487+06
+0c538026-b710-ed7d-e228-cc6dd0e14181	ab80824b-3296-4aa1-b122-79f058a73875	e312dce0-640d-9157-1a3b-6ad318e19dcf	ENTER	SMART-HQ-01	2026-05-20 09:57:00+06	t	2026-06-04 05:29:46.427487+06
+da145e81-aefe-1a17-dbcd-1e16cb202b2c	ab80824b-3296-4aa1-b122-79f058a73875	e312dce0-640d-9157-1a3b-6ad318e19dcf	ENTER	SMART-HQ-01	2026-05-21 09:57:00+06	t	2026-06-04 05:29:46.427487+06
+6ac2bd48-4dcb-41c9-7f47-512cde7819b4	ab80824b-3296-4aa1-b122-79f058a73875	e312dce0-640d-9157-1a3b-6ad318e19dcf	ENTER	SMART-HQ-01	2026-05-22 09:57:00+06	t	2026-06-04 05:29:46.427487+06
+75721cd1-10df-0b6e-66cb-39493355a75e	ab80824b-3296-4aa1-b122-79f058a73875	e312dce0-640d-9157-1a3b-6ad318e19dcf	ENTER	SMART-HQ-01	2026-05-25 09:57:00+06	t	2026-06-04 05:29:46.427487+06
+f87302e6-2944-69af-1b51-a277204eaf33	ab80824b-3296-4aa1-b122-79f058a73875	e312dce0-640d-9157-1a3b-6ad318e19dcf	ENTER	SMART-HQ-01	2026-05-26 09:57:00+06	t	2026-06-04 05:29:46.427487+06
+fe8edb50-9f63-0505-852d-14ed7e4623a3	ab80824b-3296-4aa1-b122-79f058a73875	e312dce0-640d-9157-1a3b-6ad318e19dcf	ENTER	SMART-HQ-01	2026-05-27 09:57:00+06	t	2026-06-04 05:29:46.427487+06
+1b1a230d-73aa-8d84-8fbf-0b5ad0834ffe	ab80824b-3296-4aa1-b122-79f058a73875	e312dce0-640d-9157-1a3b-6ad318e19dcf	ENTER	SMART-HQ-01	2026-05-28 09:57:00+06	t	2026-06-04 05:29:46.427487+06
+7d3c0c37-b113-97c3-9cc0-b12f276cb4e8	ab80824b-3296-4aa1-b122-79f058a73875	e312dce0-640d-9157-1a3b-6ad318e19dcf	ENTER	SMART-HQ-01	2026-05-29 09:57:00+06	t	2026-06-04 05:29:46.427487+06
+c824805c-19f9-4a0b-68f8-e3558d0d2594	ab80824b-3296-4aa1-b122-79f058a73875	b6bc7f59-28dc-64d2-9c5b-04530e9bf5a3	ENTER	SMART-HQ-01	2026-04-01 09:57:00+06	t	2026-06-04 05:29:46.427487+06
+c4fb5afb-25f2-a237-499b-5e8b83cbb8a6	ab80824b-3296-4aa1-b122-79f058a73875	b6bc7f59-28dc-64d2-9c5b-04530e9bf5a3	ENTER	SMART-HQ-01	2026-04-02 09:57:00+06	t	2026-06-04 05:29:46.427487+06
+e0e15fa8-2a52-51cf-80b3-c31e525be348	ab80824b-3296-4aa1-b122-79f058a73875	b6bc7f59-28dc-64d2-9c5b-04530e9bf5a3	ENTER	SMART-HQ-01	2026-04-03 09:57:00+06	t	2026-06-04 05:29:46.427487+06
+0dcc672c-8139-999b-de0e-1118e5afe2c2	ab80824b-3296-4aa1-b122-79f058a73875	b6bc7f59-28dc-64d2-9c5b-04530e9bf5a3	ENTER	SMART-HQ-01	2026-04-06 09:57:00+06	t	2026-06-04 05:29:46.427487+06
+6709632e-5db0-e2c5-4774-1c8f14443df0	ab80824b-3296-4aa1-b122-79f058a73875	b6bc7f59-28dc-64d2-9c5b-04530e9bf5a3	ENTER	SMART-HQ-01	2026-04-07 09:57:00+06	t	2026-06-04 05:29:46.427487+06
+b7f4a3fa-d850-9a6f-a7b1-20eeb1335b91	ab80824b-3296-4aa1-b122-79f058a73875	b6bc7f59-28dc-64d2-9c5b-04530e9bf5a3	ENTER	SMART-HQ-01	2026-04-08 09:57:00+06	t	2026-06-04 05:29:46.427487+06
+5dae96f7-a8d0-e8f7-56b0-8195743f4e4c	ab80824b-3296-4aa1-b122-79f058a73875	b6bc7f59-28dc-64d2-9c5b-04530e9bf5a3	ENTER	SMART-HQ-01	2026-04-09 09:57:00+06	t	2026-06-04 05:29:46.427487+06
+f3866e36-fd24-0e89-8ee8-330db37f1bce	ab80824b-3296-4aa1-b122-79f058a73875	b6bc7f59-28dc-64d2-9c5b-04530e9bf5a3	ENTER	SMART-HQ-01	2026-04-10 09:57:00+06	t	2026-06-04 05:29:46.427487+06
+0840a006-ab49-d842-469e-1b4a5c92f58a	ab80824b-3296-4aa1-b122-79f058a73875	b6bc7f59-28dc-64d2-9c5b-04530e9bf5a3	ENTER	SMART-HQ-01	2026-04-13 09:57:00+06	t	2026-06-04 05:29:46.427487+06
+ddea53ac-a047-8524-82a0-9da5c588fddc	ab80824b-3296-4aa1-b122-79f058a73875	b6bc7f59-28dc-64d2-9c5b-04530e9bf5a3	ENTER	SMART-HQ-01	2026-04-14 09:57:00+06	t	2026-06-04 05:29:46.427487+06
+71d55988-d143-19c8-d5d3-ac2a9234ee92	ab80824b-3296-4aa1-b122-79f058a73875	b6bc7f59-28dc-64d2-9c5b-04530e9bf5a3	ENTER	SMART-HQ-01	2026-04-15 09:57:00+06	t	2026-06-04 05:29:46.427487+06
+b2e0556b-e3db-42b2-2440-39747d635843	ab80824b-3296-4aa1-b122-79f058a73875	b6bc7f59-28dc-64d2-9c5b-04530e9bf5a3	ENTER	SMART-HQ-01	2026-04-16 09:57:00+06	t	2026-06-04 05:29:46.427487+06
+94f52621-fde2-06af-594b-60d7d44fdcca	ab80824b-3296-4aa1-b122-79f058a73875	b6bc7f59-28dc-64d2-9c5b-04530e9bf5a3	ENTER	SMART-HQ-01	2026-04-20 09:57:00+06	t	2026-06-04 05:29:46.427487+06
+88d9bdd9-8557-752b-ec61-d108a39bd307	ab80824b-3296-4aa1-b122-79f058a73875	b6bc7f59-28dc-64d2-9c5b-04530e9bf5a3	ENTER	SMART-HQ-01	2026-04-21 09:57:00+06	t	2026-06-04 05:29:46.427487+06
+9ca9f9bd-e88d-109d-5728-d9f6d7676bef	ab80824b-3296-4aa1-b122-79f058a73875	b6bc7f59-28dc-64d2-9c5b-04530e9bf5a3	ENTER	SMART-HQ-01	2026-04-22 09:57:00+06	t	2026-06-04 05:29:46.427487+06
+29da3c36-6465-7fed-3496-4cae6ab57276	ab80824b-3296-4aa1-b122-79f058a73875	b6bc7f59-28dc-64d2-9c5b-04530e9bf5a3	ENTER	SMART-HQ-01	2026-04-23 09:57:00+06	t	2026-06-04 05:29:46.427487+06
+0387e5d5-cebb-c5f7-8822-f2719699cbca	ab80824b-3296-4aa1-b122-79f058a73875	b6bc7f59-28dc-64d2-9c5b-04530e9bf5a3	ENTER	SMART-HQ-01	2026-04-24 09:57:00+06	t	2026-06-04 05:29:46.427487+06
+6816e257-2b78-4701-f824-96a95c70f333	ab80824b-3296-4aa1-b122-79f058a73875	b6bc7f59-28dc-64d2-9c5b-04530e9bf5a3	ENTER	SMART-HQ-01	2026-04-27 09:57:00+06	t	2026-06-04 05:29:46.427487+06
+281744de-f510-4997-ce35-87f436c09893	ab80824b-3296-4aa1-b122-79f058a73875	b6bc7f59-28dc-64d2-9c5b-04530e9bf5a3	ENTER	SMART-HQ-01	2026-04-28 09:57:00+06	t	2026-06-04 05:29:46.427487+06
+be753e96-41f4-5882-cef2-c05e1029516d	ab80824b-3296-4aa1-b122-79f058a73875	b6bc7f59-28dc-64d2-9c5b-04530e9bf5a3	ENTER	SMART-HQ-01	2026-04-30 09:57:00+06	t	2026-06-04 05:29:46.427487+06
+65b863f1-0266-f3b2-825f-29cc05a59c15	ab80824b-3296-4aa1-b122-79f058a73875	b6bc7f59-28dc-64d2-9c5b-04530e9bf5a3	ENTER	SMART-HQ-01	2026-05-04 09:57:00+06	t	2026-06-04 05:29:46.427487+06
+a4cd8855-8917-e06e-86a3-85570f7ee675	ab80824b-3296-4aa1-b122-79f058a73875	b6bc7f59-28dc-64d2-9c5b-04530e9bf5a3	ENTER	SMART-HQ-01	2026-05-05 09:57:00+06	t	2026-06-04 05:29:46.427487+06
+f1d125b5-7761-a509-3f09-d64f067ee14c	ab80824b-3296-4aa1-b122-79f058a73875	b6bc7f59-28dc-64d2-9c5b-04530e9bf5a3	ENTER	SMART-HQ-01	2026-05-06 09:57:00+06	t	2026-06-04 05:29:46.427487+06
+f5b63e64-5ac8-74aa-6b90-d2db686494f9	ab80824b-3296-4aa1-b122-79f058a73875	b6bc7f59-28dc-64d2-9c5b-04530e9bf5a3	ENTER	SMART-HQ-01	2026-05-08 09:57:00+06	t	2026-06-04 05:29:46.427487+06
+68779d7b-f5cd-7d76-a0af-efd4c01a8c81	ab80824b-3296-4aa1-b122-79f058a73875	b6bc7f59-28dc-64d2-9c5b-04530e9bf5a3	ENTER	SMART-HQ-01	2026-05-11 09:57:00+06	t	2026-06-04 05:29:46.427487+06
+a4c2e0cf-bbba-244e-0fd8-330655d287e3	ab80824b-3296-4aa1-b122-79f058a73875	b6bc7f59-28dc-64d2-9c5b-04530e9bf5a3	ENTER	SMART-HQ-01	2026-05-12 09:57:00+06	t	2026-06-04 05:29:46.427487+06
+aa75764e-2342-5225-f97c-3a75eb0845a1	ab80824b-3296-4aa1-b122-79f058a73875	b6bc7f59-28dc-64d2-9c5b-04530e9bf5a3	ENTER	SMART-HQ-01	2026-05-15 09:57:00+06	t	2026-06-04 05:29:46.427487+06
+c7b72bc0-71dc-2040-b251-ab6f593055a1	ab80824b-3296-4aa1-b122-79f058a73875	b6bc7f59-28dc-64d2-9c5b-04530e9bf5a3	ENTER	SMART-HQ-01	2026-05-16 09:57:00+06	t	2026-06-04 05:29:46.427487+06
+4e2bd3e8-2a92-0157-63cd-eb2299ed291c	ab80824b-3296-4aa1-b122-79f058a73875	b6bc7f59-28dc-64d2-9c5b-04530e9bf5a3	ENTER	SMART-HQ-01	2026-05-18 09:57:00+06	t	2026-06-04 05:29:46.427487+06
+5a17b293-c279-a75d-65b1-c7d4a472bfe3	ab80824b-3296-4aa1-b122-79f058a73875	b6bc7f59-28dc-64d2-9c5b-04530e9bf5a3	ENTER	SMART-HQ-01	2026-05-19 09:57:00+06	t	2026-06-04 05:29:46.427487+06
+92d33eaa-6db3-be8f-688c-2840427fd728	ab80824b-3296-4aa1-b122-79f058a73875	b6bc7f59-28dc-64d2-9c5b-04530e9bf5a3	ENTER	SMART-HQ-01	2026-05-20 09:57:00+06	t	2026-06-04 05:29:46.427487+06
+2f9dc35d-ca33-b0b8-895e-b1fff423a496	ab80824b-3296-4aa1-b122-79f058a73875	b6bc7f59-28dc-64d2-9c5b-04530e9bf5a3	ENTER	SMART-HQ-01	2026-05-21 09:57:00+06	t	2026-06-04 05:29:46.427487+06
+52ca9d06-7cf4-3bd6-da06-045f47534204	ab80824b-3296-4aa1-b122-79f058a73875	b6bc7f59-28dc-64d2-9c5b-04530e9bf5a3	ENTER	SMART-HQ-01	2026-05-22 09:57:00+06	t	2026-06-04 05:29:46.427487+06
+23435f74-c483-3471-adf6-8b0b20c3b049	ab80824b-3296-4aa1-b122-79f058a73875	b6bc7f59-28dc-64d2-9c5b-04530e9bf5a3	ENTER	SMART-HQ-01	2026-05-25 09:57:00+06	t	2026-06-04 05:29:46.427487+06
+1af8f450-831f-bf1a-c134-40eff3c7ded7	ab80824b-3296-4aa1-b122-79f058a73875	b6bc7f59-28dc-64d2-9c5b-04530e9bf5a3	ENTER	SMART-HQ-01	2026-05-26 09:57:00+06	t	2026-06-04 05:29:46.427487+06
+23be5b19-6c79-8d9b-376d-886f32da6f1c	ab80824b-3296-4aa1-b122-79f058a73875	b6bc7f59-28dc-64d2-9c5b-04530e9bf5a3	ENTER	SMART-HQ-01	2026-05-27 09:57:00+06	t	2026-06-04 05:29:46.427487+06
+f9b9e05e-4063-501f-d9bd-508ea5d2f194	ab80824b-3296-4aa1-b122-79f058a73875	b6bc7f59-28dc-64d2-9c5b-04530e9bf5a3	ENTER	SMART-HQ-01	2026-05-28 09:57:00+06	t	2026-06-04 05:29:46.427487+06
+f0f33ece-48f0-be5d-5dc1-a24d707ae305	ab80824b-3296-4aa1-b122-79f058a73875	b6bc7f59-28dc-64d2-9c5b-04530e9bf5a3	ENTER	SMART-HQ-01	2026-05-29 09:57:00+06	t	2026-06-04 05:29:46.427487+06
+d99bbdd8-ed08-51f5-dd83-d1e58df52d0b	ab80824b-3296-4aa1-b122-79f058a73875	62f042fb-d0b7-7687-942e-acf7fe237432	ENTER	SMART-HQ-01	2026-04-01 09:57:00+06	t	2026-06-04 05:29:46.427487+06
+a988f402-64cb-aedd-36d3-a3c8ae2ea23e	ab80824b-3296-4aa1-b122-79f058a73875	62f042fb-d0b7-7687-942e-acf7fe237432	ENTER	SMART-HQ-01	2026-04-02 09:57:00+06	t	2026-06-04 05:29:46.427487+06
+2bd9b9e8-4dc2-26f7-8e6f-6fd93ec815c7	ab80824b-3296-4aa1-b122-79f058a73875	62f042fb-d0b7-7687-942e-acf7fe237432	ENTER	SMART-HQ-01	2026-04-03 09:57:00+06	t	2026-06-04 05:29:46.427487+06
+c1623b66-6085-e1ad-f6ff-4271e0816009	ab80824b-3296-4aa1-b122-79f058a73875	62f042fb-d0b7-7687-942e-acf7fe237432	ENTER	SMART-HQ-01	2026-04-06 09:57:00+06	t	2026-06-04 05:29:46.427487+06
+e1c18cfb-5ade-679c-65dd-8eb487ffe18f	ab80824b-3296-4aa1-b122-79f058a73875	62f042fb-d0b7-7687-942e-acf7fe237432	ENTER	SMART-HQ-01	2026-04-07 09:57:00+06	t	2026-06-04 05:29:46.427487+06
+8e439e7f-e0da-bcb6-a9c6-c532fca06766	ab80824b-3296-4aa1-b122-79f058a73875	62f042fb-d0b7-7687-942e-acf7fe237432	ENTER	SMART-HQ-01	2026-04-08 09:57:00+06	t	2026-06-04 05:29:46.427487+06
+28f31710-f37b-8cce-bea1-d763e6b4c754	ab80824b-3296-4aa1-b122-79f058a73875	62f042fb-d0b7-7687-942e-acf7fe237432	ENTER	SMART-HQ-01	2026-04-09 09:57:00+06	t	2026-06-04 05:29:46.427487+06
+2a9b5548-717f-2709-da54-4c5908100164	ab80824b-3296-4aa1-b122-79f058a73875	62f042fb-d0b7-7687-942e-acf7fe237432	ENTER	SMART-HQ-01	2026-04-10 09:57:00+06	t	2026-06-04 05:29:46.427487+06
+f0878fe6-ad92-6cd1-86cd-a96d360406ba	ab80824b-3296-4aa1-b122-79f058a73875	62f042fb-d0b7-7687-942e-acf7fe237432	ENTER	SMART-HQ-01	2026-04-13 09:57:00+06	t	2026-06-04 05:29:46.427487+06
+17af94e0-510e-9aeb-59da-55bcff91cc54	ab80824b-3296-4aa1-b122-79f058a73875	62f042fb-d0b7-7687-942e-acf7fe237432	ENTER	SMART-HQ-01	2026-04-14 09:57:00+06	t	2026-06-04 05:29:46.427487+06
+b3b66ca0-a143-6467-210c-6cec3674e9b5	ab80824b-3296-4aa1-b122-79f058a73875	62f042fb-d0b7-7687-942e-acf7fe237432	ENTER	SMART-HQ-01	2026-04-15 10:29:00+06	t	2026-06-04 05:29:46.427487+06
+530db602-2250-b1eb-c8e1-ef01f4c19d06	ab80824b-3296-4aa1-b122-79f058a73875	62f042fb-d0b7-7687-942e-acf7fe237432	ENTER	SMART-HQ-01	2026-04-16 09:57:00+06	t	2026-06-04 05:29:46.427487+06
+f71a36b3-1ea7-8605-762c-9b52465e7058	ab80824b-3296-4aa1-b122-79f058a73875	62f042fb-d0b7-7687-942e-acf7fe237432	ENTER	SMART-HQ-01	2026-04-17 09:57:00+06	t	2026-06-04 05:29:46.427487+06
+20b0162e-f21e-287c-f3ea-cb08212f69c6	ab80824b-3296-4aa1-b122-79f058a73875	62f042fb-d0b7-7687-942e-acf7fe237432	ENTER	SMART-HQ-01	2026-04-20 09:57:00+06	t	2026-06-04 05:29:46.427487+06
+86b04d22-9fd0-7097-74bc-66d354a3ea83	ab80824b-3296-4aa1-b122-79f058a73875	62f042fb-d0b7-7687-942e-acf7fe237432	ENTER	SMART-HQ-01	2026-04-21 09:57:00+06	t	2026-06-04 05:29:46.427487+06
+f512de19-e43b-499f-37bc-a6bd1a60cae4	ab80824b-3296-4aa1-b122-79f058a73875	62f042fb-d0b7-7687-942e-acf7fe237432	ENTER	SMART-HQ-01	2026-04-22 09:57:00+06	t	2026-06-04 05:29:46.427487+06
+fc2a0009-fce3-17e6-b4ec-54ddbc998f25	ab80824b-3296-4aa1-b122-79f058a73875	62f042fb-d0b7-7687-942e-acf7fe237432	ENTER	SMART-HQ-01	2026-04-23 09:57:00+06	t	2026-06-04 05:29:46.427487+06
+8b0d478b-648d-3ccc-96a7-c352575642f6	ab80824b-3296-4aa1-b122-79f058a73875	62f042fb-d0b7-7687-942e-acf7fe237432	ENTER	SMART-HQ-01	2026-04-24 09:57:00+06	t	2026-06-04 05:29:46.427487+06
+807d7814-4904-115f-dbac-54784a8ec27f	ab80824b-3296-4aa1-b122-79f058a73875	62f042fb-d0b7-7687-942e-acf7fe237432	ENTER	SMART-HQ-01	2026-04-27 09:57:00+06	t	2026-06-04 05:29:46.427487+06
+35c6253e-cabc-75bc-a303-d0665c57361d	ab80824b-3296-4aa1-b122-79f058a73875	62f042fb-d0b7-7687-942e-acf7fe237432	ENTER	SMART-HQ-01	2026-04-28 09:57:00+06	t	2026-06-04 05:29:46.427487+06
+5d7b4225-7f5e-f9bf-325f-8c7d2fce18fd	ab80824b-3296-4aa1-b122-79f058a73875	62f042fb-d0b7-7687-942e-acf7fe237432	ENTER	SMART-HQ-01	2026-04-29 09:57:00+06	t	2026-06-04 05:29:46.427487+06
+36813d4f-0eac-1aee-1410-56b647fb5952	ab80824b-3296-4aa1-b122-79f058a73875	62f042fb-d0b7-7687-942e-acf7fe237432	ENTER	SMART-HQ-01	2026-04-30 09:57:00+06	t	2026-06-04 05:29:46.427487+06
+61430604-0344-1b66-b07c-9d44218306dc	ab80824b-3296-4aa1-b122-79f058a73875	62f042fb-d0b7-7687-942e-acf7fe237432	ENTER	SMART-HQ-01	2026-05-04 09:57:00+06	t	2026-06-04 05:29:46.427487+06
+bd880765-6abd-902b-1d45-32263f388d80	ab80824b-3296-4aa1-b122-79f058a73875	62f042fb-d0b7-7687-942e-acf7fe237432	ENTER	SMART-HQ-01	2026-05-05 10:29:00+06	t	2026-06-04 05:29:46.427487+06
+924d8082-40a1-43b7-2f3c-99370ee52bd2	ab80824b-3296-4aa1-b122-79f058a73875	62f042fb-d0b7-7687-942e-acf7fe237432	ENTER	SMART-HQ-01	2026-05-06 09:57:00+06	t	2026-06-04 05:29:46.427487+06
+68ec4cfd-83be-81f9-0dc6-00ff087dd598	ab80824b-3296-4aa1-b122-79f058a73875	62f042fb-d0b7-7687-942e-acf7fe237432	ENTER	SMART-HQ-01	2026-05-08 09:57:00+06	t	2026-06-04 05:29:46.427487+06
+d86c691a-1563-1830-ac73-bfd4d3e4e2ac	ab80824b-3296-4aa1-b122-79f058a73875	62f042fb-d0b7-7687-942e-acf7fe237432	ENTER	SMART-HQ-01	2026-05-11 09:57:00+06	t	2026-06-04 05:29:46.427487+06
+1d7915e5-30c2-b20e-c799-9ef07258f970	ab80824b-3296-4aa1-b122-79f058a73875	62f042fb-d0b7-7687-942e-acf7fe237432	ENTER	SMART-HQ-01	2026-05-12 09:57:00+06	t	2026-06-04 05:29:46.427487+06
+baabf868-173e-56ac-3da1-1430162766c3	ab80824b-3296-4aa1-b122-79f058a73875	62f042fb-d0b7-7687-942e-acf7fe237432	ENTER	SMART-HQ-01	2026-05-13 09:57:00+06	t	2026-06-04 05:29:46.427487+06
+7c4d9035-e01f-9ebd-b034-51c529254508	ab80824b-3296-4aa1-b122-79f058a73875	62f042fb-d0b7-7687-942e-acf7fe237432	ENTER	SMART-HQ-01	2026-05-14 09:57:00+06	t	2026-06-04 05:29:46.427487+06
+c00a2455-aa08-5308-63d4-78344d2e2883	ab80824b-3296-4aa1-b122-79f058a73875	62f042fb-d0b7-7687-942e-acf7fe237432	ENTER	SMART-HQ-01	2026-05-15 09:57:00+06	t	2026-06-04 05:29:46.427487+06
+ac1f3a61-aa81-d316-0f05-5dfd1840dca3	ab80824b-3296-4aa1-b122-79f058a73875	62f042fb-d0b7-7687-942e-acf7fe237432	ENTER	SMART-HQ-01	2026-05-16 09:57:00+06	t	2026-06-04 05:29:46.427487+06
+41e9edda-afd4-dbc4-7ea6-8355773ffdbf	ab80824b-3296-4aa1-b122-79f058a73875	62f042fb-d0b7-7687-942e-acf7fe237432	ENTER	SMART-HQ-01	2026-05-18 09:57:00+06	t	2026-06-04 05:29:46.427487+06
+b84874c5-2b8f-0e64-c066-b76042f3e98e	ab80824b-3296-4aa1-b122-79f058a73875	62f042fb-d0b7-7687-942e-acf7fe237432	ENTER	SMART-HQ-01	2026-05-19 09:57:00+06	t	2026-06-04 05:29:46.427487+06
+ff8d2f76-a8ff-7c62-c90f-eac0cefef38d	ab80824b-3296-4aa1-b122-79f058a73875	62f042fb-d0b7-7687-942e-acf7fe237432	ENTER	SMART-HQ-01	2026-05-20 09:57:00+06	t	2026-06-04 05:29:46.427487+06
+5cd2a0d0-e5e2-3d13-dc37-d57862d0e7ff	ab80824b-3296-4aa1-b122-79f058a73875	62f042fb-d0b7-7687-942e-acf7fe237432	ENTER	SMART-HQ-01	2026-05-21 09:57:00+06	t	2026-06-04 05:29:46.427487+06
+9cf3b6dc-d44a-df48-8cfc-4abb06c214f9	ab80824b-3296-4aa1-b122-79f058a73875	62f042fb-d0b7-7687-942e-acf7fe237432	ENTER	SMART-HQ-01	2026-05-22 09:57:00+06	t	2026-06-04 05:29:46.427487+06
+1b8f8fd3-159e-c500-a6f4-5b057aee2367	ab80824b-3296-4aa1-b122-79f058a73875	62f042fb-d0b7-7687-942e-acf7fe237432	ENTER	SMART-HQ-01	2026-05-25 09:57:00+06	t	2026-06-04 05:29:46.427487+06
+b66ecf6e-aa80-0c92-6f47-98b8cb85e106	ab80824b-3296-4aa1-b122-79f058a73875	62f042fb-d0b7-7687-942e-acf7fe237432	ENTER	SMART-HQ-01	2026-05-26 09:57:00+06	t	2026-06-04 05:29:46.427487+06
+773e9c6d-4672-dfd7-842e-1c7b253c5074	ab80824b-3296-4aa1-b122-79f058a73875	62f042fb-d0b7-7687-942e-acf7fe237432	ENTER	SMART-HQ-01	2026-05-27 09:57:00+06	t	2026-06-04 05:29:46.427487+06
+ada4f86c-55d5-3545-ddbd-a44b6cf0323e	ab80824b-3296-4aa1-b122-79f058a73875	62f042fb-d0b7-7687-942e-acf7fe237432	ENTER	SMART-HQ-01	2026-05-28 09:57:00+06	t	2026-06-04 05:29:46.427487+06
+a77ef22a-be28-889b-8ddb-8fefba16bfdb	ab80824b-3296-4aa1-b122-79f058a73875	62f042fb-d0b7-7687-942e-acf7fe237432	ENTER	SMART-HQ-01	2026-05-29 09:57:00+06	t	2026-06-04 05:29:46.427487+06
+e6539c3d-984b-290e-60eb-e43a21cafe76	ab80824b-3296-4aa1-b122-79f058a73875	1846012f-cc30-ec19-8a7f-21078a087c75	ENTER	SMART-HQ-01	2026-04-01 11:04:00+06	t	2026-06-04 05:29:46.427487+06
+6b4685ea-3675-33e1-e6c9-1357022b3aee	ab80824b-3296-4aa1-b122-79f058a73875	1846012f-cc30-ec19-8a7f-21078a087c75	ENTER	SMART-HQ-01	2026-04-02 11:04:00+06	t	2026-06-04 05:29:46.427487+06
+b6e8448d-355d-a640-c2b0-5051a0264752	ab80824b-3296-4aa1-b122-79f058a73875	1846012f-cc30-ec19-8a7f-21078a087c75	ENTER	SMART-HQ-01	2026-04-03 11:04:00+06	t	2026-06-04 05:29:46.427487+06
+74e0c219-74a3-bef7-8be6-5247e00aa387	ab80824b-3296-4aa1-b122-79f058a73875	1846012f-cc30-ec19-8a7f-21078a087c75	ENTER	SMART-HQ-01	2026-04-06 11:04:00+06	t	2026-06-04 05:29:46.427487+06
+72260af8-d27d-85e1-77d2-f4472ea8ead9	ab80824b-3296-4aa1-b122-79f058a73875	1846012f-cc30-ec19-8a7f-21078a087c75	ENTER	SMART-HQ-01	2026-04-07 11:04:00+06	t	2026-06-04 05:29:46.427487+06
+e33e59ed-1a37-38e0-b57a-059db79cde7f	ab80824b-3296-4aa1-b122-79f058a73875	1846012f-cc30-ec19-8a7f-21078a087c75	ENTER	SMART-HQ-01	2026-04-08 11:04:00+06	t	2026-06-04 05:29:46.427487+06
+bf568675-b5a8-5655-0eef-d477a5536f1a	ab80824b-3296-4aa1-b122-79f058a73875	1846012f-cc30-ec19-8a7f-21078a087c75	ENTER	SMART-HQ-01	2026-04-09 11:04:00+06	t	2026-06-04 05:29:46.427487+06
+c816e460-7f65-eef0-db8f-582b2b0b6570	ab80824b-3296-4aa1-b122-79f058a73875	1846012f-cc30-ec19-8a7f-21078a087c75	ENTER	SMART-HQ-01	2026-04-10 11:04:00+06	t	2026-06-04 05:29:46.427487+06
+6f1694cc-0482-ac1d-e4f5-19b91d070277	ab80824b-3296-4aa1-b122-79f058a73875	1846012f-cc30-ec19-8a7f-21078a087c75	ENTER	SMART-HQ-01	2026-04-13 11:04:00+06	t	2026-06-04 05:29:46.427487+06
+5e8541f6-24a3-0809-1884-7793844d6b68	ab80824b-3296-4aa1-b122-79f058a73875	1846012f-cc30-ec19-8a7f-21078a087c75	ENTER	SMART-HQ-01	2026-04-14 11:04:00+06	t	2026-06-04 05:29:46.427487+06
+8197e5f5-688b-65d7-d880-c1a4495d6471	ab80824b-3296-4aa1-b122-79f058a73875	1846012f-cc30-ec19-8a7f-21078a087c75	ENTER	SMART-HQ-01	2026-04-15 11:04:00+06	t	2026-06-04 05:29:46.427487+06
+e3881bee-5ebe-60c2-d06b-5344a1948342	ab80824b-3296-4aa1-b122-79f058a73875	1846012f-cc30-ec19-8a7f-21078a087c75	ENTER	SMART-HQ-01	2026-04-16 11:04:00+06	t	2026-06-04 05:29:46.427487+06
+edba1ae8-b704-a3ea-f76b-66acbb657c8d	ab80824b-3296-4aa1-b122-79f058a73875	1846012f-cc30-ec19-8a7f-21078a087c75	ENTER	SMART-HQ-01	2026-04-17 11:04:00+06	t	2026-06-04 05:29:46.427487+06
+7e75d400-3095-8067-a846-7e448f603d9d	ab80824b-3296-4aa1-b122-79f058a73875	1846012f-cc30-ec19-8a7f-21078a087c75	ENTER	SMART-HQ-01	2026-04-20 11:04:00+06	t	2026-06-04 05:29:46.427487+06
+1e12247b-c867-a938-b9e9-a133a194ff4b	ab80824b-3296-4aa1-b122-79f058a73875	1846012f-cc30-ec19-8a7f-21078a087c75	ENTER	SMART-HQ-01	2026-04-21 11:04:00+06	t	2026-06-04 05:29:46.427487+06
+315a0e50-2883-b4ad-dcd3-c5806664ca92	ab80824b-3296-4aa1-b122-79f058a73875	1846012f-cc30-ec19-8a7f-21078a087c75	ENTER	SMART-HQ-01	2026-04-22 11:04:00+06	t	2026-06-04 05:29:46.427487+06
+f2c50eb3-df1c-851a-4414-6c8fc9a5d7a6	ab80824b-3296-4aa1-b122-79f058a73875	1846012f-cc30-ec19-8a7f-21078a087c75	ENTER	SMART-HQ-01	2026-04-23 11:04:00+06	t	2026-06-04 05:29:46.427487+06
+73a4bf98-e54e-117f-6d08-1b81392e1533	ab80824b-3296-4aa1-b122-79f058a73875	1846012f-cc30-ec19-8a7f-21078a087c75	ENTER	SMART-HQ-01	2026-04-24 11:04:00+06	t	2026-06-04 05:29:46.427487+06
+c6f96501-897d-2efb-a66e-f87ad04ad53c	ab80824b-3296-4aa1-b122-79f058a73875	1846012f-cc30-ec19-8a7f-21078a087c75	ENTER	SMART-HQ-01	2026-04-27 11:04:00+06	t	2026-06-04 05:29:46.427487+06
+483dda71-a12d-4d1d-533d-cbaf12bc6d2b	ab80824b-3296-4aa1-b122-79f058a73875	1846012f-cc30-ec19-8a7f-21078a087c75	ENTER	SMART-HQ-01	2026-04-28 11:04:00+06	t	2026-06-04 05:29:46.427487+06
+0811fd4f-e599-2838-aee9-e71302e6cbd9	ab80824b-3296-4aa1-b122-79f058a73875	1846012f-cc30-ec19-8a7f-21078a087c75	ENTER	SMART-HQ-01	2026-04-29 11:04:00+06	t	2026-06-04 05:29:46.427487+06
+36a83db5-b5c1-acdc-7ca4-457e73780df6	ab80824b-3296-4aa1-b122-79f058a73875	1846012f-cc30-ec19-8a7f-21078a087c75	ENTER	SMART-HQ-01	2026-04-30 11:04:00+06	t	2026-06-04 05:29:46.427487+06
+51df3799-7f0d-36b5-2843-a588b6444beb	ab80824b-3296-4aa1-b122-79f058a73875	1846012f-cc30-ec19-8a7f-21078a087c75	ENTER	SMART-HQ-01	2026-05-04 11:04:00+06	t	2026-06-04 05:29:46.427487+06
+9af9f25f-78bd-57a5-7b44-85573dfc2bf2	ab80824b-3296-4aa1-b122-79f058a73875	1846012f-cc30-ec19-8a7f-21078a087c75	ENTER	SMART-HQ-01	2026-05-05 11:04:00+06	t	2026-06-04 05:29:46.427487+06
+1f48f6a8-1ff8-7f4f-fe1d-8a6a92842b94	ab80824b-3296-4aa1-b122-79f058a73875	1846012f-cc30-ec19-8a7f-21078a087c75	ENTER	SMART-HQ-01	2026-05-06 11:04:00+06	t	2026-06-04 05:29:46.427487+06
+9f21f546-9183-e773-d8e5-b8b04adde69a	ab80824b-3296-4aa1-b122-79f058a73875	1846012f-cc30-ec19-8a7f-21078a087c75	ENTER	SMART-HQ-01	2026-05-08 11:04:00+06	t	2026-06-04 05:29:46.427487+06
+24b1b5ff-eac2-e3c1-56bd-67887c3341b0	ab80824b-3296-4aa1-b122-79f058a73875	1846012f-cc30-ec19-8a7f-21078a087c75	ENTER	SMART-HQ-01	2026-05-11 11:04:00+06	t	2026-06-04 05:29:46.427487+06
+0b034a26-3eba-2849-b7d4-5738513aea4e	ab80824b-3296-4aa1-b122-79f058a73875	1846012f-cc30-ec19-8a7f-21078a087c75	ENTER	SMART-HQ-01	2026-05-12 11:04:00+06	t	2026-06-04 05:29:46.427487+06
+d6ef8953-bb81-5b8f-a706-d3dd65bd7810	ab80824b-3296-4aa1-b122-79f058a73875	1846012f-cc30-ec19-8a7f-21078a087c75	ENTER	SMART-HQ-01	2026-05-13 11:04:00+06	t	2026-06-04 05:29:46.427487+06
+7b26c33d-8c6d-4a0f-1c0e-2bcbefba5d74	ab80824b-3296-4aa1-b122-79f058a73875	1846012f-cc30-ec19-8a7f-21078a087c75	ENTER	SMART-HQ-01	2026-05-14 11:04:00+06	t	2026-06-04 05:29:46.427487+06
+3938507f-3bc3-7723-f4cc-5dfa6905d26c	ab80824b-3296-4aa1-b122-79f058a73875	1846012f-cc30-ec19-8a7f-21078a087c75	ENTER	SMART-HQ-01	2026-05-15 11:04:00+06	t	2026-06-04 05:29:46.427487+06
+a21c16e4-64f6-b4bf-abd8-4f108eb11bf3	ab80824b-3296-4aa1-b122-79f058a73875	1846012f-cc30-ec19-8a7f-21078a087c75	ENTER	SMART-HQ-01	2026-05-16 11:04:00+06	t	2026-06-04 05:29:46.427487+06
+00eebf12-91b8-d362-9d3b-7ae072e13e60	ab80824b-3296-4aa1-b122-79f058a73875	1846012f-cc30-ec19-8a7f-21078a087c75	ENTER	SMART-HQ-01	2026-05-18 11:04:00+06	t	2026-06-04 05:29:46.427487+06
+d39893e4-90f4-0999-4595-cf59fac79481	ab80824b-3296-4aa1-b122-79f058a73875	1846012f-cc30-ec19-8a7f-21078a087c75	ENTER	SMART-HQ-01	2026-05-19 11:04:00+06	t	2026-06-04 05:29:46.427487+06
+ac03e6ef-ccc2-8bf1-56ef-3442ee6b4f4d	ab80824b-3296-4aa1-b122-79f058a73875	1846012f-cc30-ec19-8a7f-21078a087c75	ENTER	SMART-HQ-01	2026-05-25 11:04:00+06	t	2026-06-04 05:29:46.427487+06
+2abf32cf-5653-8c2b-2745-666c4fcf6ce3	ab80824b-3296-4aa1-b122-79f058a73875	1846012f-cc30-ec19-8a7f-21078a087c75	ENTER	SMART-HQ-01	2026-05-26 11:04:00+06	t	2026-06-04 05:29:46.427487+06
+499caa8b-af59-bd39-7bab-8d2393395b7a	ab80824b-3296-4aa1-b122-79f058a73875	1846012f-cc30-ec19-8a7f-21078a087c75	ENTER	SMART-HQ-01	2026-05-27 11:04:00+06	t	2026-06-04 05:29:46.427487+06
+8c9dd28f-9f11-8af8-d4b0-0b2175dbee1d	ab80824b-3296-4aa1-b122-79f058a73875	1846012f-cc30-ec19-8a7f-21078a087c75	ENTER	SMART-HQ-01	2026-05-28 11:04:00+06	t	2026-06-04 05:29:46.427487+06
+5712fce1-6921-d4a0-c709-346b5193634f	ab80824b-3296-4aa1-b122-79f058a73875	1846012f-cc30-ec19-8a7f-21078a087c75	ENTER	SMART-HQ-01	2026-05-29 11:04:00+06	t	2026-06-04 05:29:46.427487+06
+f884bdee-353b-508e-4aee-7a05a3181db1	ab80824b-3296-4aa1-b122-79f058a73875	33f9e677-d27f-3997-aab5-ff7013710e53	EXIT	SMART-HQ-01	2026-04-01 19:20:00+06	t	2026-06-04 05:29:46.427487+06
+b350827b-87de-5bb3-1ba2-4cf53a2886ad	ab80824b-3296-4aa1-b122-79f058a73875	33f9e677-d27f-3997-aab5-ff7013710e53	EXIT	SMART-HQ-01	2026-04-02 19:20:00+06	t	2026-06-04 05:29:46.427487+06
+c867cb10-5fcc-d343-193d-8648f33f6371	ab80824b-3296-4aa1-b122-79f058a73875	33f9e677-d27f-3997-aab5-ff7013710e53	EXIT	SMART-HQ-01	2026-04-03 19:20:00+06	t	2026-06-04 05:29:46.427487+06
+48de3db9-41df-a772-1aca-43586d56e841	ab80824b-3296-4aa1-b122-79f058a73875	33f9e677-d27f-3997-aab5-ff7013710e53	EXIT	SMART-HQ-01	2026-04-06 19:20:00+06	t	2026-06-04 05:29:46.427487+06
+67845128-7080-c2c0-1300-7d50e7363152	ab80824b-3296-4aa1-b122-79f058a73875	33f9e677-d27f-3997-aab5-ff7013710e53	EXIT	SMART-HQ-01	2026-04-07 19:20:00+06	t	2026-06-04 05:29:46.427487+06
+5c907e79-0ae5-4fc3-bb3b-c9c6151dad6f	ab80824b-3296-4aa1-b122-79f058a73875	33f9e677-d27f-3997-aab5-ff7013710e53	EXIT	SMART-HQ-01	2026-04-08 19:20:00+06	t	2026-06-04 05:29:46.427487+06
+1f777327-2b24-14b1-ccd6-5291acf4e925	ab80824b-3296-4aa1-b122-79f058a73875	33f9e677-d27f-3997-aab5-ff7013710e53	EXIT	SMART-HQ-01	2026-04-09 19:20:00+06	t	2026-06-04 05:29:46.427487+06
+54314a8e-09a0-3ca6-73f5-95b111426dd5	ab80824b-3296-4aa1-b122-79f058a73875	33f9e677-d27f-3997-aab5-ff7013710e53	EXIT	SMART-HQ-01	2026-04-10 19:20:00+06	t	2026-06-04 05:29:46.427487+06
+836dc219-541a-5211-c4f3-2983b9550d8d	ab80824b-3296-4aa1-b122-79f058a73875	33f9e677-d27f-3997-aab5-ff7013710e53	EXIT	SMART-HQ-01	2026-04-13 19:20:00+06	t	2026-06-04 05:29:46.427487+06
+854ecc23-18d0-7fd5-5cad-b0190f6a1189	ab80824b-3296-4aa1-b122-79f058a73875	33f9e677-d27f-3997-aab5-ff7013710e53	EXIT	SMART-HQ-01	2026-04-14 19:20:00+06	t	2026-06-04 05:29:46.427487+06
+1b0c8ed1-8856-f4f7-686b-253d7dc35700	ab80824b-3296-4aa1-b122-79f058a73875	33f9e677-d27f-3997-aab5-ff7013710e53	EXIT	SMART-HQ-01	2026-04-15 19:20:00+06	t	2026-06-04 05:29:46.427487+06
+d50e26fd-55dc-7527-8515-b22f27f98f5b	ab80824b-3296-4aa1-b122-79f058a73875	33f9e677-d27f-3997-aab5-ff7013710e53	EXIT	SMART-HQ-01	2026-04-16 19:20:00+06	t	2026-06-04 05:29:46.427487+06
+0967c683-8e3d-f63d-843a-d8b032dd238e	ab80824b-3296-4aa1-b122-79f058a73875	33f9e677-d27f-3997-aab5-ff7013710e53	EXIT	SMART-HQ-01	2026-04-17 19:20:00+06	t	2026-06-04 05:29:46.427487+06
+b0f0fac0-84df-eb1c-e7c3-d253221ecae8	ab80824b-3296-4aa1-b122-79f058a73875	33f9e677-d27f-3997-aab5-ff7013710e53	EXIT	SMART-HQ-01	2026-04-20 19:20:00+06	t	2026-06-04 05:29:46.427487+06
+efbc223b-67e6-dbae-ebee-887d578cc16b	ab80824b-3296-4aa1-b122-79f058a73875	33f9e677-d27f-3997-aab5-ff7013710e53	EXIT	SMART-HQ-01	2026-04-21 19:20:00+06	t	2026-06-04 05:29:46.427487+06
+09ffd717-b120-d285-d2cd-a87c7e17d766	ab80824b-3296-4aa1-b122-79f058a73875	33f9e677-d27f-3997-aab5-ff7013710e53	EXIT	SMART-HQ-01	2026-04-22 19:20:00+06	t	2026-06-04 05:29:46.427487+06
+55abe379-491b-0405-416a-8b3cb56d70ef	ab80824b-3296-4aa1-b122-79f058a73875	33f9e677-d27f-3997-aab5-ff7013710e53	EXIT	SMART-HQ-01	2026-04-23 19:20:00+06	t	2026-06-04 05:29:46.427487+06
+0def3e3b-69bf-acd9-f394-d1c0df9c6a72	ab80824b-3296-4aa1-b122-79f058a73875	33f9e677-d27f-3997-aab5-ff7013710e53	EXIT	SMART-HQ-01	2026-04-24 19:20:00+06	t	2026-06-04 05:29:46.427487+06
+69f13416-a140-ed25-b0f1-96a840766630	ab80824b-3296-4aa1-b122-79f058a73875	33f9e677-d27f-3997-aab5-ff7013710e53	EXIT	SMART-HQ-01	2026-04-27 19:20:00+06	t	2026-06-04 05:29:46.427487+06
+2ebee28e-0c2b-f34c-a61b-cdaae063471e	ab80824b-3296-4aa1-b122-79f058a73875	33f9e677-d27f-3997-aab5-ff7013710e53	EXIT	SMART-HQ-01	2026-04-28 19:20:00+06	t	2026-06-04 05:29:46.427487+06
+cebc9220-3e26-06a1-a772-c825177b1f30	ab80824b-3296-4aa1-b122-79f058a73875	33f9e677-d27f-3997-aab5-ff7013710e53	EXIT	SMART-HQ-01	2026-04-29 19:20:00+06	t	2026-06-04 05:29:46.427487+06
+9983e7da-a668-c381-0233-cd6fb48347e6	ab80824b-3296-4aa1-b122-79f058a73875	33f9e677-d27f-3997-aab5-ff7013710e53	EXIT	SMART-HQ-01	2026-04-30 19:20:00+06	t	2026-06-04 05:29:46.427487+06
+78d370c6-68c8-d0a2-7f82-1a99320e47f9	ab80824b-3296-4aa1-b122-79f058a73875	33f9e677-d27f-3997-aab5-ff7013710e53	EXIT	SMART-HQ-01	2026-05-04 19:20:00+06	t	2026-06-04 05:29:46.427487+06
+21b6f008-1aa9-f247-7ad0-ddecfce8834e	ab80824b-3296-4aa1-b122-79f058a73875	33f9e677-d27f-3997-aab5-ff7013710e53	EXIT	SMART-HQ-01	2026-05-05 19:20:00+06	t	2026-06-04 05:29:46.427487+06
+52ab315f-781f-7b5c-2660-b0226e359884	ab80824b-3296-4aa1-b122-79f058a73875	33f9e677-d27f-3997-aab5-ff7013710e53	EXIT	SMART-HQ-01	2026-05-06 19:20:00+06	t	2026-06-04 05:29:46.427487+06
+96477ac2-5a9e-9442-7a00-b9ac49d2ab80	ab80824b-3296-4aa1-b122-79f058a73875	33f9e677-d27f-3997-aab5-ff7013710e53	EXIT	SMART-HQ-01	2026-05-08 19:20:00+06	t	2026-06-04 05:29:46.427487+06
+a693ea5a-3245-d4a2-68b4-fbecf3896adc	ab80824b-3296-4aa1-b122-79f058a73875	33f9e677-d27f-3997-aab5-ff7013710e53	EXIT	SMART-HQ-01	2026-05-11 19:20:00+06	t	2026-06-04 05:29:46.427487+06
+a4e89c1e-39fc-5719-163e-82b8c7f5da3a	ab80824b-3296-4aa1-b122-79f058a73875	33f9e677-d27f-3997-aab5-ff7013710e53	EXIT	SMART-HQ-01	2026-05-12 19:20:00+06	t	2026-06-04 05:29:46.427487+06
+df45ecbc-a0c3-e8bf-673b-0aa551440bdd	ab80824b-3296-4aa1-b122-79f058a73875	33f9e677-d27f-3997-aab5-ff7013710e53	EXIT	SMART-HQ-01	2026-05-13 19:20:00+06	t	2026-06-04 05:29:46.427487+06
+c7f7698f-549d-0a20-6f0b-203f8c9760c5	ab80824b-3296-4aa1-b122-79f058a73875	33f9e677-d27f-3997-aab5-ff7013710e53	EXIT	SMART-HQ-01	2026-05-14 19:20:00+06	t	2026-06-04 05:29:46.427487+06
+f6d4441b-de73-e2a5-95e1-d5ca49a379d1	ab80824b-3296-4aa1-b122-79f058a73875	33f9e677-d27f-3997-aab5-ff7013710e53	EXIT	SMART-HQ-01	2026-05-15 19:20:00+06	t	2026-06-04 05:29:46.427487+06
+e81c9a95-827a-ce7e-6f49-f807d4ebbc88	ab80824b-3296-4aa1-b122-79f058a73875	33f9e677-d27f-3997-aab5-ff7013710e53	EXIT	SMART-HQ-01	2026-05-16 19:20:00+06	t	2026-06-04 05:29:46.427487+06
+c558f9f6-e2ac-826a-a00e-b3e27f03568e	ab80824b-3296-4aa1-b122-79f058a73875	33f9e677-d27f-3997-aab5-ff7013710e53	EXIT	SMART-HQ-01	2026-05-18 19:20:00+06	t	2026-06-04 05:29:46.427487+06
+11983bfc-518a-5128-4a71-f3eac88badbf	ab80824b-3296-4aa1-b122-79f058a73875	33f9e677-d27f-3997-aab5-ff7013710e53	EXIT	SMART-HQ-01	2026-05-19 19:20:00+06	t	2026-06-04 05:29:46.427487+06
+244c68a7-eb04-e10a-2582-b67c7507501c	ab80824b-3296-4aa1-b122-79f058a73875	33f9e677-d27f-3997-aab5-ff7013710e53	EXIT	SMART-HQ-01	2026-05-20 19:20:00+06	t	2026-06-04 05:29:46.427487+06
+b4f2afd6-1eec-c2c1-dc95-0c6816b7aee5	ab80824b-3296-4aa1-b122-79f058a73875	33f9e677-d27f-3997-aab5-ff7013710e53	EXIT	SMART-HQ-01	2026-05-21 19:20:00+06	t	2026-06-04 05:29:46.427487+06
+95b2beb5-727b-e653-5277-1f4b91857956	ab80824b-3296-4aa1-b122-79f058a73875	33f9e677-d27f-3997-aab5-ff7013710e53	EXIT	SMART-HQ-01	2026-05-22 19:20:00+06	t	2026-06-04 05:29:46.427487+06
+97cb9055-af84-93e4-65ff-aa75f5fdca15	ab80824b-3296-4aa1-b122-79f058a73875	33f9e677-d27f-3997-aab5-ff7013710e53	EXIT	SMART-HQ-01	2026-05-25 19:20:00+06	t	2026-06-04 05:29:46.427487+06
+a19c64c1-978f-a5eb-b6e1-9605ec799614	ab80824b-3296-4aa1-b122-79f058a73875	33f9e677-d27f-3997-aab5-ff7013710e53	EXIT	SMART-HQ-01	2026-05-26 19:20:00+06	t	2026-06-04 05:29:46.427487+06
+23f86cc6-8de7-04d3-c9ea-78d08f19a9c8	ab80824b-3296-4aa1-b122-79f058a73875	33f9e677-d27f-3997-aab5-ff7013710e53	EXIT	SMART-HQ-01	2026-05-27 19:20:00+06	t	2026-06-04 05:29:46.427487+06
+7b226aa2-21c5-94d8-c8f1-534d0b05ede4	ab80824b-3296-4aa1-b122-79f058a73875	33f9e677-d27f-3997-aab5-ff7013710e53	EXIT	SMART-HQ-01	2026-05-28 19:20:00+06	t	2026-06-04 05:29:46.427487+06
+c379c955-8e55-3005-3f0e-f6777626ee38	ab80824b-3296-4aa1-b122-79f058a73875	33f9e677-d27f-3997-aab5-ff7013710e53	EXIT	SMART-HQ-01	2026-05-29 19:20:00+06	t	2026-06-04 05:29:46.427487+06
+caf1cedc-b62f-5b5b-73e5-eb0c7ef622ab	ab80824b-3296-4aa1-b122-79f058a73875	fc8a3817-f4ff-4789-89fe-1960d74b8830	EXIT	SMART-HQ-01	2026-04-01 19:02:00+06	t	2026-06-04 05:29:46.427487+06
+1f106b05-0164-f761-b114-01f47f63f3f2	ab80824b-3296-4aa1-b122-79f058a73875	fc8a3817-f4ff-4789-89fe-1960d74b8830	EXIT	SMART-HQ-01	2026-04-02 19:02:00+06	t	2026-06-04 05:29:46.427487+06
+2275e1cf-f14b-5a44-bac2-df25e2703ec1	ab80824b-3296-4aa1-b122-79f058a73875	fc8a3817-f4ff-4789-89fe-1960d74b8830	EXIT	SMART-HQ-01	2026-04-03 19:02:00+06	t	2026-06-04 05:29:46.427487+06
+7a2b5e3e-6c81-c991-8a2a-5f54976941f4	ab80824b-3296-4aa1-b122-79f058a73875	fc8a3817-f4ff-4789-89fe-1960d74b8830	EXIT	SMART-HQ-01	2026-04-06 19:02:00+06	t	2026-06-04 05:29:46.427487+06
+029c3f34-4959-9aa8-bae0-40489949ac7f	ab80824b-3296-4aa1-b122-79f058a73875	fc8a3817-f4ff-4789-89fe-1960d74b8830	EXIT	SMART-HQ-01	2026-04-07 19:02:00+06	t	2026-06-04 05:29:46.427487+06
+6c12be7b-6734-b88d-0f8e-ac0b67f1a2b6	ab80824b-3296-4aa1-b122-79f058a73875	fc8a3817-f4ff-4789-89fe-1960d74b8830	EXIT	SMART-HQ-01	2026-04-08 19:02:00+06	t	2026-06-04 05:29:46.427487+06
+ebb3aaf3-61a3-830e-4077-8d736625398d	ab80824b-3296-4aa1-b122-79f058a73875	fc8a3817-f4ff-4789-89fe-1960d74b8830	EXIT	SMART-HQ-01	2026-04-09 19:02:00+06	t	2026-06-04 05:29:46.427487+06
+8cb15f1b-c2b6-c137-cd2d-c44973b65500	ab80824b-3296-4aa1-b122-79f058a73875	fc8a3817-f4ff-4789-89fe-1960d74b8830	EXIT	SMART-HQ-01	2026-04-10 19:02:00+06	t	2026-06-04 05:29:46.427487+06
+882619d9-7ff3-9c5f-4bad-194db9389cca	ab80824b-3296-4aa1-b122-79f058a73875	fc8a3817-f4ff-4789-89fe-1960d74b8830	EXIT	SMART-HQ-01	2026-04-13 19:02:00+06	t	2026-06-04 05:29:46.427487+06
+15729d7f-f64f-4bd7-2c65-3ed3df11c4e1	ab80824b-3296-4aa1-b122-79f058a73875	fc8a3817-f4ff-4789-89fe-1960d74b8830	EXIT	SMART-HQ-01	2026-04-14 19:02:00+06	t	2026-06-04 05:29:46.427487+06
+e125d5e0-318d-6759-1736-4a9ef33f616e	ab80824b-3296-4aa1-b122-79f058a73875	fc8a3817-f4ff-4789-89fe-1960d74b8830	EXIT	SMART-HQ-01	2026-04-15 19:02:00+06	t	2026-06-04 05:29:46.427487+06
+8d05d593-0266-1af0-8840-146f5dada238	ab80824b-3296-4aa1-b122-79f058a73875	fc8a3817-f4ff-4789-89fe-1960d74b8830	EXIT	SMART-HQ-01	2026-04-16 19:02:00+06	t	2026-06-04 05:29:46.427487+06
+6f7d3604-598e-d5fa-f8bb-65ac76e12a7c	ab80824b-3296-4aa1-b122-79f058a73875	fc8a3817-f4ff-4789-89fe-1960d74b8830	EXIT	SMART-HQ-01	2026-04-17 19:02:00+06	t	2026-06-04 05:29:46.427487+06
+d9de671e-6582-72e6-9b26-0448af48ad71	ab80824b-3296-4aa1-b122-79f058a73875	fc8a3817-f4ff-4789-89fe-1960d74b8830	EXIT	SMART-HQ-01	2026-04-20 19:02:00+06	t	2026-06-04 05:29:46.427487+06
+a65d032e-52c5-1b39-ae5e-dc29bb0d7732	ab80824b-3296-4aa1-b122-79f058a73875	fc8a3817-f4ff-4789-89fe-1960d74b8830	EXIT	SMART-HQ-01	2026-04-21 19:02:00+06	t	2026-06-04 05:29:46.427487+06
+f501c08a-19e1-ad27-43fd-dc3e8e7619f5	ab80824b-3296-4aa1-b122-79f058a73875	fc8a3817-f4ff-4789-89fe-1960d74b8830	EXIT	SMART-HQ-01	2026-04-22 19:02:00+06	t	2026-06-04 05:29:46.427487+06
+3b0be094-c5df-81bc-b57c-accd32042680	ab80824b-3296-4aa1-b122-79f058a73875	fc8a3817-f4ff-4789-89fe-1960d74b8830	EXIT	SMART-HQ-01	2026-04-23 19:02:00+06	t	2026-06-04 05:29:46.427487+06
+a68f8307-ade0-bf0f-aa41-6632bf21532c	ab80824b-3296-4aa1-b122-79f058a73875	fc8a3817-f4ff-4789-89fe-1960d74b8830	EXIT	SMART-HQ-01	2026-04-24 19:02:00+06	t	2026-06-04 05:29:46.427487+06
+56639b54-ad6c-6811-6263-2d40f567377b	ab80824b-3296-4aa1-b122-79f058a73875	fc8a3817-f4ff-4789-89fe-1960d74b8830	EXIT	SMART-HQ-01	2026-04-27 19:02:00+06	t	2026-06-04 05:29:46.427487+06
+d78c3b32-9d62-6d5f-13f3-d68fe62e2299	ab80824b-3296-4aa1-b122-79f058a73875	fc8a3817-f4ff-4789-89fe-1960d74b8830	EXIT	SMART-HQ-01	2026-04-28 19:02:00+06	t	2026-06-04 05:29:46.427487+06
+ce204d8d-d767-a807-3ce9-92fb7478ed16	ab80824b-3296-4aa1-b122-79f058a73875	fc8a3817-f4ff-4789-89fe-1960d74b8830	EXIT	SMART-HQ-01	2026-04-29 19:02:00+06	t	2026-06-04 05:29:46.427487+06
+25d0c57c-b814-194c-a3ec-771c544413c6	ab80824b-3296-4aa1-b122-79f058a73875	fc8a3817-f4ff-4789-89fe-1960d74b8830	EXIT	SMART-HQ-01	2026-04-30 19:02:00+06	t	2026-06-04 05:29:46.427487+06
+44b41439-1fa3-c3fc-c2f5-0616a8706016	ab80824b-3296-4aa1-b122-79f058a73875	fc8a3817-f4ff-4789-89fe-1960d74b8830	EXIT	SMART-HQ-01	2026-05-04 19:02:00+06	t	2026-06-04 05:29:46.427487+06
+20794863-ad58-3954-eabe-1c642ba27bfd	ab80824b-3296-4aa1-b122-79f058a73875	fc8a3817-f4ff-4789-89fe-1960d74b8830	EXIT	SMART-HQ-01	2026-05-05 19:02:00+06	t	2026-06-04 05:29:46.427487+06
+4fa081aa-37af-c44f-14f3-3fcfe2119670	ab80824b-3296-4aa1-b122-79f058a73875	fc8a3817-f4ff-4789-89fe-1960d74b8830	EXIT	SMART-HQ-01	2026-05-06 19:02:00+06	t	2026-06-04 05:29:46.427487+06
+d48af9e9-469e-dbb6-3f9d-6ffac6116afe	ab80824b-3296-4aa1-b122-79f058a73875	fc8a3817-f4ff-4789-89fe-1960d74b8830	EXIT	SMART-HQ-01	2026-05-08 19:02:00+06	t	2026-06-04 05:29:46.427487+06
+82304445-508d-5cd5-2b64-b17b7c983e6f	ab80824b-3296-4aa1-b122-79f058a73875	fc8a3817-f4ff-4789-89fe-1960d74b8830	EXIT	SMART-HQ-01	2026-05-11 19:02:00+06	t	2026-06-04 05:29:46.427487+06
+ee3043cf-d896-f0c2-5278-e7b050953c47	ab80824b-3296-4aa1-b122-79f058a73875	fc8a3817-f4ff-4789-89fe-1960d74b8830	EXIT	SMART-HQ-01	2026-05-12 19:02:00+06	t	2026-06-04 05:29:46.427487+06
+864a2ff7-ceff-277d-651f-f54e52cccb0b	ab80824b-3296-4aa1-b122-79f058a73875	fc8a3817-f4ff-4789-89fe-1960d74b8830	EXIT	SMART-HQ-01	2026-05-13 19:02:00+06	t	2026-06-04 05:29:46.427487+06
+c0eb0acd-e84b-1e61-509b-8cbd7ca9a574	ab80824b-3296-4aa1-b122-79f058a73875	fc8a3817-f4ff-4789-89fe-1960d74b8830	EXIT	SMART-HQ-01	2026-05-14 19:02:00+06	t	2026-06-04 05:29:46.427487+06
+fa2495ba-b872-6a2c-1d1e-b56138bf87d7	ab80824b-3296-4aa1-b122-79f058a73875	fc8a3817-f4ff-4789-89fe-1960d74b8830	EXIT	SMART-HQ-01	2026-05-15 19:02:00+06	t	2026-06-04 05:29:46.427487+06
+cab18ec4-e49d-d471-4a0b-7cce75049da9	ab80824b-3296-4aa1-b122-79f058a73875	fc8a3817-f4ff-4789-89fe-1960d74b8830	EXIT	SMART-HQ-01	2026-05-16 19:02:00+06	t	2026-06-04 05:29:46.427487+06
+e54d44dc-18f2-29e9-9f02-9d7c59157db1	ab80824b-3296-4aa1-b122-79f058a73875	fc8a3817-f4ff-4789-89fe-1960d74b8830	EXIT	SMART-HQ-01	2026-05-18 19:02:00+06	t	2026-06-04 05:29:46.427487+06
+f26494b8-c0f2-d245-53f5-f3ca1acc1e63	ab80824b-3296-4aa1-b122-79f058a73875	fc8a3817-f4ff-4789-89fe-1960d74b8830	EXIT	SMART-HQ-01	2026-05-19 19:02:00+06	t	2026-06-04 05:29:46.427487+06
+66ae44fc-3163-06cb-74dd-10d32fa8bbdf	ab80824b-3296-4aa1-b122-79f058a73875	fc8a3817-f4ff-4789-89fe-1960d74b8830	EXIT	SMART-HQ-01	2026-05-20 19:02:00+06	t	2026-06-04 05:29:46.427487+06
+2649bea2-4564-98fc-6db0-acb61a6515c3	ab80824b-3296-4aa1-b122-79f058a73875	fc8a3817-f4ff-4789-89fe-1960d74b8830	EXIT	SMART-HQ-01	2026-05-21 19:02:00+06	t	2026-06-04 05:29:46.427487+06
+f34c0370-a5c2-b1c3-2cff-47b30667f8ca	ab80824b-3296-4aa1-b122-79f058a73875	fc8a3817-f4ff-4789-89fe-1960d74b8830	EXIT	SMART-HQ-01	2026-05-22 19:02:00+06	t	2026-06-04 05:29:46.427487+06
+f05474a4-10a5-ac42-61c5-befc769b2c94	ab80824b-3296-4aa1-b122-79f058a73875	fc8a3817-f4ff-4789-89fe-1960d74b8830	EXIT	SMART-HQ-01	2026-05-25 19:02:00+06	t	2026-06-04 05:29:46.427487+06
+0cfd9186-df1e-c07a-4472-8f6bb41fb774	ab80824b-3296-4aa1-b122-79f058a73875	fc8a3817-f4ff-4789-89fe-1960d74b8830	EXIT	SMART-HQ-01	2026-05-26 19:02:00+06	t	2026-06-04 05:29:46.427487+06
+b9a4e8f9-4075-8fa7-34bf-e41630006149	ab80824b-3296-4aa1-b122-79f058a73875	fc8a3817-f4ff-4789-89fe-1960d74b8830	EXIT	SMART-HQ-01	2026-05-27 19:02:00+06	t	2026-06-04 05:29:46.427487+06
+45d59e3f-fdcd-ea48-96c4-dcd77decc2f7	ab80824b-3296-4aa1-b122-79f058a73875	fc8a3817-f4ff-4789-89fe-1960d74b8830	EXIT	SMART-HQ-01	2026-05-28 19:02:00+06	t	2026-06-04 05:29:46.427487+06
+ec73b9a3-895c-073f-b898-a3741bcb91ba	ab80824b-3296-4aa1-b122-79f058a73875	fc8a3817-f4ff-4789-89fe-1960d74b8830	EXIT	SMART-HQ-01	2026-05-29 19:02:00+06	t	2026-06-04 05:29:46.427487+06
+85154d95-0ef2-ed5b-067f-fabd9fd1c69a	ab80824b-3296-4aa1-b122-79f058a73875	191ce5ce-8c20-4d34-8b0e-b22f0bd3a016	EXIT	SMART-HQ-01	2026-04-01 19:02:00+06	t	2026-06-04 05:29:46.427487+06
+b92ec35a-f89b-30e4-a732-3e4df7943024	ab80824b-3296-4aa1-b122-79f058a73875	191ce5ce-8c20-4d34-8b0e-b22f0bd3a016	EXIT	SMART-HQ-01	2026-04-02 19:02:00+06	t	2026-06-04 05:29:46.427487+06
+96d7a8dd-04fc-df69-e0f0-711fcf2d36a2	ab80824b-3296-4aa1-b122-79f058a73875	191ce5ce-8c20-4d34-8b0e-b22f0bd3a016	EXIT	SMART-HQ-01	2026-04-03 19:02:00+06	t	2026-06-04 05:29:46.427487+06
+73a183ae-4f72-e16f-3213-056e0c3496b5	ab80824b-3296-4aa1-b122-79f058a73875	191ce5ce-8c20-4d34-8b0e-b22f0bd3a016	EXIT	SMART-HQ-01	2026-04-06 19:02:00+06	t	2026-06-04 05:29:46.427487+06
+992e960e-cd79-b13e-ba57-0cc51d3fec36	ab80824b-3296-4aa1-b122-79f058a73875	191ce5ce-8c20-4d34-8b0e-b22f0bd3a016	EXIT	SMART-HQ-01	2026-04-07 19:02:00+06	t	2026-06-04 05:29:46.427487+06
+ce5d9131-b43d-343e-3229-a1063463af0b	ab80824b-3296-4aa1-b122-79f058a73875	191ce5ce-8c20-4d34-8b0e-b22f0bd3a016	EXIT	SMART-HQ-01	2026-04-08 19:02:00+06	t	2026-06-04 05:29:46.427487+06
+b4e456a6-86e0-1eb0-96d2-c1b83406daf7	ab80824b-3296-4aa1-b122-79f058a73875	191ce5ce-8c20-4d34-8b0e-b22f0bd3a016	EXIT	SMART-HQ-01	2026-04-09 19:02:00+06	t	2026-06-04 05:29:46.427487+06
+0e59ab37-d8dd-25b5-90d6-11c8474d0e2c	ab80824b-3296-4aa1-b122-79f058a73875	191ce5ce-8c20-4d34-8b0e-b22f0bd3a016	EXIT	SMART-HQ-01	2026-04-10 19:02:00+06	t	2026-06-04 05:29:46.427487+06
+d7159f58-3703-c156-75f5-556736089854	ab80824b-3296-4aa1-b122-79f058a73875	191ce5ce-8c20-4d34-8b0e-b22f0bd3a016	EXIT	SMART-HQ-01	2026-04-13 19:02:00+06	t	2026-06-04 05:29:46.427487+06
+24c5b626-5dfd-d21c-e145-0ed485f5fe12	ab80824b-3296-4aa1-b122-79f058a73875	191ce5ce-8c20-4d34-8b0e-b22f0bd3a016	EXIT	SMART-HQ-01	2026-04-14 19:02:00+06	t	2026-06-04 05:29:46.427487+06
+bbf2cc7d-cb2b-cfd4-7101-e8e2cbf7bb2f	ab80824b-3296-4aa1-b122-79f058a73875	191ce5ce-8c20-4d34-8b0e-b22f0bd3a016	EXIT	SMART-HQ-01	2026-04-15 19:02:00+06	t	2026-06-04 05:29:46.427487+06
+0dbd6bbf-b581-1ded-5a1b-50c9074969e9	ab80824b-3296-4aa1-b122-79f058a73875	191ce5ce-8c20-4d34-8b0e-b22f0bd3a016	EXIT	SMART-HQ-01	2026-04-16 19:02:00+06	t	2026-06-04 05:29:46.427487+06
+f88499b6-5361-043e-a0c2-a134c26d570e	ab80824b-3296-4aa1-b122-79f058a73875	191ce5ce-8c20-4d34-8b0e-b22f0bd3a016	EXIT	SMART-HQ-01	2026-04-17 19:02:00+06	t	2026-06-04 05:29:46.427487+06
+9a1bfdd8-b83e-2235-90fb-c698916bf0f7	ab80824b-3296-4aa1-b122-79f058a73875	191ce5ce-8c20-4d34-8b0e-b22f0bd3a016	EXIT	SMART-HQ-01	2026-04-20 19:02:00+06	t	2026-06-04 05:29:46.427487+06
+29f94016-01fc-d269-67e8-43e03b5cdb2c	ab80824b-3296-4aa1-b122-79f058a73875	191ce5ce-8c20-4d34-8b0e-b22f0bd3a016	EXIT	SMART-HQ-01	2026-04-21 19:02:00+06	t	2026-06-04 05:29:46.427487+06
+e3606468-349d-8059-b2d9-ffd8a9b822db	ab80824b-3296-4aa1-b122-79f058a73875	191ce5ce-8c20-4d34-8b0e-b22f0bd3a016	EXIT	SMART-HQ-01	2026-04-27 19:02:00+06	t	2026-06-04 05:29:46.427487+06
+1a804bec-fa7f-51c7-f1b9-98120367313b	ab80824b-3296-4aa1-b122-79f058a73875	191ce5ce-8c20-4d34-8b0e-b22f0bd3a016	EXIT	SMART-HQ-01	2026-04-28 19:02:00+06	t	2026-06-04 05:29:46.427487+06
+7f5729ca-d901-d95b-0eaa-c64ecfc72d37	ab80824b-3296-4aa1-b122-79f058a73875	191ce5ce-8c20-4d34-8b0e-b22f0bd3a016	EXIT	SMART-HQ-01	2026-04-29 19:02:00+06	t	2026-06-04 05:29:46.427487+06
+eb2e08b1-583f-feec-122e-c0d3464f8bba	ab80824b-3296-4aa1-b122-79f058a73875	191ce5ce-8c20-4d34-8b0e-b22f0bd3a016	EXIT	SMART-HQ-01	2026-04-30 19:02:00+06	t	2026-06-04 05:29:46.427487+06
+63bb2d2c-cc06-44ea-ebdf-d051fce812f4	ab80824b-3296-4aa1-b122-79f058a73875	191ce5ce-8c20-4d34-8b0e-b22f0bd3a016	EXIT	SMART-HQ-01	2026-05-04 19:02:00+06	t	2026-06-04 05:29:46.427487+06
+2e895602-64a2-f1de-9031-fe5976ec5e20	ab80824b-3296-4aa1-b122-79f058a73875	191ce5ce-8c20-4d34-8b0e-b22f0bd3a016	EXIT	SMART-HQ-01	2026-05-05 19:02:00+06	t	2026-06-04 05:29:46.427487+06
+bedd8f75-0d69-5aa3-4e3b-8da53de7c0d3	ab80824b-3296-4aa1-b122-79f058a73875	191ce5ce-8c20-4d34-8b0e-b22f0bd3a016	EXIT	SMART-HQ-01	2026-05-06 20:30:00+06	t	2026-06-04 05:29:46.427487+06
+aac53210-ffc6-1279-4bd4-09f30a07ab72	ab80824b-3296-4aa1-b122-79f058a73875	191ce5ce-8c20-4d34-8b0e-b22f0bd3a016	EXIT	SMART-HQ-01	2026-05-08 19:02:00+06	t	2026-06-04 05:29:46.427487+06
+a34c77f4-4322-b922-2936-243bb95cb6d7	ab80824b-3296-4aa1-b122-79f058a73875	191ce5ce-8c20-4d34-8b0e-b22f0bd3a016	EXIT	SMART-HQ-01	2026-05-11 19:02:00+06	t	2026-06-04 05:29:46.427487+06
+2eb954e1-acf2-dd60-4ccf-783db3fbf4a5	ab80824b-3296-4aa1-b122-79f058a73875	191ce5ce-8c20-4d34-8b0e-b22f0bd3a016	EXIT	SMART-HQ-01	2026-05-12 19:02:00+06	t	2026-06-04 05:29:46.427487+06
+1d8a4cb6-8f0a-b2cc-eecb-472436e3c49d	ab80824b-3296-4aa1-b122-79f058a73875	191ce5ce-8c20-4d34-8b0e-b22f0bd3a016	EXIT	SMART-HQ-01	2026-05-13 19:02:00+06	t	2026-06-04 05:29:46.427487+06
+17ad5ef0-e587-5b8b-f07c-546c316474df	ab80824b-3296-4aa1-b122-79f058a73875	191ce5ce-8c20-4d34-8b0e-b22f0bd3a016	EXIT	SMART-HQ-01	2026-05-14 19:02:00+06	t	2026-06-04 05:29:46.427487+06
+cbe3f482-a4ed-7c5d-7d64-a00a971e3649	ab80824b-3296-4aa1-b122-79f058a73875	191ce5ce-8c20-4d34-8b0e-b22f0bd3a016	EXIT	SMART-HQ-01	2026-05-15 19:02:00+06	t	2026-06-04 05:29:46.427487+06
+e74c188b-da6c-537a-c352-fb3e66c744b6	ab80824b-3296-4aa1-b122-79f058a73875	191ce5ce-8c20-4d34-8b0e-b22f0bd3a016	EXIT	SMART-HQ-01	2026-05-16 19:02:00+06	t	2026-06-04 05:29:46.427487+06
+04ff1911-95df-143d-435f-ebcea8613e05	ab80824b-3296-4aa1-b122-79f058a73875	191ce5ce-8c20-4d34-8b0e-b22f0bd3a016	EXIT	SMART-HQ-01	2026-05-18 19:02:00+06	t	2026-06-04 05:29:46.427487+06
+0e3e705c-9ea8-83e3-9a77-35bee80b3cac	ab80824b-3296-4aa1-b122-79f058a73875	191ce5ce-8c20-4d34-8b0e-b22f0bd3a016	EXIT	SMART-HQ-01	2026-05-19 19:02:00+06	t	2026-06-04 05:29:46.427487+06
+b980b434-08bf-c679-b3bf-97e9231121d6	ab80824b-3296-4aa1-b122-79f058a73875	191ce5ce-8c20-4d34-8b0e-b22f0bd3a016	EXIT	SMART-HQ-01	2026-05-20 19:02:00+06	t	2026-06-04 05:29:46.427487+06
+98e329d4-9d92-0d5d-28b0-720b1c566bf7	ab80824b-3296-4aa1-b122-79f058a73875	191ce5ce-8c20-4d34-8b0e-b22f0bd3a016	EXIT	SMART-HQ-01	2026-05-21 19:02:00+06	t	2026-06-04 05:29:46.427487+06
+f37eb187-7043-2831-6449-8fc5bd5522a9	ab80824b-3296-4aa1-b122-79f058a73875	191ce5ce-8c20-4d34-8b0e-b22f0bd3a016	EXIT	SMART-HQ-01	2026-05-22 19:02:00+06	t	2026-06-04 05:29:46.427487+06
+a4dbf7f9-64b4-ef36-6617-6481feaf29e8	ab80824b-3296-4aa1-b122-79f058a73875	191ce5ce-8c20-4d34-8b0e-b22f0bd3a016	EXIT	SMART-HQ-01	2026-05-25 19:02:00+06	t	2026-06-04 05:29:46.427487+06
+2e6d41d0-1be1-9194-6753-c8d364334f02	ab80824b-3296-4aa1-b122-79f058a73875	191ce5ce-8c20-4d34-8b0e-b22f0bd3a016	EXIT	SMART-HQ-01	2026-05-26 20:30:00+06	t	2026-06-04 05:29:46.427487+06
+718ba350-a01a-2072-08ca-337d1be33aad	ab80824b-3296-4aa1-b122-79f058a73875	191ce5ce-8c20-4d34-8b0e-b22f0bd3a016	EXIT	SMART-HQ-01	2026-05-27 19:02:00+06	t	2026-06-04 05:29:46.427487+06
+dfb10e1e-6535-339d-2629-9046803ba1e9	ab80824b-3296-4aa1-b122-79f058a73875	191ce5ce-8c20-4d34-8b0e-b22f0bd3a016	EXIT	SMART-HQ-01	2026-05-28 19:02:00+06	t	2026-06-04 05:29:46.427487+06
+82a7862d-1e5f-223f-4cff-2205d8610ff8	ab80824b-3296-4aa1-b122-79f058a73875	191ce5ce-8c20-4d34-8b0e-b22f0bd3a016	EXIT	SMART-HQ-01	2026-05-29 19:02:00+06	t	2026-06-04 05:29:46.427487+06
+52871e61-08d4-c599-37ed-5a8811fe1840	ab80824b-3296-4aa1-b122-79f058a73875	e312dce0-640d-9157-1a3b-6ad318e19dcf	EXIT	SMART-HQ-01	2026-04-01 19:02:00+06	t	2026-06-04 05:29:46.427487+06
+30ad37dd-e01f-4f30-77e6-cf550016bec4	ab80824b-3296-4aa1-b122-79f058a73875	e312dce0-640d-9157-1a3b-6ad318e19dcf	EXIT	SMART-HQ-01	2026-04-02 19:02:00+06	t	2026-06-04 05:29:46.427487+06
+7af87eab-2468-797c-9d83-90cda2a52c41	ab80824b-3296-4aa1-b122-79f058a73875	e312dce0-640d-9157-1a3b-6ad318e19dcf	EXIT	SMART-HQ-01	2026-04-03 19:02:00+06	t	2026-06-04 05:29:46.427487+06
+80f5133d-09a8-758e-7051-c9186874e5b7	ab80824b-3296-4aa1-b122-79f058a73875	e312dce0-640d-9157-1a3b-6ad318e19dcf	EXIT	SMART-HQ-01	2026-04-06 19:02:00+06	t	2026-06-04 05:29:46.427487+06
+21d10102-2f51-3adc-eb0b-bbede93a5b4e	ab80824b-3296-4aa1-b122-79f058a73875	e312dce0-640d-9157-1a3b-6ad318e19dcf	EXIT	SMART-HQ-01	2026-04-07 19:02:00+06	t	2026-06-04 05:29:46.427487+06
+9b86c57c-3029-b4ea-c22b-71f694af23f3	ab80824b-3296-4aa1-b122-79f058a73875	e312dce0-640d-9157-1a3b-6ad318e19dcf	EXIT	SMART-HQ-01	2026-04-08 19:02:00+06	t	2026-06-04 05:29:46.427487+06
+d9988194-9dc9-bf74-cff1-aee08e0b6c7e	ab80824b-3296-4aa1-b122-79f058a73875	e312dce0-640d-9157-1a3b-6ad318e19dcf	EXIT	SMART-HQ-01	2026-04-09 19:02:00+06	t	2026-06-04 05:29:46.427487+06
+cf1536e6-c3d2-7513-c30d-601e49660d44	ab80824b-3296-4aa1-b122-79f058a73875	e312dce0-640d-9157-1a3b-6ad318e19dcf	EXIT	SMART-HQ-01	2026-04-10 19:02:00+06	t	2026-06-04 05:29:46.427487+06
+4cf52c55-4271-a56f-6478-fec0cc02905d	ab80824b-3296-4aa1-b122-79f058a73875	e312dce0-640d-9157-1a3b-6ad318e19dcf	EXIT	SMART-HQ-01	2026-04-13 19:02:00+06	t	2026-06-04 05:29:46.427487+06
+b416ec61-bf06-20aa-3b8a-6a667182ae5e	ab80824b-3296-4aa1-b122-79f058a73875	e312dce0-640d-9157-1a3b-6ad318e19dcf	EXIT	SMART-HQ-01	2026-04-14 19:02:00+06	t	2026-06-04 05:29:46.427487+06
+b3778da8-6445-be66-c8b9-7cf6cfabc4af	ab80824b-3296-4aa1-b122-79f058a73875	e312dce0-640d-9157-1a3b-6ad318e19dcf	EXIT	SMART-HQ-01	2026-04-15 19:02:00+06	t	2026-06-04 05:29:46.427487+06
+c6447cd1-9d15-2c17-de72-4f94ded6fe12	ab80824b-3296-4aa1-b122-79f058a73875	e312dce0-640d-9157-1a3b-6ad318e19dcf	EXIT	SMART-HQ-01	2026-04-16 19:02:00+06	t	2026-06-04 05:29:46.427487+06
+d6764a52-4402-14d5-24e5-39afc2719e47	ab80824b-3296-4aa1-b122-79f058a73875	e312dce0-640d-9157-1a3b-6ad318e19dcf	EXIT	SMART-HQ-01	2026-04-17 19:02:00+06	t	2026-06-04 05:29:46.427487+06
+4ccde18c-4f4c-f04b-2db8-085e573a8158	ab80824b-3296-4aa1-b122-79f058a73875	e312dce0-640d-9157-1a3b-6ad318e19dcf	EXIT	SMART-HQ-01	2026-04-20 19:02:00+06	t	2026-06-04 05:29:46.427487+06
+110f6eac-7e3f-c046-8480-fd730695debc	ab80824b-3296-4aa1-b122-79f058a73875	e312dce0-640d-9157-1a3b-6ad318e19dcf	EXIT	SMART-HQ-01	2026-04-21 19:02:00+06	t	2026-06-04 05:29:46.427487+06
+f64da051-ec82-446c-3172-bd75eec950a0	ab80824b-3296-4aa1-b122-79f058a73875	e312dce0-640d-9157-1a3b-6ad318e19dcf	EXIT	SMART-HQ-01	2026-04-22 19:02:00+06	t	2026-06-04 05:29:46.427487+06
+b2f20d62-dff0-2348-88eb-1963df3dafda	ab80824b-3296-4aa1-b122-79f058a73875	e312dce0-640d-9157-1a3b-6ad318e19dcf	EXIT	SMART-HQ-01	2026-04-23 19:02:00+06	t	2026-06-04 05:29:46.427487+06
+332198eb-000d-dbc9-0ca1-b157903ea615	ab80824b-3296-4aa1-b122-79f058a73875	e312dce0-640d-9157-1a3b-6ad318e19dcf	EXIT	SMART-HQ-01	2026-04-24 19:02:00+06	t	2026-06-04 05:29:46.427487+06
+ab33fefd-681e-a9d3-abd3-51f850ac8273	ab80824b-3296-4aa1-b122-79f058a73875	e312dce0-640d-9157-1a3b-6ad318e19dcf	EXIT	SMART-HQ-01	2026-04-27 19:02:00+06	t	2026-06-04 05:29:46.427487+06
+19e901bf-5400-b181-9073-d170056e0c88	ab80824b-3296-4aa1-b122-79f058a73875	e312dce0-640d-9157-1a3b-6ad318e19dcf	EXIT	SMART-HQ-01	2026-04-28 19:02:00+06	t	2026-06-04 05:29:46.427487+06
+96d04200-1f50-44d3-444b-208301b5d47b	ab80824b-3296-4aa1-b122-79f058a73875	e312dce0-640d-9157-1a3b-6ad318e19dcf	EXIT	SMART-HQ-01	2026-04-29 19:02:00+06	t	2026-06-04 05:29:46.427487+06
+49c6c6b3-a6d2-3e1d-f073-7d4ebd2cc397	ab80824b-3296-4aa1-b122-79f058a73875	e312dce0-640d-9157-1a3b-6ad318e19dcf	EXIT	SMART-HQ-01	2026-04-30 19:02:00+06	t	2026-06-04 05:29:46.427487+06
+2f889c8e-9534-bfc8-f189-f354ec46bf8d	ab80824b-3296-4aa1-b122-79f058a73875	e312dce0-640d-9157-1a3b-6ad318e19dcf	EXIT	SMART-HQ-01	2026-05-04 19:02:00+06	t	2026-06-04 05:29:46.427487+06
+68107afc-a2f5-d314-a6ce-f1f2598cd59f	ab80824b-3296-4aa1-b122-79f058a73875	e312dce0-640d-9157-1a3b-6ad318e19dcf	EXIT	SMART-HQ-01	2026-05-05 19:02:00+06	t	2026-06-04 05:29:46.427487+06
+2fedc302-70b9-e4dd-d880-e279791a5a04	ab80824b-3296-4aa1-b122-79f058a73875	e312dce0-640d-9157-1a3b-6ad318e19dcf	EXIT	SMART-HQ-01	2026-05-06 19:02:00+06	t	2026-06-04 05:29:46.427487+06
+03a4c596-98bd-164e-8a7b-396622e7f41d	ab80824b-3296-4aa1-b122-79f058a73875	e312dce0-640d-9157-1a3b-6ad318e19dcf	EXIT	SMART-HQ-01	2026-05-08 19:02:00+06	t	2026-06-04 05:29:46.427487+06
+2139db1a-09b1-29bb-6827-6c2c14261d82	ab80824b-3296-4aa1-b122-79f058a73875	e312dce0-640d-9157-1a3b-6ad318e19dcf	EXIT	SMART-HQ-01	2026-05-11 19:02:00+06	t	2026-06-04 05:29:46.427487+06
+e1a66567-b778-87a3-15e3-1b8823d209d3	ab80824b-3296-4aa1-b122-79f058a73875	e312dce0-640d-9157-1a3b-6ad318e19dcf	EXIT	SMART-HQ-01	2026-05-12 19:02:00+06	t	2026-06-04 05:29:46.427487+06
+946d6d97-5f0b-db6e-9f80-c65ed5b68999	ab80824b-3296-4aa1-b122-79f058a73875	e312dce0-640d-9157-1a3b-6ad318e19dcf	EXIT	SMART-HQ-01	2026-05-13 19:02:00+06	t	2026-06-04 05:29:46.427487+06
+d6614e62-1be1-2e63-ad4a-7d137dd985e6	ab80824b-3296-4aa1-b122-79f058a73875	e312dce0-640d-9157-1a3b-6ad318e19dcf	EXIT	SMART-HQ-01	2026-05-14 19:02:00+06	t	2026-06-04 05:29:46.427487+06
+c9642449-a7b6-862c-0d61-e0edb148855c	ab80824b-3296-4aa1-b122-79f058a73875	e312dce0-640d-9157-1a3b-6ad318e19dcf	EXIT	SMART-HQ-01	2026-05-15 19:02:00+06	t	2026-06-04 05:29:46.427487+06
+6108a5aa-27ab-cbeb-d6ef-39c0e8dbf297	ab80824b-3296-4aa1-b122-79f058a73875	e312dce0-640d-9157-1a3b-6ad318e19dcf	EXIT	SMART-HQ-01	2026-05-16 19:02:00+06	t	2026-06-04 05:29:46.427487+06
+d419aec0-1582-14bf-9cd3-d80838d27793	ab80824b-3296-4aa1-b122-79f058a73875	e312dce0-640d-9157-1a3b-6ad318e19dcf	EXIT	SMART-HQ-01	2026-05-18 19:02:00+06	t	2026-06-04 05:29:46.427487+06
+508344e5-df52-40a7-7020-fa7067c1b9b4	ab80824b-3296-4aa1-b122-79f058a73875	e312dce0-640d-9157-1a3b-6ad318e19dcf	EXIT	SMART-HQ-01	2026-05-19 19:02:00+06	t	2026-06-04 05:29:46.427487+06
+09857b93-c09b-d59d-ebc6-03a87fa974f9	ab80824b-3296-4aa1-b122-79f058a73875	e312dce0-640d-9157-1a3b-6ad318e19dcf	EXIT	SMART-HQ-01	2026-05-20 19:02:00+06	t	2026-06-04 05:29:46.427487+06
+b78c82c1-2fd5-0bda-a62a-6d715fe9dfc8	ab80824b-3296-4aa1-b122-79f058a73875	e312dce0-640d-9157-1a3b-6ad318e19dcf	EXIT	SMART-HQ-01	2026-05-21 19:02:00+06	t	2026-06-04 05:29:46.427487+06
+3deec29e-d885-2a9c-735d-99321095f4b8	ab80824b-3296-4aa1-b122-79f058a73875	e312dce0-640d-9157-1a3b-6ad318e19dcf	EXIT	SMART-HQ-01	2026-05-22 19:02:00+06	t	2026-06-04 05:29:46.427487+06
+b623a83b-c850-e336-a2ba-e1eba52a0689	ab80824b-3296-4aa1-b122-79f058a73875	e312dce0-640d-9157-1a3b-6ad318e19dcf	EXIT	SMART-HQ-01	2026-05-25 19:02:00+06	t	2026-06-04 05:29:46.427487+06
+13286f9b-b911-5a03-dc83-00cac2fc40a8	ab80824b-3296-4aa1-b122-79f058a73875	e312dce0-640d-9157-1a3b-6ad318e19dcf	EXIT	SMART-HQ-01	2026-05-26 19:02:00+06	t	2026-06-04 05:29:46.427487+06
+508d720c-7a04-a4fd-e164-2f47aafdaf2b	ab80824b-3296-4aa1-b122-79f058a73875	e312dce0-640d-9157-1a3b-6ad318e19dcf	EXIT	SMART-HQ-01	2026-05-27 19:02:00+06	t	2026-06-04 05:29:46.427487+06
+10c70e64-0d7e-168a-2c2d-af8344f38e40	ab80824b-3296-4aa1-b122-79f058a73875	e312dce0-640d-9157-1a3b-6ad318e19dcf	EXIT	SMART-HQ-01	2026-05-28 19:02:00+06	t	2026-06-04 05:29:46.427487+06
+7fb49c51-ddbd-b903-c291-c9d4203a99d9	ab80824b-3296-4aa1-b122-79f058a73875	e312dce0-640d-9157-1a3b-6ad318e19dcf	EXIT	SMART-HQ-01	2026-05-29 19:02:00+06	t	2026-06-04 05:29:46.427487+06
+0ee98499-0764-5d16-c455-a89001e42e8e	ab80824b-3296-4aa1-b122-79f058a73875	b6bc7f59-28dc-64d2-9c5b-04530e9bf5a3	EXIT	SMART-HQ-01	2026-04-01 19:02:00+06	t	2026-06-04 05:29:46.427487+06
+0441dbef-ccb8-8a00-47a0-83f4c40a638d	ab80824b-3296-4aa1-b122-79f058a73875	b6bc7f59-28dc-64d2-9c5b-04530e9bf5a3	EXIT	SMART-HQ-01	2026-04-02 19:02:00+06	t	2026-06-04 05:29:46.427487+06
+ae982826-4607-f9f7-244e-77fecc7f586a	ab80824b-3296-4aa1-b122-79f058a73875	b6bc7f59-28dc-64d2-9c5b-04530e9bf5a3	EXIT	SMART-HQ-01	2026-04-03 19:02:00+06	t	2026-06-04 05:29:46.427487+06
+57cbb2e5-73c6-9564-db42-381dd29c3c0e	ab80824b-3296-4aa1-b122-79f058a73875	b6bc7f59-28dc-64d2-9c5b-04530e9bf5a3	EXIT	SMART-HQ-01	2026-04-06 19:02:00+06	t	2026-06-04 05:29:46.427487+06
+d4c9b1cd-ec81-2bec-3f96-c92371f8a96a	ab80824b-3296-4aa1-b122-79f058a73875	b6bc7f59-28dc-64d2-9c5b-04530e9bf5a3	EXIT	SMART-HQ-01	2026-04-07 19:02:00+06	t	2026-06-04 05:29:46.427487+06
+c1a7d922-755d-5a05-fef2-cae8bd4bd0e5	ab80824b-3296-4aa1-b122-79f058a73875	b6bc7f59-28dc-64d2-9c5b-04530e9bf5a3	EXIT	SMART-HQ-01	2026-04-08 19:02:00+06	t	2026-06-04 05:29:46.427487+06
+6ce2c2a9-590c-f9d7-6589-fb69c2e4707b	ab80824b-3296-4aa1-b122-79f058a73875	b6bc7f59-28dc-64d2-9c5b-04530e9bf5a3	EXIT	SMART-HQ-01	2026-04-09 19:02:00+06	t	2026-06-04 05:29:46.427487+06
+e4accb49-1f38-248d-1c69-bfe25b89b2f9	ab80824b-3296-4aa1-b122-79f058a73875	b6bc7f59-28dc-64d2-9c5b-04530e9bf5a3	EXIT	SMART-HQ-01	2026-04-10 19:02:00+06	t	2026-06-04 05:29:46.427487+06
+5c8b5b1f-815e-86ab-073c-2a08720b4ef1	ab80824b-3296-4aa1-b122-79f058a73875	b6bc7f59-28dc-64d2-9c5b-04530e9bf5a3	EXIT	SMART-HQ-01	2026-04-13 19:02:00+06	t	2026-06-04 05:29:46.427487+06
+abb69ff7-5989-1ad6-e3ad-9bbd9efe96f3	ab80824b-3296-4aa1-b122-79f058a73875	b6bc7f59-28dc-64d2-9c5b-04530e9bf5a3	EXIT	SMART-HQ-01	2026-04-14 19:02:00+06	t	2026-06-04 05:29:46.427487+06
+fd41a679-f55d-db6f-7eee-e5213b08fe6d	ab80824b-3296-4aa1-b122-79f058a73875	b6bc7f59-28dc-64d2-9c5b-04530e9bf5a3	EXIT	SMART-HQ-01	2026-04-15 19:02:00+06	t	2026-06-04 05:29:46.427487+06
+55dfa4fe-159d-c92d-264a-97081fce9a27	ab80824b-3296-4aa1-b122-79f058a73875	b6bc7f59-28dc-64d2-9c5b-04530e9bf5a3	EXIT	SMART-HQ-01	2026-04-16 19:02:00+06	t	2026-06-04 05:29:46.427487+06
+a3e523a4-157f-3d57-6705-e40178d5aef9	ab80824b-3296-4aa1-b122-79f058a73875	b6bc7f59-28dc-64d2-9c5b-04530e9bf5a3	EXIT	SMART-HQ-01	2026-04-20 19:02:00+06	t	2026-06-04 05:29:46.427487+06
+7f914012-8f16-60a2-8cdf-0e6ef9de8a59	ab80824b-3296-4aa1-b122-79f058a73875	b6bc7f59-28dc-64d2-9c5b-04530e9bf5a3	EXIT	SMART-HQ-01	2026-04-21 19:02:00+06	t	2026-06-04 05:29:46.427487+06
+84f49a31-08c5-22bd-37d5-3080ad926bcb	ab80824b-3296-4aa1-b122-79f058a73875	b6bc7f59-28dc-64d2-9c5b-04530e9bf5a3	EXIT	SMART-HQ-01	2026-04-22 19:02:00+06	t	2026-06-04 05:29:46.427487+06
+2b67f66b-a1fb-6cfd-2c62-46fe64af28e0	ab80824b-3296-4aa1-b122-79f058a73875	b6bc7f59-28dc-64d2-9c5b-04530e9bf5a3	EXIT	SMART-HQ-01	2026-04-23 19:02:00+06	t	2026-06-04 05:29:46.427487+06
+316b8827-37b7-342e-7854-ea5197fa0e08	ab80824b-3296-4aa1-b122-79f058a73875	b6bc7f59-28dc-64d2-9c5b-04530e9bf5a3	EXIT	SMART-HQ-01	2026-04-24 19:02:00+06	t	2026-06-04 05:29:46.427487+06
+eba759a8-5771-11cb-eb4b-35083b4a686f	ab80824b-3296-4aa1-b122-79f058a73875	b6bc7f59-28dc-64d2-9c5b-04530e9bf5a3	EXIT	SMART-HQ-01	2026-04-27 19:02:00+06	t	2026-06-04 05:29:46.427487+06
+712329af-27d2-3423-b079-f2bc3d17dba4	ab80824b-3296-4aa1-b122-79f058a73875	b6bc7f59-28dc-64d2-9c5b-04530e9bf5a3	EXIT	SMART-HQ-01	2026-04-28 19:02:00+06	t	2026-06-04 05:29:46.427487+06
+3d697c99-d426-bfd3-68c8-170484e77964	ab80824b-3296-4aa1-b122-79f058a73875	b6bc7f59-28dc-64d2-9c5b-04530e9bf5a3	EXIT	SMART-HQ-01	2026-04-30 19:02:00+06	t	2026-06-04 05:29:46.427487+06
+1572d60c-a245-87f1-2ae9-8b55bcaafe0b	ab80824b-3296-4aa1-b122-79f058a73875	b6bc7f59-28dc-64d2-9c5b-04530e9bf5a3	EXIT	SMART-HQ-01	2026-05-04 19:02:00+06	t	2026-06-04 05:29:46.427487+06
+a8f9aaf7-984b-48b6-8952-73c99396afaf	ab80824b-3296-4aa1-b122-79f058a73875	b6bc7f59-28dc-64d2-9c5b-04530e9bf5a3	EXIT	SMART-HQ-01	2026-05-05 19:02:00+06	t	2026-06-04 05:29:46.427487+06
+75fb2f4c-b6ca-7ac7-0cd1-c512f11b4abe	ab80824b-3296-4aa1-b122-79f058a73875	b6bc7f59-28dc-64d2-9c5b-04530e9bf5a3	EXIT	SMART-HQ-01	2026-05-06 19:02:00+06	t	2026-06-04 05:29:46.427487+06
+d9099b15-3bd9-2472-fcaf-a19d4fa52d9b	ab80824b-3296-4aa1-b122-79f058a73875	b6bc7f59-28dc-64d2-9c5b-04530e9bf5a3	EXIT	SMART-HQ-01	2026-05-08 19:02:00+06	t	2026-06-04 05:29:46.427487+06
+87220a03-7d5c-ed96-ecc5-37297d01e7c5	ab80824b-3296-4aa1-b122-79f058a73875	b6bc7f59-28dc-64d2-9c5b-04530e9bf5a3	EXIT	SMART-HQ-01	2026-05-11 19:02:00+06	t	2026-06-04 05:29:46.427487+06
+fa64606c-eccc-0f8e-9bc7-f51afbdec098	ab80824b-3296-4aa1-b122-79f058a73875	b6bc7f59-28dc-64d2-9c5b-04530e9bf5a3	EXIT	SMART-HQ-01	2026-05-12 19:02:00+06	t	2026-06-04 05:29:46.427487+06
+9ee62bad-b572-1d4f-7563-029fae728daa	ab80824b-3296-4aa1-b122-79f058a73875	b6bc7f59-28dc-64d2-9c5b-04530e9bf5a3	EXIT	SMART-HQ-01	2026-05-15 19:02:00+06	t	2026-06-04 05:29:46.427487+06
+612e4406-1eb3-07d4-9d9a-512454f4f50b	ab80824b-3296-4aa1-b122-79f058a73875	b6bc7f59-28dc-64d2-9c5b-04530e9bf5a3	EXIT	SMART-HQ-01	2026-05-16 19:02:00+06	t	2026-06-04 05:29:46.427487+06
+ff40df5e-a139-643f-8a57-f90a8339f7d2	ab80824b-3296-4aa1-b122-79f058a73875	b6bc7f59-28dc-64d2-9c5b-04530e9bf5a3	EXIT	SMART-HQ-01	2026-05-18 19:02:00+06	t	2026-06-04 05:29:46.427487+06
+1696de10-0797-c8f1-eb95-0bb7ffa727d1	ab80824b-3296-4aa1-b122-79f058a73875	b6bc7f59-28dc-64d2-9c5b-04530e9bf5a3	EXIT	SMART-HQ-01	2026-05-19 19:02:00+06	t	2026-06-04 05:29:46.427487+06
+a46a4a27-c6d0-37de-d5b7-3ab10d108071	ab80824b-3296-4aa1-b122-79f058a73875	b6bc7f59-28dc-64d2-9c5b-04530e9bf5a3	EXIT	SMART-HQ-01	2026-05-20 19:02:00+06	t	2026-06-04 05:29:46.427487+06
+8f2c83f1-1010-5716-1b15-da65abc4787c	ab80824b-3296-4aa1-b122-79f058a73875	b6bc7f59-28dc-64d2-9c5b-04530e9bf5a3	EXIT	SMART-HQ-01	2026-05-21 19:02:00+06	t	2026-06-04 05:29:46.427487+06
+da79d364-dab9-673c-9ba0-f9341c60b210	ab80824b-3296-4aa1-b122-79f058a73875	b6bc7f59-28dc-64d2-9c5b-04530e9bf5a3	EXIT	SMART-HQ-01	2026-05-22 19:02:00+06	t	2026-06-04 05:29:46.427487+06
+a07f6d4b-3d04-0317-dee8-5bca98b9711e	ab80824b-3296-4aa1-b122-79f058a73875	b6bc7f59-28dc-64d2-9c5b-04530e9bf5a3	EXIT	SMART-HQ-01	2026-05-25 19:02:00+06	t	2026-06-04 05:29:46.427487+06
+0822a0ed-1182-00ed-1f33-a92a9e9f9b54	ab80824b-3296-4aa1-b122-79f058a73875	b6bc7f59-28dc-64d2-9c5b-04530e9bf5a3	EXIT	SMART-HQ-01	2026-05-26 19:02:00+06	t	2026-06-04 05:29:46.427487+06
+f0f2d0a8-9162-8d05-f77a-58756b67b6a8	ab80824b-3296-4aa1-b122-79f058a73875	b6bc7f59-28dc-64d2-9c5b-04530e9bf5a3	EXIT	SMART-HQ-01	2026-05-27 19:02:00+06	t	2026-06-04 05:29:46.427487+06
+f8655b0d-31b3-0e0e-1e74-f8a6af7d31bc	ab80824b-3296-4aa1-b122-79f058a73875	b6bc7f59-28dc-64d2-9c5b-04530e9bf5a3	EXIT	SMART-HQ-01	2026-05-28 19:02:00+06	t	2026-06-04 05:29:46.427487+06
+5bb11c02-14d5-2cb2-41a9-96302d1d6d49	ab80824b-3296-4aa1-b122-79f058a73875	b6bc7f59-28dc-64d2-9c5b-04530e9bf5a3	EXIT	SMART-HQ-01	2026-05-29 19:02:00+06	t	2026-06-04 05:29:46.427487+06
+65dab7c9-b7e0-c1aa-141a-93e51617b9b8	ab80824b-3296-4aa1-b122-79f058a73875	62f042fb-d0b7-7687-942e-acf7fe237432	EXIT	SMART-HQ-01	2026-04-01 19:02:00+06	t	2026-06-04 05:29:46.427487+06
+7928a920-8898-f658-9ba5-f23022ae9e76	ab80824b-3296-4aa1-b122-79f058a73875	62f042fb-d0b7-7687-942e-acf7fe237432	EXIT	SMART-HQ-01	2026-04-02 19:02:00+06	t	2026-06-04 05:29:46.427487+06
+6a8fc6f0-4a28-4252-1d86-eede6c125702	ab80824b-3296-4aa1-b122-79f058a73875	62f042fb-d0b7-7687-942e-acf7fe237432	EXIT	SMART-HQ-01	2026-04-03 19:02:00+06	t	2026-06-04 05:29:46.427487+06
+5ed56ff7-b6b4-aec5-77f5-9466f64be420	ab80824b-3296-4aa1-b122-79f058a73875	62f042fb-d0b7-7687-942e-acf7fe237432	EXIT	SMART-HQ-01	2026-04-06 19:02:00+06	t	2026-06-04 05:29:46.427487+06
+cbfba505-fe93-9880-d5f4-a8db5599db3b	ab80824b-3296-4aa1-b122-79f058a73875	62f042fb-d0b7-7687-942e-acf7fe237432	EXIT	SMART-HQ-01	2026-04-07 19:02:00+06	t	2026-06-04 05:29:46.427487+06
+285bab46-115b-1d60-8050-1ab2bedb5bd6	ab80824b-3296-4aa1-b122-79f058a73875	62f042fb-d0b7-7687-942e-acf7fe237432	EXIT	SMART-HQ-01	2026-04-08 19:02:00+06	t	2026-06-04 05:29:46.427487+06
+5cf15001-267a-b6a0-6c7a-8b7f9eb48846	ab80824b-3296-4aa1-b122-79f058a73875	62f042fb-d0b7-7687-942e-acf7fe237432	EXIT	SMART-HQ-01	2026-04-09 19:02:00+06	t	2026-06-04 05:29:46.427487+06
+d352954d-6c36-9234-d724-b15698e2b285	ab80824b-3296-4aa1-b122-79f058a73875	62f042fb-d0b7-7687-942e-acf7fe237432	EXIT	SMART-HQ-01	2026-04-10 19:02:00+06	t	2026-06-04 05:29:46.427487+06
+33f6375e-c184-fcb6-51a7-1dc79fce6b20	ab80824b-3296-4aa1-b122-79f058a73875	62f042fb-d0b7-7687-942e-acf7fe237432	EXIT	SMART-HQ-01	2026-04-13 19:02:00+06	t	2026-06-04 05:29:46.427487+06
+e0b0b5b8-0436-495c-b5a5-9e97b907b50d	ab80824b-3296-4aa1-b122-79f058a73875	62f042fb-d0b7-7687-942e-acf7fe237432	EXIT	SMART-HQ-01	2026-04-14 19:02:00+06	t	2026-06-04 05:29:46.427487+06
+d265491b-2d28-78b4-6d64-34a65181f841	ab80824b-3296-4aa1-b122-79f058a73875	62f042fb-d0b7-7687-942e-acf7fe237432	EXIT	SMART-HQ-01	2026-04-15 19:02:00+06	t	2026-06-04 05:29:46.427487+06
+753324f2-ddf4-dbf9-ead3-a6db11c6f8ea	ab80824b-3296-4aa1-b122-79f058a73875	62f042fb-d0b7-7687-942e-acf7fe237432	EXIT	SMART-HQ-01	2026-04-16 19:02:00+06	t	2026-06-04 05:29:46.427487+06
+23329c0f-4024-c03d-6375-cef5f2cd5791	ab80824b-3296-4aa1-b122-79f058a73875	62f042fb-d0b7-7687-942e-acf7fe237432	EXIT	SMART-HQ-01	2026-04-17 19:02:00+06	t	2026-06-04 05:29:46.427487+06
+20beca21-4e5b-582e-d396-71f5a592b452	ab80824b-3296-4aa1-b122-79f058a73875	62f042fb-d0b7-7687-942e-acf7fe237432	EXIT	SMART-HQ-01	2026-04-20 19:02:00+06	t	2026-06-04 05:29:46.427487+06
+dcb83e1d-c90b-1564-fe18-fbb7fa48223f	ab80824b-3296-4aa1-b122-79f058a73875	62f042fb-d0b7-7687-942e-acf7fe237432	EXIT	SMART-HQ-01	2026-04-21 19:02:00+06	t	2026-06-04 05:29:46.427487+06
+d7ef7aa5-ee75-176f-5278-44d95077a611	ab80824b-3296-4aa1-b122-79f058a73875	62f042fb-d0b7-7687-942e-acf7fe237432	EXIT	SMART-HQ-01	2026-04-22 19:02:00+06	t	2026-06-04 05:29:46.427487+06
+181e1ae4-9fe4-f6c3-1d2e-12627fe7428e	ab80824b-3296-4aa1-b122-79f058a73875	62f042fb-d0b7-7687-942e-acf7fe237432	EXIT	SMART-HQ-01	2026-04-23 19:02:00+06	t	2026-06-04 05:29:46.427487+06
+6e7142ef-d03a-eb8b-ff18-4700dfc660e5	ab80824b-3296-4aa1-b122-79f058a73875	62f042fb-d0b7-7687-942e-acf7fe237432	EXIT	SMART-HQ-01	2026-04-24 19:02:00+06	t	2026-06-04 05:29:46.427487+06
+a23ecf21-b523-d564-726b-3d5be9115513	ab80824b-3296-4aa1-b122-79f058a73875	62f042fb-d0b7-7687-942e-acf7fe237432	EXIT	SMART-HQ-01	2026-04-27 19:02:00+06	t	2026-06-04 05:29:46.427487+06
+3ea5f372-296a-6267-1ca1-e7880351d679	ab80824b-3296-4aa1-b122-79f058a73875	62f042fb-d0b7-7687-942e-acf7fe237432	EXIT	SMART-HQ-01	2026-04-28 19:02:00+06	t	2026-06-04 05:29:46.427487+06
+ffec0548-b5fb-ac68-7bc4-30ab6c048078	ab80824b-3296-4aa1-b122-79f058a73875	62f042fb-d0b7-7687-942e-acf7fe237432	EXIT	SMART-HQ-01	2026-04-29 19:02:00+06	t	2026-06-04 05:29:46.427487+06
+5e1e702d-069e-b0a0-9781-54f5315201a4	ab80824b-3296-4aa1-b122-79f058a73875	62f042fb-d0b7-7687-942e-acf7fe237432	EXIT	SMART-HQ-01	2026-04-30 19:02:00+06	t	2026-06-04 05:29:46.427487+06
+2171062a-39dd-5d84-9d71-14ce5fda7955	ab80824b-3296-4aa1-b122-79f058a73875	62f042fb-d0b7-7687-942e-acf7fe237432	EXIT	SMART-HQ-01	2026-05-04 19:02:00+06	t	2026-06-04 05:29:46.427487+06
+4a451a91-5786-7508-94ba-dc50e470152a	ab80824b-3296-4aa1-b122-79f058a73875	62f042fb-d0b7-7687-942e-acf7fe237432	EXIT	SMART-HQ-01	2026-05-05 19:02:00+06	t	2026-06-04 05:29:46.427487+06
+b7fefb4c-d81f-e387-ccf4-520c54811d07	ab80824b-3296-4aa1-b122-79f058a73875	62f042fb-d0b7-7687-942e-acf7fe237432	EXIT	SMART-HQ-01	2026-05-06 19:02:00+06	t	2026-06-04 05:29:46.427487+06
+cfa4829c-e02d-22bc-522d-3a9760973282	ab80824b-3296-4aa1-b122-79f058a73875	62f042fb-d0b7-7687-942e-acf7fe237432	EXIT	SMART-HQ-01	2026-05-08 19:02:00+06	t	2026-06-04 05:29:46.427487+06
+6427a784-29bb-d008-36c3-7b8bbcf98643	ab80824b-3296-4aa1-b122-79f058a73875	62f042fb-d0b7-7687-942e-acf7fe237432	EXIT	SMART-HQ-01	2026-05-11 19:02:00+06	t	2026-06-04 05:29:46.427487+06
+206a0824-165b-2edb-8c2f-87915b865843	ab80824b-3296-4aa1-b122-79f058a73875	62f042fb-d0b7-7687-942e-acf7fe237432	EXIT	SMART-HQ-01	2026-05-12 19:02:00+06	t	2026-06-04 05:29:46.427487+06
+21aa8029-50c8-8774-daf9-03f88cbbda41	ab80824b-3296-4aa1-b122-79f058a73875	62f042fb-d0b7-7687-942e-acf7fe237432	EXIT	SMART-HQ-01	2026-05-13 19:02:00+06	t	2026-06-04 05:29:46.427487+06
+1a849e08-a9d3-79af-323c-4fe2be1842ba	ab80824b-3296-4aa1-b122-79f058a73875	62f042fb-d0b7-7687-942e-acf7fe237432	EXIT	SMART-HQ-01	2026-05-14 19:02:00+06	t	2026-06-04 05:29:46.427487+06
+60195cc0-b5ac-f25e-96de-398c3f695f3b	ab80824b-3296-4aa1-b122-79f058a73875	62f042fb-d0b7-7687-942e-acf7fe237432	EXIT	SMART-HQ-01	2026-05-15 19:02:00+06	t	2026-06-04 05:29:46.427487+06
+5980c73d-f2d0-fcd9-f7e5-b3f62d52e04d	ab80824b-3296-4aa1-b122-79f058a73875	62f042fb-d0b7-7687-942e-acf7fe237432	EXIT	SMART-HQ-01	2026-05-16 19:02:00+06	t	2026-06-04 05:29:46.427487+06
+da757498-b260-3980-b0fd-f4f6862d12da	ab80824b-3296-4aa1-b122-79f058a73875	62f042fb-d0b7-7687-942e-acf7fe237432	EXIT	SMART-HQ-01	2026-05-18 19:02:00+06	t	2026-06-04 05:29:46.427487+06
+3824ed18-f248-6919-f54c-2b650146fd33	ab80824b-3296-4aa1-b122-79f058a73875	62f042fb-d0b7-7687-942e-acf7fe237432	EXIT	SMART-HQ-01	2026-05-19 19:02:00+06	t	2026-06-04 05:29:46.427487+06
+a67f09df-cd6e-3fdf-3339-3f7e98fd28ae	ab80824b-3296-4aa1-b122-79f058a73875	62f042fb-d0b7-7687-942e-acf7fe237432	EXIT	SMART-HQ-01	2026-05-20 19:02:00+06	t	2026-06-04 05:29:46.427487+06
+f9b0f882-368c-de0a-07e9-f6cbd01395ae	ab80824b-3296-4aa1-b122-79f058a73875	62f042fb-d0b7-7687-942e-acf7fe237432	EXIT	SMART-HQ-01	2026-05-21 19:02:00+06	t	2026-06-04 05:29:46.427487+06
+006e39c2-eb41-e82c-98cf-62e129968361	ab80824b-3296-4aa1-b122-79f058a73875	62f042fb-d0b7-7687-942e-acf7fe237432	EXIT	SMART-HQ-01	2026-05-22 19:02:00+06	t	2026-06-04 05:29:46.427487+06
+4bb4e1b2-7b6d-fa9d-b325-65bf68750439	ab80824b-3296-4aa1-b122-79f058a73875	62f042fb-d0b7-7687-942e-acf7fe237432	EXIT	SMART-HQ-01	2026-05-25 19:02:00+06	t	2026-06-04 05:29:46.427487+06
+b6b5b37f-9716-cf2f-11f2-413bee7caa4e	ab80824b-3296-4aa1-b122-79f058a73875	62f042fb-d0b7-7687-942e-acf7fe237432	EXIT	SMART-HQ-01	2026-05-26 19:02:00+06	t	2026-06-04 05:29:46.427487+06
+7389ebd4-8251-9219-1dd7-391a5c1b8537	ab80824b-3296-4aa1-b122-79f058a73875	62f042fb-d0b7-7687-942e-acf7fe237432	EXIT	SMART-HQ-01	2026-05-27 19:02:00+06	t	2026-06-04 05:29:46.427487+06
+a8d29214-dad6-977d-456f-dcb2624fbd42	ab80824b-3296-4aa1-b122-79f058a73875	62f042fb-d0b7-7687-942e-acf7fe237432	EXIT	SMART-HQ-01	2026-05-28 19:02:00+06	t	2026-06-04 05:29:46.427487+06
+f46165d6-ea95-9eb7-97e3-9630410aa6e2	ab80824b-3296-4aa1-b122-79f058a73875	62f042fb-d0b7-7687-942e-acf7fe237432	EXIT	SMART-HQ-01	2026-05-29 19:02:00+06	t	2026-06-04 05:29:46.427487+06
+977e3e8d-4eb5-7434-a3c5-3fadc673a0a0	ab80824b-3296-4aa1-b122-79f058a73875	1846012f-cc30-ec19-8a7f-21078a087c75	EXIT	SMART-HQ-01	2026-04-01 20:06:00+06	t	2026-06-04 05:29:46.427487+06
+1dbd519a-14c1-2282-ff7f-ad7c897732fc	ab80824b-3296-4aa1-b122-79f058a73875	1846012f-cc30-ec19-8a7f-21078a087c75	EXIT	SMART-HQ-01	2026-04-02 20:06:00+06	t	2026-06-04 05:29:46.427487+06
+0b0955e3-e73d-f291-0d4f-68ffdd8817a2	ab80824b-3296-4aa1-b122-79f058a73875	1846012f-cc30-ec19-8a7f-21078a087c75	EXIT	SMART-HQ-01	2026-04-03 20:06:00+06	t	2026-06-04 05:29:46.427487+06
+cbdc395c-39b8-b1b0-a047-cb881daae8cd	ab80824b-3296-4aa1-b122-79f058a73875	1846012f-cc30-ec19-8a7f-21078a087c75	EXIT	SMART-HQ-01	2026-04-06 20:06:00+06	t	2026-06-04 05:29:46.427487+06
+06fe32a7-9c52-59cc-17c2-7a688d37a63b	ab80824b-3296-4aa1-b122-79f058a73875	1846012f-cc30-ec19-8a7f-21078a087c75	EXIT	SMART-HQ-01	2026-04-07 20:06:00+06	t	2026-06-04 05:29:46.427487+06
+47412501-04ee-98e9-1f8f-5a140da2c912	ab80824b-3296-4aa1-b122-79f058a73875	1846012f-cc30-ec19-8a7f-21078a087c75	EXIT	SMART-HQ-01	2026-04-08 20:06:00+06	t	2026-06-04 05:29:46.427487+06
+eeb7bd78-8d9f-80ef-f613-a5e9ff72a52f	ab80824b-3296-4aa1-b122-79f058a73875	1846012f-cc30-ec19-8a7f-21078a087c75	EXIT	SMART-HQ-01	2026-04-09 20:06:00+06	t	2026-06-04 05:29:46.427487+06
+ddaf5019-662b-adc0-bfb0-d025b585ba19	ab80824b-3296-4aa1-b122-79f058a73875	1846012f-cc30-ec19-8a7f-21078a087c75	EXIT	SMART-HQ-01	2026-04-10 20:06:00+06	t	2026-06-04 05:29:46.427487+06
+e5d37b91-4528-4959-3c67-b33919a26f6d	ab80824b-3296-4aa1-b122-79f058a73875	1846012f-cc30-ec19-8a7f-21078a087c75	EXIT	SMART-HQ-01	2026-04-13 20:06:00+06	t	2026-06-04 05:29:46.427487+06
+35dec6cc-e1f5-b8af-1aed-b645aa7e9833	ab80824b-3296-4aa1-b122-79f058a73875	1846012f-cc30-ec19-8a7f-21078a087c75	EXIT	SMART-HQ-01	2026-04-14 20:06:00+06	t	2026-06-04 05:29:46.427487+06
+85d07ad0-22a0-255a-fcbc-b540a377be76	ab80824b-3296-4aa1-b122-79f058a73875	1846012f-cc30-ec19-8a7f-21078a087c75	EXIT	SMART-HQ-01	2026-04-15 20:06:00+06	t	2026-06-04 05:29:46.427487+06
+9e8b1936-bdb5-c19e-0dee-b9e2b87c8dec	ab80824b-3296-4aa1-b122-79f058a73875	1846012f-cc30-ec19-8a7f-21078a087c75	EXIT	SMART-HQ-01	2026-04-16 20:06:00+06	t	2026-06-04 05:29:46.427487+06
+ee76a43e-f95e-7b23-b97b-97e0bac86344	ab80824b-3296-4aa1-b122-79f058a73875	1846012f-cc30-ec19-8a7f-21078a087c75	EXIT	SMART-HQ-01	2026-04-17 20:06:00+06	t	2026-06-04 05:29:46.427487+06
+e30ce3ec-0f46-2c9e-4020-8c704740a573	ab80824b-3296-4aa1-b122-79f058a73875	1846012f-cc30-ec19-8a7f-21078a087c75	EXIT	SMART-HQ-01	2026-04-20 20:06:00+06	t	2026-06-04 05:29:46.427487+06
+2997ddbd-72a1-fc0a-5cf0-8fd2d90b1d5b	ab80824b-3296-4aa1-b122-79f058a73875	1846012f-cc30-ec19-8a7f-21078a087c75	EXIT	SMART-HQ-01	2026-04-21 20:06:00+06	t	2026-06-04 05:29:46.427487+06
+ff28b989-40fb-3944-3815-5bd764ea3104	ab80824b-3296-4aa1-b122-79f058a73875	1846012f-cc30-ec19-8a7f-21078a087c75	EXIT	SMART-HQ-01	2026-04-22 20:06:00+06	t	2026-06-04 05:29:46.427487+06
+a0a2556d-a54e-583d-b931-2c247db1f432	ab80824b-3296-4aa1-b122-79f058a73875	1846012f-cc30-ec19-8a7f-21078a087c75	EXIT	SMART-HQ-01	2026-04-23 20:06:00+06	t	2026-06-04 05:29:46.427487+06
+7f9038c8-d37a-531a-23fd-2eef10b21178	ab80824b-3296-4aa1-b122-79f058a73875	1846012f-cc30-ec19-8a7f-21078a087c75	EXIT	SMART-HQ-01	2026-04-24 20:06:00+06	t	2026-06-04 05:29:46.427487+06
+7c9e657c-af6d-395d-182b-fd7e042df3c1	ab80824b-3296-4aa1-b122-79f058a73875	1846012f-cc30-ec19-8a7f-21078a087c75	EXIT	SMART-HQ-01	2026-04-27 20:06:00+06	t	2026-06-04 05:29:46.427487+06
+dc16e6d8-c739-6833-8113-1cfbc8bd0261	ab80824b-3296-4aa1-b122-79f058a73875	1846012f-cc30-ec19-8a7f-21078a087c75	EXIT	SMART-HQ-01	2026-04-28 20:06:00+06	t	2026-06-04 05:29:46.427487+06
+ee7c11bd-6396-f1d4-7987-ada17acf6b87	ab80824b-3296-4aa1-b122-79f058a73875	1846012f-cc30-ec19-8a7f-21078a087c75	EXIT	SMART-HQ-01	2026-04-29 20:06:00+06	t	2026-06-04 05:29:46.427487+06
+2f072b58-f62d-a125-24d9-572c2351e8ea	ab80824b-3296-4aa1-b122-79f058a73875	1846012f-cc30-ec19-8a7f-21078a087c75	EXIT	SMART-HQ-01	2026-04-30 20:06:00+06	t	2026-06-04 05:29:46.427487+06
+82f7f506-b491-6d26-4c7c-bc7340158cc7	ab80824b-3296-4aa1-b122-79f058a73875	1846012f-cc30-ec19-8a7f-21078a087c75	EXIT	SMART-HQ-01	2026-05-04 20:06:00+06	t	2026-06-04 05:29:46.427487+06
+ab60fd81-3507-755a-c9d6-a7cb280b1540	ab80824b-3296-4aa1-b122-79f058a73875	1846012f-cc30-ec19-8a7f-21078a087c75	EXIT	SMART-HQ-01	2026-05-05 20:06:00+06	t	2026-06-04 05:29:46.427487+06
+8fd4a740-fae1-499c-f9d3-597d0873265e	ab80824b-3296-4aa1-b122-79f058a73875	1846012f-cc30-ec19-8a7f-21078a087c75	EXIT	SMART-HQ-01	2026-05-06 20:06:00+06	t	2026-06-04 05:29:46.427487+06
+e2240f5b-b54f-cf45-d488-64ae62db15bb	ab80824b-3296-4aa1-b122-79f058a73875	1846012f-cc30-ec19-8a7f-21078a087c75	EXIT	SMART-HQ-01	2026-05-08 20:06:00+06	t	2026-06-04 05:29:46.427487+06
+587e3f35-fa89-b0af-9442-4005665f3825	ab80824b-3296-4aa1-b122-79f058a73875	1846012f-cc30-ec19-8a7f-21078a087c75	EXIT	SMART-HQ-01	2026-05-11 20:06:00+06	t	2026-06-04 05:29:46.427487+06
+137b669e-0bc4-2871-a4e8-ae4f1512037e	ab80824b-3296-4aa1-b122-79f058a73875	1846012f-cc30-ec19-8a7f-21078a087c75	EXIT	SMART-HQ-01	2026-05-12 20:06:00+06	t	2026-06-04 05:29:46.427487+06
+bc436e37-363d-2550-d8b1-6c06dcec142c	ab80824b-3296-4aa1-b122-79f058a73875	1846012f-cc30-ec19-8a7f-21078a087c75	EXIT	SMART-HQ-01	2026-05-13 20:06:00+06	t	2026-06-04 05:29:46.427487+06
+8b3f3f6b-695d-8fe1-a926-cb5d28841a79	ab80824b-3296-4aa1-b122-79f058a73875	1846012f-cc30-ec19-8a7f-21078a087c75	EXIT	SMART-HQ-01	2026-05-14 20:06:00+06	t	2026-06-04 05:29:46.427487+06
+577939c0-aaa4-daa2-6883-acd6c8d159ab	ab80824b-3296-4aa1-b122-79f058a73875	1846012f-cc30-ec19-8a7f-21078a087c75	EXIT	SMART-HQ-01	2026-05-15 20:06:00+06	t	2026-06-04 05:29:46.427487+06
+2c708a8c-9dc6-919a-f3ad-cecfb61e733d	ab80824b-3296-4aa1-b122-79f058a73875	1846012f-cc30-ec19-8a7f-21078a087c75	EXIT	SMART-HQ-01	2026-05-16 20:06:00+06	t	2026-06-04 05:29:46.427487+06
+87f4b2ae-0afb-b418-3f7e-16213d661ad7	ab80824b-3296-4aa1-b122-79f058a73875	1846012f-cc30-ec19-8a7f-21078a087c75	EXIT	SMART-HQ-01	2026-05-18 20:06:00+06	t	2026-06-04 05:29:46.427487+06
+bd343a23-00d3-2f22-014d-fcd477b6c0e6	ab80824b-3296-4aa1-b122-79f058a73875	1846012f-cc30-ec19-8a7f-21078a087c75	EXIT	SMART-HQ-01	2026-05-19 20:06:00+06	t	2026-06-04 05:29:46.427487+06
+eadb6864-c8e3-ed5c-4119-8100560adee1	ab80824b-3296-4aa1-b122-79f058a73875	1846012f-cc30-ec19-8a7f-21078a087c75	EXIT	SMART-HQ-01	2026-05-25 20:06:00+06	t	2026-06-04 05:29:46.427487+06
+d8d5274b-e610-07b6-eabf-39c7db32a0bc	ab80824b-3296-4aa1-b122-79f058a73875	1846012f-cc30-ec19-8a7f-21078a087c75	EXIT	SMART-HQ-01	2026-05-26 20:06:00+06	t	2026-06-04 05:29:46.427487+06
+55ee4abe-4ba9-b9de-5f42-aeb56c5b2ebb	ab80824b-3296-4aa1-b122-79f058a73875	1846012f-cc30-ec19-8a7f-21078a087c75	EXIT	SMART-HQ-01	2026-05-27 20:06:00+06	t	2026-06-04 05:29:46.427487+06
+2fc7c81d-de1d-2846-560f-50e70a3df8ef	ab80824b-3296-4aa1-b122-79f058a73875	1846012f-cc30-ec19-8a7f-21078a087c75	EXIT	SMART-HQ-01	2026-05-28 20:06:00+06	t	2026-06-04 05:29:46.427487+06
+393c35f5-427d-ade6-4d86-3a36052f63a8	ab80824b-3296-4aa1-b122-79f058a73875	1846012f-cc30-ec19-8a7f-21078a087c75	EXIT	SMART-HQ-01	2026-05-29 20:06:00+06	t	2026-06-04 05:29:46.427487+06
+\.
+
+
+--
+-- Data for Name: tasks; Type: TABLE DATA; Schema: public; Owner: postgres
+--
+
+COPY public.tasks (id, org_id, created_by, assigned_to, title, description, due_date, status, reviewed_by, reviewed_at, created_at, updated_at, report_description, report_url, submitted_at) FROM stdin;
+cc4a26ba-282f-e136-a929-0fc4d847b3e7	ab80824b-3296-4aa1-b122-79f058a73875	34e8a4a8-1001-7045-2027-0ce681ca4789	191ce5ce-8c20-4d34-8b0e-b22f0bd3a016	Improve employee dashboard UI	Polish employee dashboard cards and add empty states.	2026-04-20	APPROVED	34e8a4a8-1001-7045-2027-0ce681ca4789	2026-04-20 19:20:00+06	2026-04-05 11:00:00+06	2026-06-04 05:29:46.427487+06	Dashboard updated, empty states added, and mobile layout verified.	https://example.com/reports/dashboard-ui.pdf	2026-04-20 18:40:00+06
+8c35137a-9fd6-77fe-0c11-8d75b88bc072	ab80824b-3296-4aa1-b122-79f058a73875	34e8a4a8-1001-7045-2027-0ce681ca4789	b6bc7f59-28dc-64d2-9c5b-04530e9bf5a3	Payroll API regression	Run payroll regression scenarios for April cycle.	2026-04-29	SUBMITTED	\N	\N	2026-04-16 12:00:00+06	2026-06-04 05:29:46.427487+06	Regression suite completed. Found one edge case around unpaid absence override.	https://example.com/reports/payroll-regression.xlsx	2026-04-29 16:00:00+06
+da1f5daf-5ceb-d347-f475-39056f08c1b3	ab80824b-3296-4aa1-b122-79f058a73875	34e8a4a8-1001-7045-2027-0ce681ca4789	62f042fb-d0b7-7687-942e-acf7fe237432	Prepare employer branding post	Draft May hiring post and coordinate visuals.	2026-05-24	PENDING	\N	\N	2026-05-12 10:40:00+06	2026-06-04 05:29:46.427487+06	\N	\N	\N
+\.
+
+
+--
+-- Data for Name: user_sessions; Type: TABLE DATA; Schema: public; Owner: postgres
+--
+
+COPY public.user_sessions (id, user_id, cognito_username, refresh_token, created_at, expires_at) FROM stdin;
+dcd64cb6-1c57-4c40-bcae-729eb60aea53	6458a4b8-7031-70fe-b6c0-921f1903783f	6458a4b8-7031-70fe-b6c0-921f1903783f	eyJjdHkiOiJKV1QiLCJlbmMiOiJBMjU2R0NNIiwiYWxnIjoiUlNBLU9BRVAifQ.ZmOHwAv04QF2MT1H4lNJTtjiOYShTrXBSafNCGr6zYGTA8c_JBE2krrFnYzrai3ZHblRVI56bzEh8Dl_9HTTbGmdw6xfMDbSVPp3f9HbCqA1VNHIHwWq_lbgCYh28MElRHF0dn79ys2gexDSVVn6UXUO0VfxfK0BKNO7vP66uktuwuCUZwKbIcHf7RDe63N4s_ZWDN5002OFfnZg_PC8pErUvMbMy8pOsEqht-_OkiKGdW82xasX5sanXaJN8GSo2_lO2QCMEZ-VgZ3Yb69Ez9REGHK_CP_dJl31z_dCzyRjXYPS4a447OaKrMAxU8J9yuy7oIik4bIWVba1kijizg.kNZ38WZ0Qng17Psd.lo7K5FMxRxw56E6ZDxfDVYDo2c_qTqKplMrK_phA-Q38kP_NrhEEYPOcHVqxFc7pY6LRNApTsxUs_DwZsgyBU4dyLhuioN9QqTyxWwZi7Dckgxe7sodqLCmKBqjrW4c_0FXFdaO0RZ6zBDmGVQIurMoCul3mdocdLrDLWyRoL_1uN9tJMVDu8RqGsK7vtOjTW-7R-mq1LePBPQ1Sf1pNKqfY9iabNo5fx905TP4l_Yy9zU8CAuHTXlqLSxb4ta4GGhyar4tbEoZMqyQOuLkIk4aCQk0Tz8ZF-Nn0mQ2wgDtpbGfrPesEfUXSJucV1edKJXidmmBVmagjEpihVky3gb8b4zewmGCaFGJiafPOzgvNp2illMmV6nQfzBlYPXWL3_Dvifyndy898VpqjobCnP7w5r9tCk_spRGsm9sApkTLNbXGIE16JTrSTd7N7-Yj_GLkt47LzY1JVj7J4Dl31keQtYangB5mu8auTifWSFovZuCnsZTH2INecaGKtYXiofy29brpsy_ZjFMitGu1N7YgQr_iX4BqWL1fTEJ6nORQz8QHmEZlEmmh27plj1otSmUfKuLPiOIhw_f8Bao9UpsOuOKkNTxQh4PGHgMpRVatC6sSZcOwUhWwiJsG1HW-XEXkvzMuD_yFqg97sCFs3nFJBfSQaWRHJgLlbawk89-gW6aOuIDUJ5RmrHL4TNmDw3Arjj4WnHBo8VrOfIp8SDRVgFbdovyBBDYRUNRfVcErihBOCc6ZHyj8RmSQAIw65NrUZnFd6HB1rENChDrvm-36oZWS1yn0FkMxYdFLk4XwxrYnD__duVgs9TQRhpgV0NNoGCS0_kfEZWRCX0cjvfKH7AAf_1GhVdGaAXVJxWJTbO4th8VGK9jlgoc8EsYk3jHLPZv-5v66xVvoGiTt_P5AeVwg9Whna94nrz-NWgBPNq8e2esYlQx3_nKwbY3pzfwQuA2YoNLBcPyICAN3tOe2RxlAwDGTkP1y7heuKOkEXpSE7zTKFaFtXKEN9WL-D9mXnXC9N2pN3pdlQGAh7WbCeZs2CDsJxiP0iusSezIyDkWyJtH9eA9ECvcIbDkXGDgcdsMBHxqQ-Hyf0CjUKvJA3qjFRZptxPrEsVuaHpQNAwTGsc_yTGEjEDiLuohY4XnhrslyUDGCYNvVVTsSpVVxqJFzM_s51xiI8bX3ThQDOZlaIXf1whDkWRCc4WYh7J1TwB7wj-xSpgJ_uwzZnG1lGY6uQsRd4zYZ_bfTPvBWfoucjHk_Z1_9IDDSqnWMPCfDrRAwqTqhny6KdmtzzVKFROQI8L4ZmLB5xmCYBXmpWtIXeOl0.voCyUbGU2CFah9YBXGPbbA	2026-06-04 05:19:29.058749+06	2026-07-04 05:19:29.058194+06
+0e0907aa-fcd0-433e-8cd7-2559c6ebd703	34e8a4a8-1001-7045-2027-0ce681ca4789	34e8a4a8-1001-7045-2027-0ce681ca4789	eyJjdHkiOiJKV1QiLCJlbmMiOiJBMjU2R0NNIiwiYWxnIjoiUlNBLU9BRVAifQ.l6RY7S_L6GemAosBG0Q2ISYOmfKW3gGJw_zN806ifjDN-EeHoyjyfaoXtaYRXarJL8SFXkmR2tXBXUQCgaI9t5d087MYXU8qOdP9tZfIp3rvZPl3yp5IG0S2E4VCXimluJEAfCJC6MRB_e5Gu1ln5YDrqTyIHBI4yN0t8JSr9xWRi6lczTJNF-ODEu5DJTfIlYLU5ZR_xvGakhlQzzAAs1cl2xRukvDGEZTZxi0Rx7T7i0eney31XEWb5vjBXtpNqWY9bQ_8aNJCoKdJXeWM066ZKKLS_TwUTX5OPFLe8uOoY9IgpN_vfuMrcW8762kYwHD8VXYU5DdTvMk2ElmM0Q.fzXLjfLoVRVaQMWB.jBa7l-JbGQmQjB2CC69NYWCP74sXoEIZJQ7un1gsMPU8N2rG0i8gRdJgGR7UhpLFWRoDKFCAKqKajtmxWfxbs4AvVlwmRoUwrBNBX7AWdmShpMMOJRAmBuOWD5D9yc2glgRFIn7XvJzf3cfgKavS57SNQMZZMefzS10iEu7d1cOmBWO9UgUExIxC41O62FHGo7SrC7pTEd3J3AY2FLC6Zulw8B0hVCLAs8C0fSUFgRNV25JQHo9FhvuVcLOYXbkrOd8F1sxIibJPVbjW13gOJUySYbTkfVkvsgUCDWaaTN3-nItURh1eARkSX_UueELRenZIJz-yIbmZwPwEZRWN5MecL2Q4EP_YbTjGSAf5Lyio_6Q_jPoeJrpfvm-t_qODoBDTMZ3077lZxXkWKeJ3iesaVI5Avuc9VYsEu9Q4Y8RY8BUBzVh6XTFr_rFNv0Ab5E01pqA86quc4wasBxpjx8hr3nF0INlObGuYNHIrr1g8cxFuhPtt8x0T3t95XCCmNFwc3H6M9S3yr9Geaiswe8ZNx7hnzn12ztEY9Gj8KGL8_BVLol1MTBozPANlXcGIaSuOgB9BdbH8x4B5SV4t3w65DBDVdlVTQRKV7yBcLkeYaMgfMmdXE81gW7n-5OelE2V777vw8hRkuNZodA7w75hvAwZB0dJvoJwinHbo9bfMw6X4zW3Btp9RYXZWnFaBUFJ15KJSx4fiN-5nOr1PrGwW1gXIBsqY5G5KyQG0gDGihlX4D74INVtPUkjKST6kKLKJWgAYNIGRb1Zpir44rSHQ0TtvjfV1eR2Ad4v5it--wpjVyh9RLo9gW13UEqWWfzf6kQApDhM5u3WQZsX7KQ7MPLPujZAdAfxHo4HIEBLH1J4JEZ-nilkUddzje6EZwZPnYHzIIH6LrLPoNmDQeBNjvxkr8WuhME8BQ8ICapVz64AXIHFLpWUTOMBMO5UpL7_zUgAjcZ0G9vSne7Of3PeB4FL_KyodgEpDML2XbW8eL8cn3dv7aqsWPBnfXByyaYSnYEi8w1Ae4q_U-1WGkwVZPMSVIB5tcMrinK5wE6fNATL5rQlRr0Rsb5nElWR6b_FPYh-5hzxsiTP64Xu_vHRyb151WN7n8L1-VRLgoaJIwyA6axk-LGYxGjU_nJ20FNF5jM7k3NWGC_LMEHRTlyxSKy7MKH4zQ6rYiqPSpOCz3RNJWlEFIMueOclF8Mx0RKHDg31Lvob_aNPoIya5wVSnQPj_W54Gl04gcVOUAry2N_Xi6FVwHvv8Mw4aGEqodgcP5Hkq8w3RGlXQQ5b0FD3wmuPL1RyARjZmM40z0YUNMVWpTOHw.oLZ_yk3SZJ6jzGdl8U7hkg	2026-06-04 05:21:14.114467+06	2026-07-04 05:21:14.11277+06
+63690d3c-e941-4b73-86de-3a9d15ba41c8	34383408-0001-7097-7ccb-cec085c50bda	34383408-0001-7097-7ccb-cec085c50bda	eyJjdHkiOiJKV1QiLCJlbmMiOiJBMjU2R0NNIiwiYWxnIjoiUlNBLU9BRVAifQ.W0Bt2pdTmdSFpfKCDfDac74F2eKmK1TMqB24yNbzYowIhX0UcoMttyi63aBKQ97vXbmkCraqtfQ6ea9S2ZkvgTiQu5Jo5L8UI9U-iwaVHEI-7VK69SoduVOQenah9ZY4y0OB8TMk2lf6_8sL9OXgHRsLaG1RCo_OcoMAF0HmaqM8UMHygHM6_BI6Y1ZaaARRfXvdVG21rNyhMIfo5IUeAQc18UrLHqqRBo3UVCmY-dACZH0Jv2rqa_EyS6pIFP5b2yBw5n7zXzS4zwVMiob1GqBdxnzUa5jOqjjBYONUrHIIAM7A16yjJJQgOdn3_g3Qf3XkHl-qxXcaCcWm_HUACQ.p8TwSPmrE7CKOLjW.2mrKhR4tOSutolJxvmQtntCRFmMnkIdowiYaN9GjH0YQrLWd85sYCY6dqEZ093PhX7kRjkd7NIGBF_3bCVP-YvH2-BNd31Bh4huSsHJrvoR336hFl2vnQGN4Gfxt8li1yPWD-hsWG4N_VcxwHAueJjuCGTmKclPVGvRNBKTOVL_fyFdEmECmPWp_UANmBP8S1jg3fFCBHHbnyud2gYrIIvPJhkeRjxfs6OYLvCPSmUm-M5bnSaWofs-6FAKgqWS_ohLzrsEpDafDDnkmhkilWxgDEWWd8BvSQ1Vapm7EW2SGIKcGfQE2LAxb5eJMh_5G1_Av5vNafHZUv2fM6rbyyaXyIYp2QWZGZHeJiku-UdsmmzNNh_z_Hs-imWPVuJKa7CmQ1fBlpEJxwxVM43Wemd90XZd23BL7aBxSFD4bwIQlB-hq67uv3HlTz7vJNSg3y0FcJmV4_j25Zo3X4ud0e8Xt3OjeoQZwPQNUBVXNuDUIEAKr-R9-oRc2iebfr2JGyflhbBC5zY5L9Y3c1W4czxO-VfhPhzcnd4EOXFD5W3QvOzxy-z6wzdkoYEVpic_jlfmXPC1reJD1GTKGrGGhKBa7hSxj6igac5HfuOXUCw29LbJFTPDsR0DACXuRdy9Zx6ojQngbmD-wMov0koQue46gkfOeH9PBcSN5g6IY9-yfS-y_G0jvWbNTq5bG9-T_lTNTGhHU4KSTOP__5t92MQj3JyNdv-U4LWS-4ZHNGg6JczZrQ1royZSgtHy4DRCq8sdzCZTGd7PCTiJnEPXq-dVOO_2D4PL3tC_eb5Cz3aG__X95hZ0Xn3G8kaQjct9XVKuGFNrtcPLM--VZnGcm2faIMMUfgcmgL22aBU0i0qFpodkYyvgl-6fUW-gxwwDRQ-Jur1cOnm1S5W-v_7X-2c4N_oc8sXZnTskNrp21WmjyvE8a5M-ATNrosRB3Z5Zjvv17ll-GVA-zj35U7ydC5TFkVft3TPSCa52-pOmlY_FA-iosAXSRoVxcLlhb28NmXOtggtFKIi--glp-8xYQbx4UWA1zvjiMaEDjelLASPHxbNsIOuI8FDEa7niPm0Ynm2QLeMSqcHLp_xbTLIsO62Lk8j6GKR6002XllEw_LiproA6etk4Sj_7uVOwHjnYVR_84U9efERHR_2DabUR2SgoIxeI4Wwz_gX4m0rwSZPLi4bE6Ulfla9zKYdSfXc-dDtuDRrE2vRGBGjCArs7UWJuvog1h0jwAsgo-5gRAeWiIKKuk7_NhH9YBEEBwR50F_6okR1EqGUs1DQPgjTPRA2E17UGASX7l4vVHKoxUbtfj4MzrgvMu.1M8MhU4E9yx_GbNdGorBmg	2026-06-04 05:22:40.300585+06	2026-07-04 05:22:40.299245+06
+\.
+
+
+--
+-- Data for Name: users; Type: TABLE DATA; Schema: public; Owner: postgres
+--
+
+COPY public.users (id, org_id, email, role, first_name, last_name, phone_number, verification_status, created_at) FROM stdin;
+6458a4b8-7031-70fe-b6c0-921f1903783f	ab80824b-3296-4aa1-b122-79f058a73875	zhandkurmanbekyzy@gmail.com	SysAdmin	Zhansaya	Kurmanbekkyzy	+77711396298	Verified	2026-06-04 05:19:00.303973+06
+34e8a4a8-1001-7045-2027-0ce681ca4789	ab80824b-3296-4aa1-b122-79f058a73875	231266@astanait.edu.kz	Admin	Adel	Kenesova	+77711399898	Verified	2026-06-04 05:21:06.046001+06
+34383408-0001-7097-7ccb-cec085c50bda	ab80824b-3296-4aa1-b122-79f058a73875	shynterek@gmail.com	Employee	Shyngys	Terekbayev	+77711396262	Verified	2026-06-04 05:22:28.364762+06
+5b8be9b4-e404-95c1-39af-93eee9566b35	ab80824b-3296-4aa1-b122-79f058a73875	aliya.hr@smartemp.test	HR	Aliya	Nurgaliyeva	+77020000001	Verified	2026-04-01 10:00:00+06
+784c1a9a-e98d-4627-941f-18abe63de2c1	ab80824b-3296-4aa1-b122-79f058a73875	timur.backend@smartemp.test	Manager	Timur	Kassenov	+77020000002	Verified	2026-04-01 10:00:00+06
+b6ef0eaa-04b8-dc28-8a83-d3ffbfd00922	ab80824b-3296-4aa1-b122-79f058a73875	madina.marketing@smartemp.test	Employee	Madina	Yessenova	+77020000003	Verified	2026-04-01 10:00:00+06
+5ca169e8-e12e-dbd0-4f26-2ff4e786d976	ab80824b-3296-4aa1-b122-79f058a73875	nurlan.sales@smartemp.test	Employee	Nurlan	Iskakov	+77020000004	Verified	2026-04-01 10:00:00+06
+35aaebe5-98db-015b-addf-bc1385556e98	ab80824b-3296-4aa1-b122-79f058a73875	zhanar.ops@smartemp.test	Employee	Zhanar	Beketova	+77020000005	Verified	2026-04-01 10:00:00+06
+\.
+
+
+--
+-- Data for Name: work_schedules; Type: TABLE DATA; Schema: public; Owner: postgres
+--
+
+COPY public.work_schedules (id, org_id, employee_id, work_start, work_end, late_threshold_minutes, created_at, updated_at) FROM stdin;
+f8388076-7e44-d50b-58f5-d398d59b69e0	ab80824b-3296-4aa1-b122-79f058a73875	33f9e677-d27f-3997-aab5-ff7013710e53	09:00:00	18:00:00	15	2026-04-01 11:00:00+06	2026-06-04 05:29:46.427487+06
+21fca42f-65ef-847b-b486-e8156557022c	ab80824b-3296-4aa1-b122-79f058a73875	fc8a3817-f4ff-4789-89fe-1960d74b8830	09:00:00	18:00:00	15	2026-04-01 11:00:00+06	2026-06-04 05:29:46.427487+06
+8612c993-4c26-390f-48ff-ffd3b425346b	ab80824b-3296-4aa1-b122-79f058a73875	191ce5ce-8c20-4d34-8b0e-b22f0bd3a016	09:00:00	18:00:00	15	2026-04-01 11:00:00+06	2026-06-04 05:29:46.427487+06
+5b9d07dd-7c4f-e230-7eff-3cbedfe25966	ab80824b-3296-4aa1-b122-79f058a73875	e312dce0-640d-9157-1a3b-6ad318e19dcf	09:00:00	18:00:00	15	2026-04-01 11:00:00+06	2026-06-04 05:29:46.427487+06
+72b79c3e-d3e4-73cb-48ab-1b036dc16e67	ab80824b-3296-4aa1-b122-79f058a73875	b6bc7f59-28dc-64d2-9c5b-04530e9bf5a3	09:00:00	18:00:00	15	2026-04-01 11:00:00+06	2026-06-04 05:29:46.427487+06
+6466e9ad-dff0-77c5-9b76-5e7ca0203ecb	ab80824b-3296-4aa1-b122-79f058a73875	62f042fb-d0b7-7687-942e-acf7fe237432	09:00:00	18:00:00	15	2026-04-01 11:00:00+06	2026-06-04 05:29:46.427487+06
+2c19f4e6-96a4-b48c-78cd-a42066716f5f	ab80824b-3296-4aa1-b122-79f058a73875	1846012f-cc30-ec19-8a7f-21078a087c75	10:00:00	19:00:00	15	2026-04-01 11:00:00+06	2026-06-04 05:29:46.427487+06
+87f0617e-d603-18f2-8707-c982c7c42dfb	ab80824b-3296-4aa1-b122-79f058a73875	10f32409-6c83-a51b-f478-9b311f9e3cf2	09:00:00	18:00:00	15	2026-04-01 11:00:00+06	2026-06-04 05:29:46.427487+06
+\.
+
+
+--
+-- Data for Name: working_calendar; Type: TABLE DATA; Schema: public; Owner: postgres
+--
+
+COPY public.working_calendar (id, org_id, date, type, name, created_at) FROM stdin;
+3cc00697-7e82-b354-70f1-4cb4a7d89570	ab80824b-3296-4aa1-b122-79f058a73875	2026-05-01	HOLIDAY	Kazakhstan Unity Day	2026-04-01 11:00:00+06
+06ca2541-2b96-721d-2432-5db0c29d8804	ab80824b-3296-4aa1-b122-79f058a73875	2026-05-07	HOLIDAY	Defender of the Fatherland Day	2026-04-01 11:00:00+06
+815252a5-4746-82ab-b047-de7db7bb32f3	ab80824b-3296-4aa1-b122-79f058a73875	2026-05-09	HOLIDAY	Victory Day	2026-04-01 11:00:00+06
+390c1fed-db2e-0128-6ef6-212216c8c510	ab80824b-3296-4aa1-b122-79f058a73875	2026-05-16	WORKDAY	Compensating workday	2026-04-01 11:00:00+06
+\.
+
+
+--
+-- Name: cities_id_seq; Type: SEQUENCE SET; Schema: public; Owner: postgres
+--
+
+SELECT pg_catalog.setval('public.cities_id_seq', 25, true);
+
+
+--
+-- Name: goose_db_version_id_seq; Type: SEQUENCE SET; Schema: public; Owner: postgres
+--
+
+SELECT pg_catalog.setval('public.goose_db_version_id_seq', 22, true);
+
+
+--
+-- Name: attendance_records attendance_records_employee_id_date_key; Type: CONSTRAINT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY public.attendance_records
+    ADD CONSTRAINT attendance_records_employee_id_date_key UNIQUE (employee_id, date);
+
+
+--
+-- Name: attendance_records attendance_records_pkey; Type: CONSTRAINT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY public.attendance_records
+    ADD CONSTRAINT attendance_records_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: cities cities_name_key; Type: CONSTRAINT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY public.cities
+    ADD CONSTRAINT cities_name_key UNIQUE (name);
+
+
+--
+-- Name: cities cities_pkey; Type: CONSTRAINT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY public.cities
+    ADD CONSTRAINT cities_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: consents consents_pkey; Type: CONSTRAINT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY public.consents
+    ADD CONSTRAINT consents_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: departments departments_name_key; Type: CONSTRAINT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY public.departments
+    ADD CONSTRAINT departments_name_key UNIQUE (name);
+
+
+--
+-- Name: departments departments_pkey; Type: CONSTRAINT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY public.departments
+    ADD CONSTRAINT departments_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: documents documents_pkey; Type: CONSTRAINT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY public.documents
+    ADD CONSTRAINT documents_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: documents documents_type_version_key; Type: CONSTRAINT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY public.documents
+    ADD CONSTRAINT documents_type_version_key UNIQUE (type, version);
+
+
+--
+-- Name: employees employees_pkey; Type: CONSTRAINT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY public.employees
+    ADD CONSTRAINT employees_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: events events_pkey; Type: CONSTRAINT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY public.events
+    ADD CONSTRAINT events_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: goose_db_version goose_db_version_pkey; Type: CONSTRAINT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY public.goose_db_version
+    ADD CONSTRAINT goose_db_version_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: invites invites_code_key; Type: CONSTRAINT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY public.invites
+    ADD CONSTRAINT invites_code_key UNIQUE (code);
+
+
+--
+-- Name: invites invites_pkey; Type: CONSTRAINT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY public.invites
+    ADD CONSTRAINT invites_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: leave_requests leave_requests_pkey; Type: CONSTRAINT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY public.leave_requests
+    ADD CONSTRAINT leave_requests_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: notifications notifications_pkey; Type: CONSTRAINT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY public.notifications
+    ADD CONSTRAINT notifications_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: organizations organizations_admin_id_key; Type: CONSTRAINT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY public.organizations
+    ADD CONSTRAINT organizations_admin_id_key UNIQUE (admin_id);
+
+
+--
+-- Name: organizations organizations_pkey; Type: CONSTRAINT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY public.organizations
+    ADD CONSTRAINT organizations_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: organizations organizations_vat_id_key; Type: CONSTRAINT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY public.organizations
+    ADD CONSTRAINT organizations_vat_id_key UNIQUE (vat_id);
+
+
+--
+-- Name: payroll_adjustments payroll_adjustments_pkey; Type: CONSTRAINT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY public.payroll_adjustments
+    ADD CONSTRAINT payroll_adjustments_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: payroll_attendance_overrides payroll_attendance_overrides_employee_id_date_key; Type: CONSTRAINT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY public.payroll_attendance_overrides
+    ADD CONSTRAINT payroll_attendance_overrides_employee_id_date_key UNIQUE (employee_id, date);
+
+
+--
+-- Name: payroll_attendance_overrides payroll_attendance_overrides_pkey; Type: CONSTRAINT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY public.payroll_attendance_overrides
+    ADD CONSTRAINT payroll_attendance_overrides_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: payroll_audit_logs payroll_audit_logs_pkey; Type: CONSTRAINT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY public.payroll_audit_logs
+    ADD CONSTRAINT payroll_audit_logs_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: payroll_corrections payroll_corrections_pkey; Type: CONSTRAINT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY public.payroll_corrections
+    ADD CONSTRAINT payroll_corrections_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: payroll_cycles payroll_cycles_org_id_period_start_period_end_key; Type: CONSTRAINT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY public.payroll_cycles
+    ADD CONSTRAINT payroll_cycles_org_id_period_start_period_end_key UNIQUE (org_id, period_start, period_end);
+
+
+--
+-- Name: payroll_cycles payroll_cycles_pkey; Type: CONSTRAINT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY public.payroll_cycles
+    ADD CONSTRAINT payroll_cycles_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: payroll_items payroll_items_cycle_id_employee_id_key; Type: CONSTRAINT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY public.payroll_items
+    ADD CONSTRAINT payroll_items_cycle_id_employee_id_key UNIQUE (cycle_id, employee_id);
+
+
+--
+-- Name: payroll_items payroll_items_pkey; Type: CONSTRAINT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY public.payroll_items
+    ADD CONSTRAINT payroll_items_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: payroll_policies payroll_policies_org_id_key; Type: CONSTRAINT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY public.payroll_policies
+    ADD CONSTRAINT payroll_policies_org_id_key UNIQUE (org_id);
+
+
+--
+-- Name: payroll_policies payroll_policies_pkey; Type: CONSTRAINT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY public.payroll_policies
+    ADD CONSTRAINT payroll_policies_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: payroll_tax_rules payroll_tax_rules_pkey; Type: CONSTRAINT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY public.payroll_tax_rules
+    ADD CONSTRAINT payroll_tax_rules_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: payslips payslips_pkey; Type: CONSTRAINT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY public.payslips
+    ADD CONSTRAINT payslips_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: positions positions_name_key; Type: CONSTRAINT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY public.positions
+    ADD CONSTRAINT positions_name_key UNIQUE (name);
+
+
+--
+-- Name: positions positions_pkey; Type: CONSTRAINT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY public.positions
+    ADD CONSTRAINT positions_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: salary_history salary_history_pkey; Type: CONSTRAINT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY public.salary_history
+    ADD CONSTRAINT salary_history_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: skud_events skud_events_pkey; Type: CONSTRAINT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY public.skud_events
+    ADD CONSTRAINT skud_events_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: tasks tasks_pkey; Type: CONSTRAINT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY public.tasks
+    ADD CONSTRAINT tasks_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: user_sessions user_sessions_pkey; Type: CONSTRAINT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY public.user_sessions
+    ADD CONSTRAINT user_sessions_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: user_sessions user_sessions_refresh_token_key; Type: CONSTRAINT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY public.user_sessions
+    ADD CONSTRAINT user_sessions_refresh_token_key UNIQUE (refresh_token);
+
+
+--
+-- Name: users users_email_key; Type: CONSTRAINT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY public.users
+    ADD CONSTRAINT users_email_key UNIQUE (email);
+
+
+--
+-- Name: users users_phone_number_key; Type: CONSTRAINT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY public.users
+    ADD CONSTRAINT users_phone_number_key UNIQUE (phone_number);
+
+
+--
+-- Name: users users_pkey; Type: CONSTRAINT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY public.users
+    ADD CONSTRAINT users_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: work_schedules work_schedules_employee_id_key; Type: CONSTRAINT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY public.work_schedules
+    ADD CONSTRAINT work_schedules_employee_id_key UNIQUE (employee_id);
+
+
+--
+-- Name: work_schedules work_schedules_pkey; Type: CONSTRAINT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY public.work_schedules
+    ADD CONSTRAINT work_schedules_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: working_calendar working_calendar_org_id_date_key; Type: CONSTRAINT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY public.working_calendar
+    ADD CONSTRAINT working_calendar_org_id_date_key UNIQUE (org_id, date);
+
+
+--
+-- Name: working_calendar working_calendar_pkey; Type: CONSTRAINT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY public.working_calendar
+    ADD CONSTRAINT working_calendar_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: idx_events_department_starts_at; Type: INDEX; Schema: public; Owner: postgres
+--
+
+CREATE INDEX idx_events_department_starts_at ON public.events USING btree (department_id, starts_at);
+
+
+--
+-- Name: idx_events_org_starts_at; Type: INDEX; Schema: public; Owner: postgres
+--
+
+CREATE INDEX idx_events_org_starts_at ON public.events USING btree (organization_id, starts_at);
+
+
+--
+-- Name: idx_notifications_user_created_at; Type: INDEX; Schema: public; Owner: postgres
+--
+
+CREATE INDEX idx_notifications_user_created_at ON public.notifications USING btree (user_id, created_at DESC);
+
+
+--
+-- Name: idx_notifications_user_is_read; Type: INDEX; Schema: public; Owner: postgres
+--
+
+CREATE INDEX idx_notifications_user_is_read ON public.notifications USING btree (user_id, is_read);
+
+
+--
+-- Name: idx_user_sessions_refresh_token; Type: INDEX; Schema: public; Owner: postgres
+--
+
+CREATE INDEX idx_user_sessions_refresh_token ON public.user_sessions USING btree (refresh_token);
+
+
+--
+-- Name: idx_user_sessions_user_id; Type: INDEX; Schema: public; Owner: postgres
+--
+
+CREATE INDEX idx_user_sessions_user_id ON public.user_sessions USING btree (user_id);
+
+
+--
+-- Name: payroll_adjustments_employee_cycle_idx; Type: INDEX; Schema: public; Owner: postgres
+--
+
+CREATE INDEX payroll_adjustments_employee_cycle_idx ON public.payroll_adjustments USING btree (employee_id, cycle_id);
+
+
+--
+-- Name: payroll_attendance_overrides_employee_date_idx; Type: INDEX; Schema: public; Owner: postgres
+--
+
+CREATE INDEX payroll_attendance_overrides_employee_date_idx ON public.payroll_attendance_overrides USING btree (employee_id, date);
+
+
+--
+-- Name: payroll_corrections_employee_idx; Type: INDEX; Schema: public; Owner: postgres
+--
+
+CREATE INDEX payroll_corrections_employee_idx ON public.payroll_corrections USING btree (employee_id, target_cycle_id);
+
+
+--
+-- Name: payroll_cycles_org_status_idx; Type: INDEX; Schema: public; Owner: postgres
+--
+
+CREATE INDEX payroll_cycles_org_status_idx ON public.payroll_cycles USING btree (org_id, status);
+
+
+--
+-- Name: payroll_items_cycle_idx; Type: INDEX; Schema: public; Owner: postgres
+--
+
+CREATE INDEX payroll_items_cycle_idx ON public.payroll_items USING btree (cycle_id);
+
+
+--
+-- Name: payroll_tax_rules_active_idx; Type: INDEX; Schema: public; Owner: postgres
+--
+
+CREATE INDEX payroll_tax_rules_active_idx ON public.payroll_tax_rules USING btree (org_id, is_active, effective_from);
+
+
+--
+-- Name: payslips_active_payroll_item_idx; Type: INDEX; Schema: public; Owner: postgres
+--
+
+CREATE UNIQUE INDEX payslips_active_payroll_item_idx ON public.payslips USING btree (payroll_item_id) WHERE ((status)::text <> 'VOID'::text);
+
+
+--
+-- Name: payslips_employee_period_idx; Type: INDEX; Schema: public; Owner: postgres
+--
+
+CREATE INDEX payslips_employee_period_idx ON public.payslips USING btree (employee_id, period_start, period_end);
+
+
+--
+-- Name: payslips_org_cycle_idx; Type: INDEX; Schema: public; Owner: postgres
+--
+
+CREATE INDEX payslips_org_cycle_idx ON public.payslips USING btree (org_id, payroll_cycle_id);
+
+
+--
+-- Name: payslips_pdf_generated_idx; Type: INDEX; Schema: public; Owner: postgres
+--
+
+CREATE INDEX payslips_pdf_generated_idx ON public.payslips USING btree (org_id, pdf_generated_at);
+
+
+--
+-- Name: payslips_status_idx; Type: INDEX; Schema: public; Owner: postgres
+--
+
+CREATE INDEX payslips_status_idx ON public.payslips USING btree (org_id, status);
+
+
+--
+-- Name: salary_history_employee_period_idx; Type: INDEX; Schema: public; Owner: postgres
+--
+
+CREATE INDEX salary_history_employee_period_idx ON public.salary_history USING btree (employee_id, effective_from, effective_to);
+
+
+--
+-- Name: attendance_records ar_employee_fk; Type: FK CONSTRAINT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY public.attendance_records
+    ADD CONSTRAINT ar_employee_fk FOREIGN KEY (employee_id) REFERENCES public.employees(id);
+
+
+--
+-- Name: attendance_records ar_org_fk; Type: FK CONSTRAINT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY public.attendance_records
+    ADD CONSTRAINT ar_org_fk FOREIGN KEY (org_id) REFERENCES public.organizations(id);
+
+
+--
+-- Name: consents consents_org_id_fk; Type: FK CONSTRAINT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY public.consents
+    ADD CONSTRAINT consents_org_id_fk FOREIGN KEY (org_id) REFERENCES public.organizations(id);
+
+
+--
+-- Name: consents consents_user_id_fk; Type: FK CONSTRAINT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY public.consents
+    ADD CONSTRAINT consents_user_id_fk FOREIGN KEY (user_id) REFERENCES public.users(id);
+
+
+--
+-- Name: departments departments_org_id_fk; Type: FK CONSTRAINT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY public.departments
+    ADD CONSTRAINT departments_org_id_fk FOREIGN KEY (org_id) REFERENCES public.organizations(id);
+
+
+--
+-- Name: employees employees_department_id_fk; Type: FK CONSTRAINT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY public.employees
+    ADD CONSTRAINT employees_department_id_fk FOREIGN KEY (department_id) REFERENCES public.departments(id);
+
+
+--
+-- Name: employees employees_org_id_fk; Type: FK CONSTRAINT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY public.employees
+    ADD CONSTRAINT employees_org_id_fk FOREIGN KEY (org_id) REFERENCES public.organizations(id);
+
+
+--
+-- Name: employees employees_position_id_fk; Type: FK CONSTRAINT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY public.employees
+    ADD CONSTRAINT employees_position_id_fk FOREIGN KEY (position_id) REFERENCES public.positions(id);
+
+
+--
+-- Name: employees employees_user_id_fk; Type: FK CONSTRAINT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY public.employees
+    ADD CONSTRAINT employees_user_id_fk FOREIGN KEY (user_id) REFERENCES public.users(id);
+
+
+--
+-- Name: events events_created_by_fk; Type: FK CONSTRAINT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY public.events
+    ADD CONSTRAINT events_created_by_fk FOREIGN KEY (created_by) REFERENCES public.users(id);
+
+
+--
+-- Name: events events_department_id_fk; Type: FK CONSTRAINT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY public.events
+    ADD CONSTRAINT events_department_id_fk FOREIGN KEY (department_id) REFERENCES public.departments(id);
+
+
+--
+-- Name: events events_organization_id_fk; Type: FK CONSTRAINT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY public.events
+    ADD CONSTRAINT events_organization_id_fk FOREIGN KEY (organization_id) REFERENCES public.organizations(id);
+
+
+--
+-- Name: invites invites_department_id_fk; Type: FK CONSTRAINT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY public.invites
+    ADD CONSTRAINT invites_department_id_fk FOREIGN KEY (department_id) REFERENCES public.departments(id);
+
+
+--
+-- Name: invites invites_org_id_fk; Type: FK CONSTRAINT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY public.invites
+    ADD CONSTRAINT invites_org_id_fk FOREIGN KEY (org_id) REFERENCES public.organizations(id);
+
+
+--
+-- Name: invites invites_position_id_fk; Type: FK CONSTRAINT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY public.invites
+    ADD CONSTRAINT invites_position_id_fk FOREIGN KEY (position_id) REFERENCES public.positions(id);
+
+
+--
+-- Name: leave_requests lr_employee_fk; Type: FK CONSTRAINT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY public.leave_requests
+    ADD CONSTRAINT lr_employee_fk FOREIGN KEY (employee_id) REFERENCES public.employees(id);
+
+
+--
+-- Name: leave_requests lr_org_fk; Type: FK CONSTRAINT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY public.leave_requests
+    ADD CONSTRAINT lr_org_fk FOREIGN KEY (org_id) REFERENCES public.organizations(id);
+
+
+--
+-- Name: leave_requests lr_reviewed_by_fk; Type: FK CONSTRAINT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY public.leave_requests
+    ADD CONSTRAINT lr_reviewed_by_fk FOREIGN KEY (reviewed_by) REFERENCES public.users(id);
+
+
+--
+-- Name: notifications notifications_org_id_fk; Type: FK CONSTRAINT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY public.notifications
+    ADD CONSTRAINT notifications_org_id_fk FOREIGN KEY (org_id) REFERENCES public.organizations(id);
+
+
+--
+-- Name: notifications notifications_user_id_fk; Type: FK CONSTRAINT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY public.notifications
+    ADD CONSTRAINT notifications_user_id_fk FOREIGN KEY (user_id) REFERENCES public.users(id);
+
+
+--
+-- Name: payroll_adjustments pa_created_by_fk; Type: FK CONSTRAINT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY public.payroll_adjustments
+    ADD CONSTRAINT pa_created_by_fk FOREIGN KEY (created_by) REFERENCES public.users(id);
+
+
+--
+-- Name: payroll_adjustments pa_cycle_fk; Type: FK CONSTRAINT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY public.payroll_adjustments
+    ADD CONSTRAINT pa_cycle_fk FOREIGN KEY (cycle_id) REFERENCES public.payroll_cycles(id);
+
+
+--
+-- Name: payroll_adjustments pa_employee_fk; Type: FK CONSTRAINT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY public.payroll_adjustments
+    ADD CONSTRAINT pa_employee_fk FOREIGN KEY (employee_id) REFERENCES public.employees(id);
+
+
+--
+-- Name: payroll_adjustments pa_org_fk; Type: FK CONSTRAINT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY public.payroll_adjustments
+    ADD CONSTRAINT pa_org_fk FOREIGN KEY (org_id) REFERENCES public.organizations(id);
+
+
+--
+-- Name: payroll_audit_logs pal_actor_fk; Type: FK CONSTRAINT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY public.payroll_audit_logs
+    ADD CONSTRAINT pal_actor_fk FOREIGN KEY (actor_user_id) REFERENCES public.users(id);
+
+
+--
+-- Name: payroll_audit_logs pal_cycle_fk; Type: FK CONSTRAINT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY public.payroll_audit_logs
+    ADD CONSTRAINT pal_cycle_fk FOREIGN KEY (cycle_id) REFERENCES public.payroll_cycles(id);
+
+
+--
+-- Name: payroll_audit_logs pal_item_fk; Type: FK CONSTRAINT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY public.payroll_audit_logs
+    ADD CONSTRAINT pal_item_fk FOREIGN KEY (payroll_item_id) REFERENCES public.payroll_items(id);
+
+
+--
+-- Name: payroll_audit_logs pal_org_fk; Type: FK CONSTRAINT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY public.payroll_audit_logs
+    ADD CONSTRAINT pal_org_fk FOREIGN KEY (org_id) REFERENCES public.organizations(id);
+
+
+--
+-- Name: payroll_attendance_overrides pao_created_by_fk; Type: FK CONSTRAINT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY public.payroll_attendance_overrides
+    ADD CONSTRAINT pao_created_by_fk FOREIGN KEY (created_by) REFERENCES public.users(id);
+
+
+--
+-- Name: payroll_attendance_overrides pao_employee_fk; Type: FK CONSTRAINT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY public.payroll_attendance_overrides
+    ADD CONSTRAINT pao_employee_fk FOREIGN KEY (employee_id) REFERENCES public.employees(id);
+
+
+--
+-- Name: payroll_attendance_overrides pao_org_fk; Type: FK CONSTRAINT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY public.payroll_attendance_overrides
+    ADD CONSTRAINT pao_org_fk FOREIGN KEY (org_id) REFERENCES public.organizations(id);
+
+
+--
+-- Name: payslips payslips_cycle_fk; Type: FK CONSTRAINT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY public.payslips
+    ADD CONSTRAINT payslips_cycle_fk FOREIGN KEY (payroll_cycle_id) REFERENCES public.payroll_cycles(id);
+
+
+--
+-- Name: payslips payslips_employee_fk; Type: FK CONSTRAINT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY public.payslips
+    ADD CONSTRAINT payslips_employee_fk FOREIGN KEY (employee_id) REFERENCES public.employees(id);
+
+
+--
+-- Name: payslips payslips_generated_by_fk; Type: FK CONSTRAINT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY public.payslips
+    ADD CONSTRAINT payslips_generated_by_fk FOREIGN KEY (generated_by) REFERENCES public.users(id);
+
+
+--
+-- Name: payslips payslips_item_fk; Type: FK CONSTRAINT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY public.payslips
+    ADD CONSTRAINT payslips_item_fk FOREIGN KEY (payroll_item_id) REFERENCES public.payroll_items(id);
+
+
+--
+-- Name: payslips payslips_org_fk; Type: FK CONSTRAINT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY public.payslips
+    ADD CONSTRAINT payslips_org_fk FOREIGN KEY (org_id) REFERENCES public.organizations(id);
+
+
+--
+-- Name: payslips payslips_voided_by_fk; Type: FK CONSTRAINT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY public.payslips
+    ADD CONSTRAINT payslips_voided_by_fk FOREIGN KEY (voided_by) REFERENCES public.users(id);
+
+
+--
+-- Name: payroll_cycles pc_approved_by_fk; Type: FK CONSTRAINT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY public.payroll_cycles
+    ADD CONSTRAINT pc_approved_by_fk FOREIGN KEY (approved_by) REFERENCES public.users(id);
+
+
+--
+-- Name: payroll_cycles pc_created_by_fk; Type: FK CONSTRAINT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY public.payroll_cycles
+    ADD CONSTRAINT pc_created_by_fk FOREIGN KEY (created_by) REFERENCES public.users(id);
+
+
+--
+-- Name: payroll_cycles pc_org_fk; Type: FK CONSTRAINT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY public.payroll_cycles
+    ADD CONSTRAINT pc_org_fk FOREIGN KEY (org_id) REFERENCES public.organizations(id);
+
+
+--
+-- Name: payroll_corrections pcorr_adjustment_fk; Type: FK CONSTRAINT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY public.payroll_corrections
+    ADD CONSTRAINT pcorr_adjustment_fk FOREIGN KEY (adjustment_id) REFERENCES public.payroll_adjustments(id);
+
+
+--
+-- Name: payroll_corrections pcorr_created_by_fk; Type: FK CONSTRAINT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY public.payroll_corrections
+    ADD CONSTRAINT pcorr_created_by_fk FOREIGN KEY (created_by) REFERENCES public.users(id);
+
+
+--
+-- Name: payroll_corrections pcorr_employee_fk; Type: FK CONSTRAINT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY public.payroll_corrections
+    ADD CONSTRAINT pcorr_employee_fk FOREIGN KEY (employee_id) REFERENCES public.employees(id);
+
+
+--
+-- Name: payroll_corrections pcorr_org_fk; Type: FK CONSTRAINT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY public.payroll_corrections
+    ADD CONSTRAINT pcorr_org_fk FOREIGN KEY (org_id) REFERENCES public.organizations(id);
+
+
+--
+-- Name: payroll_corrections pcorr_source_item_fk; Type: FK CONSTRAINT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY public.payroll_corrections
+    ADD CONSTRAINT pcorr_source_item_fk FOREIGN KEY (source_item_id) REFERENCES public.payroll_items(id);
+
+
+--
+-- Name: payroll_corrections pcorr_target_cycle_fk; Type: FK CONSTRAINT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY public.payroll_corrections
+    ADD CONSTRAINT pcorr_target_cycle_fk FOREIGN KEY (target_cycle_id) REFERENCES public.payroll_cycles(id);
+
+
+--
+-- Name: payroll_items pi_cycle_fk; Type: FK CONSTRAINT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY public.payroll_items
+    ADD CONSTRAINT pi_cycle_fk FOREIGN KEY (cycle_id) REFERENCES public.payroll_cycles(id);
+
+
+--
+-- Name: payroll_items pi_employee_fk; Type: FK CONSTRAINT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY public.payroll_items
+    ADD CONSTRAINT pi_employee_fk FOREIGN KEY (employee_id) REFERENCES public.employees(id);
+
+
+--
+-- Name: payroll_items pi_org_fk; Type: FK CONSTRAINT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY public.payroll_items
+    ADD CONSTRAINT pi_org_fk FOREIGN KEY (org_id) REFERENCES public.organizations(id);
+
+
+--
+-- Name: payroll_items pi_reviewed_by_fk; Type: FK CONSTRAINT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY public.payroll_items
+    ADD CONSTRAINT pi_reviewed_by_fk FOREIGN KEY (reviewed_by) REFERENCES public.users(id);
+
+
+--
+-- Name: positions positions_org_id_fk; Type: FK CONSTRAINT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY public.positions
+    ADD CONSTRAINT positions_org_id_fk FOREIGN KEY (org_id) REFERENCES public.organizations(id);
+
+
+--
+-- Name: payroll_policies pp_org_fk; Type: FK CONSTRAINT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY public.payroll_policies
+    ADD CONSTRAINT pp_org_fk FOREIGN KEY (org_id) REFERENCES public.organizations(id);
+
+
+--
+-- Name: payroll_tax_rules ptr_org_fk; Type: FK CONSTRAINT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY public.payroll_tax_rules
+    ADD CONSTRAINT ptr_org_fk FOREIGN KEY (org_id) REFERENCES public.organizations(id);
+
+
+--
+-- Name: skud_events se_employee_fk; Type: FK CONSTRAINT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY public.skud_events
+    ADD CONSTRAINT se_employee_fk FOREIGN KEY (employee_id) REFERENCES public.employees(id);
+
+
+--
+-- Name: skud_events se_org_fk; Type: FK CONSTRAINT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY public.skud_events
+    ADD CONSTRAINT se_org_fk FOREIGN KEY (org_id) REFERENCES public.organizations(id);
+
+
+--
+-- Name: salary_history sh_created_by_fk; Type: FK CONSTRAINT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY public.salary_history
+    ADD CONSTRAINT sh_created_by_fk FOREIGN KEY (created_by) REFERENCES public.users(id);
+
+
+--
+-- Name: salary_history sh_employee_fk; Type: FK CONSTRAINT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY public.salary_history
+    ADD CONSTRAINT sh_employee_fk FOREIGN KEY (employee_id) REFERENCES public.employees(id);
+
+
+--
+-- Name: salary_history sh_org_fk; Type: FK CONSTRAINT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY public.salary_history
+    ADD CONSTRAINT sh_org_fk FOREIGN KEY (org_id) REFERENCES public.organizations(id);
+
+
+--
+-- Name: tasks tasks_assigned_to_fk; Type: FK CONSTRAINT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY public.tasks
+    ADD CONSTRAINT tasks_assigned_to_fk FOREIGN KEY (assigned_to) REFERENCES public.employees(id);
+
+
+--
+-- Name: tasks tasks_created_by_fk; Type: FK CONSTRAINT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY public.tasks
+    ADD CONSTRAINT tasks_created_by_fk FOREIGN KEY (created_by) REFERENCES public.users(id);
+
+
+--
+-- Name: tasks tasks_org_fk; Type: FK CONSTRAINT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY public.tasks
+    ADD CONSTRAINT tasks_org_fk FOREIGN KEY (org_id) REFERENCES public.organizations(id);
+
+
+--
+-- Name: tasks tasks_reviewed_by_fk; Type: FK CONSTRAINT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY public.tasks
+    ADD CONSTRAINT tasks_reviewed_by_fk FOREIGN KEY (reviewed_by) REFERENCES public.users(id);
+
+
+--
+-- Name: user_sessions user_sessions_user_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY public.user_sessions
+    ADD CONSTRAINT user_sessions_user_id_fkey FOREIGN KEY (user_id) REFERENCES public.users(id);
+
+
+--
+-- Name: working_calendar wc_org_fk; Type: FK CONSTRAINT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY public.working_calendar
+    ADD CONSTRAINT wc_org_fk FOREIGN KEY (org_id) REFERENCES public.organizations(id);
+
+
+--
+-- Name: work_schedules ws_employee_fk; Type: FK CONSTRAINT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY public.work_schedules
+    ADD CONSTRAINT ws_employee_fk FOREIGN KEY (employee_id) REFERENCES public.employees(id);
+
+
+--
+-- Name: work_schedules ws_org_fk; Type: FK CONSTRAINT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY public.work_schedules
+    ADD CONSTRAINT ws_org_fk FOREIGN KEY (org_id) REFERENCES public.organizations(id);
+
+
+--
+-- PostgreSQL database dump complete
+--
+

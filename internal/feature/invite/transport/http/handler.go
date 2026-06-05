@@ -47,9 +47,18 @@ func (h *Handler) GenerateInvite(c *gin.Context) {
 			errors.Is(err, service.ErrFirstNameRequired),
 			errors.Is(err, service.ErrLastNameRequired),
 			errors.Is(err, service.ErrEmailRequired),
-			errors.Is(err, service.ErrInvalidEmail):
+			errors.Is(err, service.ErrInvalidEmail),
+			errors.Is(err, service.ErrDepartmentIDRequired),
+			errors.Is(err, service.ErrInvalidDepartmentID),
+			errors.Is(err, service.ErrPositionIDRequired),
+			errors.Is(err, service.ErrInvalidPositionID),
+			errors.Is(err, service.ErrSalaryRateRequired),
+			errors.Is(err, service.ErrInvalidSalaryRate),
+			errors.Is(err, service.ErrStatusRequired):
 			c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
-		case errors.Is(err, service.ErrOrganizationNotFound):
+		case errors.Is(err, service.ErrOrganizationNotFound),
+			errors.Is(err, service.ErrDepartmentNotFound),
+			errors.Is(err, service.ErrPositionNotFound):
 			c.JSON(http.StatusNotFound, gin.H{"error": err.Error()})
 		case errors.Is(err, service.ErrGenerateInvite):
 			c.JSON(http.StatusConflict, gin.H{"error": err.Error()})
@@ -135,7 +144,14 @@ func (h *Handler) CompleteRegistration(c *gin.Context) {
 		case errors.Is(err, service.ErrInviteCodeRequired),
 			errors.Is(err, service.ErrPasswordRequired),
 			errors.Is(err, service.ErrPhoneNumberRequired),
-			errors.Is(err, service.ErrInvalidPhoneNumber):
+			errors.Is(err, service.ErrInvalidPhoneNumber),
+			errors.Is(err, service.ErrDepartmentIDRequired),
+			errors.Is(err, service.ErrInvalidDepartmentID),
+			errors.Is(err, service.ErrPositionIDRequired),
+			errors.Is(err, service.ErrInvalidPositionID),
+			errors.Is(err, service.ErrSalaryRateRequired),
+			errors.Is(err, service.ErrInvalidSalaryRate),
+			errors.Is(err, service.ErrStatusRequired):
 			c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		case errors.As(err, &passwordPolicyErr):
 			c.JSON(http.StatusBadRequest, gin.H{"error": passwordPolicyErr.Error()})

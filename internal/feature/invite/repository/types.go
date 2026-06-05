@@ -12,6 +12,10 @@ type Invite struct {
 	Code             string
 	Role             string
 	Position         *string
+	DepartmentID     string
+	PositionID       string
+	SalaryRate       string
+	EmployeeStatus   string
 	ExpiresAt        time.Time
 	IsUsed           bool
 	UsedAt           *time.Time

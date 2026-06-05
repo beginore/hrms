@@ -77,7 +77,11 @@ func (s *taskService) GetTask(ctx context.Context, callerUserID uuid.UUID, calle
 		return nil, fmt.Errorf("%w: %v", ErrDatabaseQueryFailed, err)
 	}
 
-	if !canManageTasks(callerRole) {
+	if canManageTasks(callerRole) {
+		if err := s.ensureTaskInCallerOrg(ctx, callerUserID, task); err != nil {
+			return nil, err
+		}
+	} else {
 		employeeID, err := s.repo.GetEmployeeIDByUserID(ctx, callerUserID)
 		if err != nil {
 			return nil, ErrEmployeeNotFound
@@ -154,6 +158,9 @@ func (s *taskService) ReviewTask(ctx context.Context, callerUserID uuid.UUID, id
 	if err != nil {
 		return fmt.Errorf("%w: %v", ErrDatabaseQueryFailed, err)
 	}
+	if err := s.ensureTaskInCallerOrg(ctx, callerUserID, task); err != nil {
+		return err
+	}
 
 	if task.Status == "PENDING" {
 		return ErrTaskNotSubmitted
@@ -169,7 +176,7 @@ func (s *taskService) ReviewTask(ctx context.Context, callerUserID uuid.UUID, id
 	case "reject":
 		status = "REJECTED"
 	default:
-		return fmt.Errorf("invalid action: use approve or reject")
+		return ErrInvalidReviewAction
 	}
 
 	log.Printf("[Task] ReviewTask id=%s action=%s", id, req.Action)
@@ -191,6 +198,20 @@ func canManageTasks(role string) bool {
 	default:
 		return false
 	}
+}
+
+func (s *taskService) ensureTaskInCallerOrg(ctx context.Context, callerUserID uuid.UUID, task taskRepository.Task) error {
+	orgID, err := s.repo.GetOrgIDByUserID(ctx, callerUserID)
+	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return ErrForbidden
+		}
+		return fmt.Errorf("%w: %v", ErrDatabaseQueryFailed, err)
+	}
+	if task.OrgID != orgID {
+		return ErrForbidden
+	}
+	return nil
 }
 
 func mapTaskResponse(t taskRepository.Task) TaskResponse {

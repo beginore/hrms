@@ -4,22 +4,20 @@ import (
 	"context"
 	"errors"
 	payrollService "hrms/internal/feature/payroll/service"
-	"hrms/internal/infrastructure/app/cognito"
+	"hrms/internal/infrastructure/middleware"
 	"log"
 	"net/http"
-	"strings"
 
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
 )
 
 type PayrollHandler struct {
-	service    payrollService.PayrollService
-	cognitoSvc *cognito.Service
+	service payrollService.PayrollService
 }
 
-func NewPayrollHandler(service payrollService.PayrollService, cognitoSvc *cognito.Service) *PayrollHandler {
-	return &PayrollHandler{service: service, cognitoSvc: cognitoSvc}
+func NewPayrollHandler(service payrollService.PayrollService) *PayrollHandler {
+	return &PayrollHandler{service: service}
 }
 
 // CreateCycle godoc
@@ -751,20 +749,14 @@ func (h *PayrollHandler) mutateCycle(c *gin.Context, fn func(ctx context.Context
 }
 
 func (h *PayrollHandler) extractCallerUserID(c *gin.Context) (uuid.UUID, bool) {
-	authHeader := c.GetHeader("Authorization")
-	if authHeader == "" {
-		c.JSON(http.StatusUnauthorized, gin.H{"error": "missing authorization header"})
+	value, exists := c.Get(middleware.UserIDKey)
+	if !exists {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "unauthorized"})
 		return uuid.Nil, false
 	}
-	token := strings.TrimPrefix(authHeader, "Bearer ")
-	if token == authHeader {
-		c.JSON(http.StatusUnauthorized, gin.H{"error": "invalid authorization header format"})
-		return uuid.Nil, false
-	}
-	userID, _, err := h.cognitoSvc.ParseTokenClaims(token)
-	if err != nil {
-		log.Printf("[PayrollHandler] ParseTokenClaims failed: %v", err)
-		c.JSON(http.StatusUnauthorized, gin.H{"error": "invalid or expired token"})
+	userID, ok := value.(uuid.UUID)
+	if !ok {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "unauthorized"})
 		return uuid.Nil, false
 	}
 	return userID, true

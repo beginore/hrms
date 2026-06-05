@@ -216,6 +216,8 @@ func (h *TaskHandler) handleError(c *gin.Context, err error) {
 		c.JSON(http.StatusUnprocessableEntity, gin.H{"error": "invalid employee id"})
 	case errors.Is(err, taskService.ErrInvalidDateFormat):
 		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid date format, use YYYY-MM-DD"})
+	case errors.Is(err, taskService.ErrInvalidReviewAction):
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 	default:
 		log.Printf("[TaskHandler] error: %v", err)
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "internal server error"})

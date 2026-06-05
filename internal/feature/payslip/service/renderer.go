@@ -32,10 +32,10 @@ Your payslip for %s - %s has been generated.
 
 Net salary: %s %s
 
-You can view the payslip in HRMS.
+You can view the payslip in Smart EMP.
 
 Best regards,
-HRMS Payroll Team`, employeeName, periodStart, periodEnd, netSalary, currency), nil
+Smart EMP Payroll Team`, employeeName, periodStart, periodEnd, netSalary, currency), nil
 }
 
 func payslipLines(payload []byte) ([]string, error) {

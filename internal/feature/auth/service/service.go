@@ -43,6 +43,10 @@ func (s *authService) Login(ctx context.Context, req LoginRequest) (*TokenRespon
 		return nil, err
 	}
 	result := output.AuthenticationResult
+	if result == nil || result.AccessToken == nil || result.IdToken == nil || result.RefreshToken == nil || result.TokenType == nil {
+		log.Printf("[Auth] Cognito sign-in returned no complete authentication result for email=%s", req.Email)
+		return nil, ErrInvalidCredentials
+	}
 	userId, cognitoUsername, err := s.cognitoSvc.ParseTokenClaims(*result.AccessToken)
 	if err != nil {
 		log.Printf("[Auth] Failed to parse token claims %v", err)
@@ -125,6 +129,10 @@ func (s *authService) RefreshToken(ctx context.Context, req RefreshTokenRequest)
 		return nil, err
 	}
 	result := output.AuthenticationResult
+	if result == nil || result.AccessToken == nil || result.IdToken == nil || result.TokenType == nil {
+		log.Printf("[Auth] Cognito refresh returned no complete authentication result for user=%s", session.UserID)
+		return nil, ErrInvalidRefreshToken
+	}
 	// Since we have disabled refresh token rotation in our cognito, it will just return is nil, so we just use our current refresh token for now ;D
 	refreshToken := req.RefreshToken
 	if result.RefreshToken != nil {

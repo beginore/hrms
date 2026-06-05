@@ -10,6 +10,7 @@ import (
 	"math/big"
 	"net/mail"
 	"regexp"
+	"strconv"
 	"strings"
 	"time"
 
@@ -57,6 +58,8 @@ func (s *Service) GenerateInvite(ctx context.Context, req GenerateInviteRequest)
 	email := strings.TrimSpace(req.Email)
 	firstName := strings.TrimSpace(req.FirstName)
 	lastName := strings.TrimSpace(req.LastName)
+	salaryRate := strings.TrimSpace(req.SalaryRate)
+	status := strings.TrimSpace(req.Status)
 
 	log.Printf("[Invite Generate] Starting invite generation for org=%q email=%q", orgIDRaw, email)
 
@@ -80,6 +83,36 @@ func (s *Service) GenerateInvite(ctx context.Context, req GenerateInviteRequest)
 		log.Printf("[Invite Generate] Validation failed: invalid email format for %q", email)
 		return nil, ErrInvalidEmail
 	}
+	if strings.TrimSpace(req.DepartmentID) == "" {
+		log.Printf("[Invite Generate] Validation failed: department id is required")
+		return nil, ErrDepartmentIDRequired
+	}
+	departmentID, err := uuid.Parse(strings.TrimSpace(req.DepartmentID))
+	if err != nil {
+		log.Printf("[Invite Generate] Validation failed: invalid department id %q", req.DepartmentID)
+		return nil, ErrInvalidDepartmentID
+	}
+	if strings.TrimSpace(req.PositionID) == "" {
+		log.Printf("[Invite Generate] Validation failed: position id is required")
+		return nil, ErrPositionIDRequired
+	}
+	positionID, err := uuid.Parse(strings.TrimSpace(req.PositionID))
+	if err != nil {
+		log.Printf("[Invite Generate] Validation failed: invalid position id %q", req.PositionID)
+		return nil, ErrInvalidPositionID
+	}
+	if salaryRate == "" {
+		log.Printf("[Invite Generate] Validation failed: salary rate is required")
+		return nil, ErrSalaryRateRequired
+	}
+	if !isValidSalaryRate(salaryRate) {
+		log.Printf("[Invite Generate] Validation failed: invalid salary rate %q", salaryRate)
+		return nil, ErrInvalidSalaryRate
+	}
+	if status == "" {
+		log.Printf("[Invite Generate] Validation failed: status is required")
+		return nil, ErrStatusRequired
+	}
 
 	orgID, err := uuid.Parse(orgIDRaw)
 	if err != nil {
@@ -99,6 +132,26 @@ func (s *Service) GenerateInvite(ctx context.Context, req GenerateInviteRequest)
 	}
 	log.Printf("[Invite Generate] Organization resolved: org=%s name=%q", orgID, organizationName)
 
+	departmentExists, err := s.repo.DepartmentExistsInOrg(ctx, orgID, departmentID)
+	if err != nil {
+		log.Printf("[Invite Generate] Failed to validate department=%s org=%s: %v", departmentID, orgID, err)
+		return nil, fmt.Errorf("validate department: %w", err)
+	}
+	if !departmentExists {
+		log.Printf("[Invite Generate] Department not found in org: department=%s org=%s", departmentID, orgID)
+		return nil, ErrDepartmentNotFound
+	}
+
+	positionExists, err := s.repo.PositionExistsInOrg(ctx, orgID, positionID)
+	if err != nil {
+		log.Printf("[Invite Generate] Failed to validate position=%s org=%s: %v", positionID, orgID, err)
+		return nil, fmt.Errorf("validate position: %w", err)
+	}
+	if !positionExists {
+		log.Printf("[Invite Generate] Position not found in org: position=%s org=%s", positionID, orgID)
+		return nil, ErrPositionNotFound
+	}
+
 	inviteID := uuid.New()
 	expiresAt := time.Now().UTC().Add(inviteTTL)
 
@@ -113,15 +166,19 @@ func (s *Service) GenerateInvite(ctx context.Context, req GenerateInviteRequest)
 		log.Printf("[Invite Generate] Attempt=%d generated code=%s for email=%q", attempt, code, email)
 
 		insertErr := s.repo.CreateInvite(ctx, repository.CreateInviteParams{
-			ID:        inviteID,
-			OrgID:     orgID,
-			FirstName: firstName,
-			LastName:  lastName,
-			Email:     email,
-			Code:      code,
-			Role:      resolveRole(req.Role),
-			Position:  trimOptional(req.Position),
-			ExpiresAt: expiresAt,
+			ID:             inviteID,
+			OrgID:          orgID,
+			FirstName:      firstName,
+			LastName:       lastName,
+			Email:          email,
+			Code:           code,
+			Role:           resolveRole(req.Role),
+			Position:       trimOptional(req.Position),
+			DepartmentID:   departmentID,
+			PositionID:     positionID,
+			SalaryRate:     salaryRate,
+			EmployeeStatus: status,
+			ExpiresAt:      expiresAt,
 		})
 		if insertErr == nil {
 			log.Printf("[Invite Generate] Invite persisted: inviteID=%s code=%s email=%q expiresAt=%s", inviteID, code, email, expiresAt.Format(time.RFC3339))
@@ -200,6 +257,10 @@ func (s *Service) VerifyInvite(ctx context.Context, req VerifyInviteRequest) (*V
 		Email:            invite.Email,
 		Role:             invite.Role,
 		Position:         invite.Position,
+		DepartmentID:     invite.DepartmentID,
+		PositionID:       invite.PositionID,
+		SalaryRate:       invite.SalaryRate,
+		Status:           invite.EmployeeStatus,
 		ExpiresAt:        invite.ExpiresAt,
 		Message:          fmt.Sprintf("You have been invited to join %s", invite.OrganizationName),
 	}, nil
@@ -246,6 +307,10 @@ func (s *Service) CompleteRegistration(ctx context.Context, req CompleteRegistra
 		log.Printf("[Invite CompleteRegistration] Invite validation failed for code=%q email=%q: %v", code, invite.Email, err)
 		return nil, err
 	}
+	if err := validateInviteEmployeeProfile(invite); err != nil {
+		log.Printf("[Invite CompleteRegistration] Invite employee profile is incomplete for code=%q email=%q: %v", code, invite.Email, err)
+		return nil, err
+	}
 
 	firstName := invite.FirstName
 	lastName := invite.LastName
@@ -289,6 +354,18 @@ func (s *Service) CompleteRegistration(ctx context.Context, req CompleteRegistra
 		s.rollbackCreatedCognitoUser(ctx, invite.Email, "invalid invite id")
 		return nil, fmt.Errorf("parse invite id: %w", err)
 	}
+	departmentID, err := uuid.Parse(invite.DepartmentID)
+	if err != nil {
+		log.Printf("[Invite CompleteRegistration] Invalid department id for code=%q: %v", code, err)
+		s.rollbackCreatedCognitoUser(ctx, invite.Email, "invalid department id")
+		return nil, ErrInvalidDepartmentID
+	}
+	positionID, err := uuid.Parse(invite.PositionID)
+	if err != nil {
+		log.Printf("[Invite CompleteRegistration] Invalid position id for code=%q: %v", code, err)
+		s.rollbackCreatedCognitoUser(ctx, invite.Email, "invalid position id")
+		return nil, ErrInvalidPositionID
+	}
 
 	log.Printf("[Invite CompleteRegistration] Inserting application user for code=%q email=%q", code, invite.Email)
 	if err := s.repo.InsertUserTx(ctx, tx, repository.CreateInvitedUserParams{
@@ -315,6 +392,24 @@ func (s *Service) CompleteRegistration(ctx context.Context, req CompleteRegistra
 
 		return nil, fmt.Errorf("insert invited user: %w", err)
 	}
+
+	employeeID := uuid.New()
+	log.Printf("[Invite CompleteRegistration] Inserting employee profile for code=%q email=%q employeeID=%s", code, invite.Email, employeeID)
+	if err := s.repo.InsertEmployeeTx(ctx, tx, repository.CreateInvitedEmployeeParams{
+		ID:           employeeID,
+		OrgID:        orgID,
+		UserID:       userID,
+		DepartmentID: departmentID,
+		PositionID:   positionID,
+		Role:         invite.Role,
+		SalaryRate:   invite.SalaryRate,
+		Status:       invite.EmployeeStatus,
+	}); err != nil {
+		log.Printf("[Invite CompleteRegistration] Failed to insert employee profile for code=%q email=%q: %v", code, invite.Email, err)
+		s.rollbackCreatedCognitoUser(ctx, invite.Email, "employee profile insert failed")
+		return nil, fmt.Errorf("insert employee profile: %w", err)
+	}
+
 	log.Printf("[Invite CompleteRegistration] Marking invite as used: inviteID=%s code=%q", inviteID, code)
 	if err := s.repo.MarkInviteUsedTx(ctx, tx, inviteID, time.Now().UTC()); err != nil {
 		log.Printf("[Invite CompleteRegistration] Failed to mark invite as used for code=%q: %v", code, err)
@@ -344,6 +439,7 @@ func (s *Service) CompleteRegistration(ctx context.Context, req CompleteRegistra
 
 	return &CompleteRegistrationResponse{
 		UserID:         userID.String(),
+		EmployeeID:     employeeID.String(),
 		OrganizationID: invite.OrgID,
 		Role:           invite.Role,
 	}, nil
@@ -440,6 +536,32 @@ func validateInvite(invite repository.Invite) error {
 	return nil
 }
 
+func validateInviteEmployeeProfile(invite repository.Invite) error {
+	if strings.TrimSpace(invite.DepartmentID) == "" {
+		return ErrDepartmentIDRequired
+	}
+	if _, err := uuid.Parse(invite.DepartmentID); err != nil {
+		return ErrInvalidDepartmentID
+	}
+	if strings.TrimSpace(invite.PositionID) == "" {
+		return ErrPositionIDRequired
+	}
+	if _, err := uuid.Parse(invite.PositionID); err != nil {
+		return ErrInvalidPositionID
+	}
+	if strings.TrimSpace(invite.SalaryRate) == "" {
+		return ErrSalaryRateRequired
+	}
+	if !isValidSalaryRate(invite.SalaryRate) {
+		return ErrInvalidSalaryRate
+	}
+	if strings.TrimSpace(invite.EmployeeStatus) == "" {
+		return ErrStatusRequired
+	}
+
+	return nil
+}
+
 func resolveRole(role *string) string {
 	if role == nil || strings.TrimSpace(*role) == "" {
 		return defaultInviteRole
@@ -467,6 +589,11 @@ func isValidPassword(password string) bool {
 	}
 
 	return strings.ContainsAny(password, "!@#$%^&*")
+}
+
+func isValidSalaryRate(salaryRate string) bool {
+	value, err := strconv.ParseFloat(strings.TrimSpace(salaryRate), 64)
+	return err == nil && value > 0
 }
 
 func normalizeInviteCode(code string) string {

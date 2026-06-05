@@ -288,6 +288,7 @@ func (s *payrollService) calculateEmployee(ctx context.Context, cycle payrollRep
 	netSalary = grossSalary.Sub(deductionsTotal).Sub(taxesTotal)
 	if netSalary.IsNegative() {
 		netSalary = ZeroMoney()
+		reviewReasons = append(reviewReasons, "net salary was below zero after rounding and clamped to zero")
 	}
 	netSalary = roundMoney(netSalary, policy.RoundingMode)
 	totalEmployerCost = roundMoney(grossSalary.Add(employerTaxesTotal), policy.RoundingMode)

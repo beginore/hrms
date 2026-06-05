@@ -9,6 +9,10 @@ type GenerateInviteRequest struct {
 	Email          string  `json:"email"`
 	Role           *string `json:"role,omitempty"`
 	Position       *string `json:"position,omitempty"`
+	DepartmentID   string  `json:"departmentId"`
+	PositionID     string  `json:"positionId"`
+	SalaryRate     string  `json:"salaryRate"`
+	Status         string  `json:"status"`
 }
 
 type GenerateInviteResponse struct {
@@ -33,6 +37,10 @@ type VerifyInviteResponse struct {
 	Email            string    `json:"email"`
 	Role             string    `json:"role"`
 	Position         *string   `json:"position,omitempty"`
+	DepartmentID     string    `json:"departmentId"`
+	PositionID       string    `json:"positionId"`
+	SalaryRate       string    `json:"salaryRate"`
+	Status           string    `json:"status"`
 	ExpiresAt        time.Time `json:"expiresAt"`
 	Message          string    `json:"message"`
 }
@@ -45,6 +53,7 @@ type CompleteRegistrationRequest struct {
 
 type CompleteRegistrationResponse struct {
 	UserID         string `json:"userId"`
+	EmployeeID     string `json:"employeeId"`
 	OrganizationID string `json:"organizationId"`
 	Role           string `json:"role"`
 }

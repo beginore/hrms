@@ -8,7 +8,9 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	notificationService "hrms/internal/feature/notification/service"
 	payslipRepository "hrms/internal/feature/payslip/repository"
+	"strings"
 	"time"
 
 	"github.com/google/uuid"
@@ -44,12 +46,13 @@ type PayslipService interface {
 }
 
 type payslipService struct {
-	repo   payslipRepository.PayslipRepository
-	mailer PayslipMailer
+	repo      payslipRepository.PayslipRepository
+	mailer    PayslipMailer
+	notifySvc *notificationService.Service
 }
 
-func NewPayslipService(repo payslipRepository.PayslipRepository, mailer PayslipMailer) PayslipService {
-	return &payslipService{repo: repo, mailer: mailer}
+func NewPayslipService(repo payslipRepository.PayslipRepository, mailer PayslipMailer, notifySvc *notificationService.Service) PayslipService {
+	return &payslipService{repo: repo, mailer: mailer, notifySvc: notifySvc}
 }
 
 func (s *payslipService) GeneratePayslip(ctx context.Context, callerUserID uuid.UUID, req GeneratePayslipRequest) (*PayslipResponse, error) {
@@ -394,6 +397,21 @@ func (s *payslipService) sendPayslip(ctx context.Context, payslip payslipReposit
 	if err != nil {
 		return nil, fmt.Errorf("%w: mark sent: %v", ErrDatabaseSaveFailed, err)
 	}
+
+	if s.notifySvc != nil {
+		employee, empErr := s.repo.GetEmployeeProfile(ctx, payslip.EmployeeID)
+		if empErr == nil {
+			orgIDStr := employee.OrgID.String()
+			periodStart := payslip.PeriodStart.Format(dateLayout)
+			periodEnd := payslip.PeriodEnd.Format(dateLayout)
+			_, _ = s.notifySvc.NotifySalaryToEmployee(ctx, notificationService.NotifyUserRequest{
+				UserID:  employee.UserID.String(),
+				OrgID:   &orgIDStr,
+				Title:   "Your payslip is ready",
+				Message: fmt.Sprintf("Your payslip for the period %s – %s has been sent to %s.", periodStart, periodEnd, email),
+			})
+		}
+	}
 	return sent, nil
 }
 
@@ -629,11 +647,20 @@ func contentSHA256(content []byte) string {
 }
 
 func canManagePayslips(role string) bool {
-	switch role {
-	case "SysAdmin", "Admin", "HR":
+	switch normalizeRole(role) {
+	case "sysadmin", "admin", "hr":
 		return true
 	default:
 		return false
+	}
+}
+
+func normalizeRole(role string) string {
+	switch strings.ToLower(strings.TrimSpace(role)) {
+	case "sysadmin", "superadmin", "super_admin":
+		return "sysadmin"
+	default:
+		return strings.ToLower(strings.TrimSpace(role))
 	}
 }
 

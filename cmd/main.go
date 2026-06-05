@@ -12,6 +12,8 @@ package main
 
 import (
 	_ "hrms/docs"
+	aiService "hrms/internal/feature/ai/service"
+	aiHandler "hrms/internal/feature/ai/transport/http"
 	attendanceRepository "hrms/internal/feature/attendance/repository"
 	attendanceService "hrms/internal/feature/attendance/service"
 	attendanceHandler "hrms/internal/feature/attendance/transport/http"
@@ -29,6 +31,9 @@ import (
 	employeeRepository "hrms/internal/feature/employee/repository"
 	employeeService "hrms/internal/feature/employee/service"
 	employeeHandler "hrms/internal/feature/employee/transport/http"
+	eventsRepository "hrms/internal/feature/events/repository"
+	eventsService "hrms/internal/feature/events/service"
+	eventsHandler "hrms/internal/feature/events/transport/http"
 	inviteRepository "hrms/internal/feature/invite/repository"
 	inviteService "hrms/internal/feature/invite/service"
 	inviteHandler "hrms/internal/feature/invite/transport/http"
@@ -50,8 +55,9 @@ import (
 	taskRepository "hrms/internal/feature/task/repository"
 	taskService "hrms/internal/feature/task/service"
 	taskHandler "hrms/internal/feature/task/transport/http"
-	aiService "hrms/internal/feature/ai/service"
-	aiHandler "hrms/internal/feature/ai/transport/http"
+	userRepository "hrms/internal/feature/user/repository"
+	userService "hrms/internal/feature/user/service"
+	userHandler "hrms/internal/feature/user/transport/http"
 	"hrms/internal/infrastructure/app/anthropic"
 	"hrms/internal/infrastructure/app/cognito"
 	"hrms/internal/infrastructure/config"
@@ -59,7 +65,9 @@ import (
 	"hrms/internal/infrastructure/middleware"
 	"hrms/internal/infrastructure/storage/postgres"
 	"hrms/pkg/log"
+	"time"
 
+	"github.com/gin-contrib/cors"
 	"github.com/gin-gonic/gin"
 	swaggerFiles "github.com/swaggo/files"
 	ginSwagger "github.com/swaggo/gin-swagger"
@@ -86,7 +94,7 @@ func main() {
 	calendarHTTPHandler := calendarHandler.NewCalendarHandler(calendarSvc, cognitoSvc)
 
 	attendanceRepo := attendanceRepository.NewRepository(postgres.DB, calendarRepo)
-	attendanceSvc := attendanceService.NewAttendanceService(attendanceRepo)
+	attendanceSvc := attendanceService.NewAttendanceService(attendanceRepo, notificationSvc)
 	attendanceHTTPHandler := attendanceHandler.NewAttendanceHandler(attendanceSvc)
 
 	cityRepo := cityRepository.NewRepository(postgres.DB)
@@ -98,6 +106,8 @@ func main() {
 	inviteRepo := inviteRepository.NewRepository(postgres.DB)
 	authRepo := authRepository.NewAuthRepository(postgres.DB)
 	employeeRepo := employeeRepository.NewRepository(postgres.DB)
+	userRepo := userRepository.NewRepository(postgres.DB)
+	eventsRepo := eventsRepository.NewRepository(postgres.DB)
 	payrollRepo := payrollRepository.NewRepository(postgres.DB)
 	payslipRepo := payslipRepository.NewRepository(postgres.DB)
 	reportsRepo := reportsRepository.NewRepository(postgres.DB)
@@ -107,8 +117,10 @@ func main() {
 	consentSvc := consentService.NewConsentService(consentRepo)
 	orgSvc := organizationService.NewSignUpService(orgRepo, consentRepo, notificationSvc, cognitoSvc, emailSvc)
 	employeeSvc := employeeService.NewEmployeeService(employeeRepo)
-	payrollSvc := payrollService.NewPayrollService(payrollRepo)
-	payslipSvc := payslipService.NewPayslipService(payslipRepo, emailSvc)
+	userSvc := userService.NewService(cognitoSvc, userRepo)
+	eventsSvc := eventsService.NewService(eventsRepo)
+	payrollSvc := payrollService.NewPayrollService(payrollRepo, notificationSvc)
+	payslipSvc := payslipService.NewPayslipService(payslipRepo, emailSvc, notificationSvc)
 	reportsSvc := reportsService.NewReportsService(reportsRepo)
 	taskSvc := taskService.NewTaskService(taskRepo)
 
@@ -128,8 +140,10 @@ func main() {
 	handler := organizationHandler.NewOrganizationHandler(orgSvc, consentSvc)
 	inviteHTTPHandler := inviteHandler.NewHandler(inviteSvc)
 	notificationHTTPHandler := notificationHandler.NewHandler(notificationSvc)
-	payrollHTTPHandler := payrollHandler.NewPayrollHandler(payrollSvc, cognitoSvc)
-	payslipHTTPHandler := payslipHandler.NewPayslipHandler(payslipSvc, cognitoSvc)
+	userHTTPHandler := userHandler.NewHandler(userSvc)
+	eventsHTTPHandler := eventsHandler.NewHandler(eventsSvc)
+	payrollHTTPHandler := payrollHandler.NewPayrollHandler(payrollSvc)
+	payslipHTTPHandler := payslipHandler.NewPayslipHandler(payslipSvc)
 	reportsHTTPHandler := reportsHandler.NewReportsHandler(reportsSvc)
 	taskHTTPHandler := taskHandler.NewTaskHandler(taskSvc)
 
@@ -139,6 +153,25 @@ func main() {
 	}
 
 	router := gin.Default()
+	router.Use(cors.New(cors.Config{
+		AllowOrigins: []string{
+			"http://localhost:3000",
+			"http://localhost:5173",
+			"http://localhost:5174",
+			"http://127.0.0.1:3000",
+			"http://127.0.0.1:5173",
+			"http://127.0.0.1:5174",
+		},
+		AllowMethods: []string{"GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"},
+		AllowHeaders: []string{"Origin", "Content-Type", "Accept", "Authorization"},
+		ExposeHeaders: []string{
+			"Content-Disposition",
+			"Content-Length",
+			"Content-Type",
+		},
+		AllowCredentials: true,
+		MaxAge:           12 * time.Hour,
+	}))
 
 	v1 := router.Group("/v1")
 
@@ -148,6 +181,7 @@ func main() {
 	// Public routes
 	v1.POST("/auth/login", newAuthHTTPHandler.Login)
 	v1.POST("/auth/refresh", newAuthHTTPHandler.RefreshTokens)
+	v1.GET("/profile/me", userHTTPHandler.Me)
 	v1.POST("/auth/forgot-password", newAuthHTTPHandler.ForgotPassword)
 	v1.POST("/auth/reset-password", newAuthHTTPHandler.ResetPassword)
 	v1.POST("/organizations", handler.CreateOrganization)
@@ -165,6 +199,14 @@ func main() {
 
 	// Auth (protected)
 	protected.POST("/auth/logout", newAuthHTTPHandler.Logout)
+
+	events := v1.Group("/events")
+	events.Use(cognito.AuthMiddleware(cognitoSvc, userRepo))
+	events.GET("/upcoming", eventsHTTPHandler.Upcoming)
+	events.GET("/my", eventsHTTPHandler.My)
+	events.POST("", eventsHTTPHandler.Create)
+	events.PATCH("/:id", eventsHTTPHandler.Update)
+	events.DELETE("/:id", eventsHTTPHandler.Delete)
 
 	// Consents
 	protected.POST("/organizations/consents", handler.SubmitConsents)
