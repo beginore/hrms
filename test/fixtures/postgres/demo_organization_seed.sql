@@ -117,7 +117,8 @@ JOIN users u ON u.email = p.email
 JOIN departments d ON d.name = p.department_name
 JOIN positions pos ON pos.name = p.position_name
 WHERE e.org_id = '3db21a6d-abca-49a5-8f56-f3cbbc0f22e2'
-  AND e.user_id = u.id;
+  AND e.user_id = u.id
+  AND p.role <> 'SysAdmin';
 
 INSERT INTO employees (id, org_id, user_id, department_id, position_id, role, salary_rate, status, hire_date)
 SELECT
@@ -134,7 +135,8 @@ FROM demo_people p
 JOIN users u ON u.email = p.email
 JOIN departments d ON d.name = p.department_name
 JOIN positions pos ON pos.name = p.position_name
-WHERE NOT EXISTS (
+WHERE p.role <> 'SysAdmin'
+  AND NOT EXISTS (
     SELECT 1
     FROM employees e
     WHERE e.org_id = '3db21a6d-abca-49a5-8f56-f3cbbc0f22e2'
