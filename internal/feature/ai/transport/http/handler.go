@@ -51,12 +51,19 @@ func (h *AIHandler) ReviewTaskReport(c *gin.Context) {
 // @Description  Generate a natural language executive summary of the current HR analytics
 // @Tags         AI
 // @Produce      json
+// @Param        date        query  string  false  "Attendance date YYYY-MM-DD"
+// @Param        start_date  query  string  false  "Reporting period start YYYY-MM-DD"
+// @Param        end_date    query  string  false  "Reporting period end YYYY-MM-DD"
 // @Success      200  {object}  service.AnalyticsSummaryResponse
 // @Failure      500  {object}  map[string]string
 // @Security     BearerAuth
 // @Router       /reports/ai-summary [get]
 func (h *AIHandler) GetAnalyticsSummary(c *gin.Context) {
-	resp, err := h.service.GetAnalyticsSummary(c.Request.Context(), h.callerUserID(c))
+	resp, err := h.service.GetAnalyticsSummary(c.Request.Context(), h.callerUserID(c), service.AnalyticsSummaryRequest{
+		Date:      c.Query("date"),
+		StartDate: c.Query("start_date"),
+		EndDate:   c.Query("end_date"),
+	})
 	if err != nil {
 		log.Printf("[AIHandler] GetAnalyticsSummary: %v", err)
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
