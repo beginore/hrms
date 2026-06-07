@@ -46,3 +46,7 @@ configs/local/
 # Local Makefile
 Makefile.local
 makefile.local
+# Local build artifacts and database dumps
+bin/
+.tmp/
+hrms_dump.sql

@@ -100,7 +100,10 @@ func ParseConfig(explicitConfigPath string) *Config {
 		}
 
 		if cfg.Database.DSN == "" {
-			panic("Database DSN is required (add [database] dsn = \"...\" to config.toml or set DB_DSN env var)")
+			cfg.Database.DSN = os.Getenv("DATABASE_URL")
+		}
+		if cfg.Database.DSN == "" {
+			panic("Database DSN is required (set DB_DSN or DATABASE_URL env var)")
 		}
 
 		if cfg.SES.SenderEmail == "" {
