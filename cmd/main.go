@@ -65,6 +65,7 @@ import (
 	"hrms/internal/infrastructure/middleware"
 	"hrms/internal/infrastructure/storage/postgres"
 	"hrms/pkg/log"
+	"os"
 	"time"
 
 	"github.com/gin-contrib/cors"
@@ -153,15 +154,20 @@ func main() {
 	}
 
 	router := gin.Default()
+	allowedOrigins := []string{
+		"http://localhost:3000",
+		"http://localhost:5173",
+		"http://localhost:5174",
+		"http://127.0.0.1:3000",
+		"http://127.0.0.1:5173",
+		"http://127.0.0.1:5174",
+	}
+	if corsOrigin := os.Getenv("CORS_ORIGIN"); corsOrigin != "" {
+		allowedOrigins = append(allowedOrigins, corsOrigin)
+	}
+
 	router.Use(cors.New(cors.Config{
-		AllowOrigins: []string{
-			"http://localhost:3000",
-			"http://localhost:5173",
-			"http://localhost:5174",
-			"http://127.0.0.1:3000",
-			"http://127.0.0.1:5173",
-			"http://127.0.0.1:5174",
-		},
+		AllowOrigins: allowedOrigins,
 		AllowMethods: []string{"GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"},
 		AllowHeaders: []string{"Origin", "Content-Type", "Accept", "Authorization"},
 		ExposeHeaders: []string{
@@ -328,7 +334,10 @@ func main() {
 	protected.GET("/reports/export/pdf", reportsHTTPHandler.ExportReportPDF)
 	protected.GET("/reports/export/csv", reportsHTTPHandler.ExportReportCSV)
 
-	port := ":8080"
+	port := ":" + os.Getenv("PORT")
+	if port == ":" {
+		port = ":8080"
+	}
 	logger.Info("Starting HTTP server on port " + port)
 	if err := router.Run(port); err != nil {
 		logger.Fatal("Server failed", log.Error(err))
